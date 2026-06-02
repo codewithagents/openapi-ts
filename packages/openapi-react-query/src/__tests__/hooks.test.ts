@@ -2056,3 +2056,95 @@ describe('Feature #188: queryOptions factories', () => {
     expect(factoryBody).not.toContain('| undefined | null')
   })
 })
+
+// ── operationId uniquification mirroring (#254) ────────────────────────────────
+
+describe('generateHooks — operationId collides with client-internal helper (#254)', () => {
+  it('operationId getConfig gets uniquified to getConfig_2 in hook imports (airflow/configcat pattern)', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Fictional Config API', version: '1' },
+      paths: {
+        '/config': {
+          get: {
+            operationId: 'get_config',
+            responses: {
+              '200': {
+                description: 'ok',
+                content: { 'application/json': { schema: { type: 'object' } } },
+              },
+            },
+          },
+        },
+      },
+    }
+    const { content: hooksContent } = generateHooks(spec, { staleTime: 0, gcTime: 0 })
+
+    // The hook must import the uniquified name, not the raw one.
+    expect(hooksContent).toContain('getConfig_2')
+    expect(hooksContent).not.toMatch(/import\s*\{[^}]*\bgetConfig\b(?!_)[^}]*\}/)
+  })
+
+  it('operationId fetch gets uniquified to fetch_2 in hook imports (pinecone pattern)', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Fictional Vector API', version: '1' },
+      paths: {
+        '/vectors/fetch': {
+          get: {
+            operationId: 'fetch',
+            responses: {
+              '200': {
+                description: 'ok',
+                content: {
+                  'application/json': { schema: { $ref: '#/components/schemas/FetchResponse' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      components: {
+        schemas: {
+          FetchResponse: {
+            type: 'object',
+            properties: { vectors: { type: 'object' } },
+          },
+        },
+      },
+    }
+    const { content: hooksContent } = generateHooks(spec, { staleTime: 0, gcTime: 0 })
+
+    // The hook must import the uniquified name, not the raw one.
+    expect(hooksContent).toContain('fetch_2')
+    expect(hooksContent).not.toMatch(/import\s*\{[^}]*\bfetch\b(?!_)[^}]*\}/)
+  })
+
+  it('both getConfig and fetch collision in one spec each get uniquified names', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Fictional Multi-Collision API', version: '1' },
+      paths: {
+        '/config': {
+          get: {
+            operationId: 'getConfig',
+            responses: { '200': { description: 'ok' } },
+          },
+        },
+        '/fetch': {
+          get: {
+            operationId: 'fetch',
+            responses: { '200': { description: 'ok' } },
+          },
+        },
+      },
+    }
+    const { content: hooksContent } = generateHooks(spec, { staleTime: 0, gcTime: 0 })
+
+    expect(hooksContent).toContain('getConfig_2')
+    expect(hooksContent).toContain('fetch_2')
+    // The raw colliding names must not appear in the client import list.
+    expect(hooksContent).not.toMatch(/import\s*\{[^}]*\bgetConfig\b(?!_)[^}]*\}/)
+    expect(hooksContent).not.toMatch(/import\s*\{[^}]*\bfetch\b(?!_)[^}]*\}/)
+  })
+})

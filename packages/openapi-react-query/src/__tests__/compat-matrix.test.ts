@@ -36,24 +36,13 @@ describe.each(cases)('compat — $name', ({ specPath }) => {
 // {Y} brace and produced "ByY". The hook imported a function that did not
 // exist in the client. Zero type-resolution overhead: pure string matching.
 //
-// KNOWN_IMPORT_MISMATCHES lists specs with a SEPARATE pre-existing mismatch
-// unrelated to #241 (operationId uniquification collisions):
+// All known mismatches have been resolved:
+//   airflow/configcat (#254): getConfig uniquification now mirrored in hooks
+//   pinecone (#254):          fetch uniquification now mirrored in hooks
 //
-//   airflow    - operationId "getConfig" collides with the client file's own
-//   configcat    getConfig() helper; client renames the operation to
-//                getConfig_2 via uniquifyName, but the hook still imports the
-//                un-uniquified name. Tracked as a separate follow-up.
-//   pinecone   - operationId "fetch" collides with globalThis.fetch; client
-//                renames to fetch_2, hook imports "fetch". Same issue.
-//
-// The test FAILS if a spec NOT on this list has a new hook-import mismatch.
-// The test FAILS if a spec ON this list unexpectedly passes (list must shrink).
+// The test FAILS if any spec has a hook-import mismatch.
 // ---------------------------------------------------------------------------
-const KNOWN_IMPORT_MISMATCHES = new Set<string>([
-  'airflow', // getConfig uniquified to getConfig_2 in client; hook imports getConfig
-  'configcat', // same getConfig collision as airflow
-  'pinecone', // fetch uniquified to fetch_2 in client; hook imports fetch
-])
+const KNOWN_IMPORT_MISMATCHES = new Set<string>([])
 
 /** Collect names after `^export (async )?function` in the client output. */
 function extractClientExports(content: string): Set<string> {
