@@ -403,19 +403,86 @@ interface QueryParam {
   required: boolean
 }
 
+/** Returns true when c is an ASCII letter (a-z, A-Z). */
+function isAsciiLetter(c: string): boolean {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
+
+/** Returns true when c is an ASCII letter or digit (a-z, A-Z, 0-9). */
+function isAlphanumeric(c: string): boolean {
+  return isAsciiLetter(c) || (c >= '0' && c <= '9')
+}
+
+/** Returns true when c is a valid identifier-start character (letter, _, $). */
+function isIdentStart(c: string): boolean {
+  return isAsciiLetter(c) || c === '_' || c === '$'
+}
+
+/**
+ * CamelCase a pre-processed string in a single linear pass.
+ *
+ * Finds each run of non-alphanumeric characters (separators). If the run is
+ * immediately followed by a letter it is discarded and that letter is
+ * uppercased. Otherwise the separator characters are kept verbatim, which
+ * lets a later trailing-strip step remove any that end up at the tail.
+ *
+ * This is the linear-time equivalent of the one-step regex
+ * `/[^a-zA-Z0-9]+([a-zA-Z])/g` which is vulnerable to polynomial
+ * backtracking (CodeQL js/polynomial-redos) when the input ends in a long
+ * separator run not followed by a letter.
+ */
+function camelCaseSeparators(s: string): string {
+  let result = ''
+  let i = 0
+  while (i < s.length) {
+    if (isAlphanumeric(s[i])) {
+      result += s[i++]
+      continue
+    }
+    // Locate the end of this separator run.
+    let j = i + 1
+    while (j < s.length && !isAlphanumeric(s[j])) j++
+    // Separator run followed by a letter: discard separators, uppercase the letter.
+    if (j < s.length && isAsciiLetter(s[j])) {
+      result += s[j].toUpperCase()
+      i = j + 1
+    } else {
+      // Separator run NOT followed by a letter: keep as-is (trailing strip handles it).
+      result += s.slice(i, j)
+      i = j
+    }
+  }
+  return result
+}
+
 /**
  * Normalize a query parameter name to a valid TypeScript identifier.
- * - Strips the [] suffix used by some APIs (PHP/Rails array convention): 'ids[]' → 'ids'
- * - Converts dot/hyphen-separated names to camelCase: 'place.fields' → 'placeFields'
+ * - Strips the [] suffix used by some APIs (PHP/Rails array convention): 'ids[]' -> 'ids'
+ * - Converts dot/hyphen-separated names to camelCase: 'place.fields' -> 'placeFields'
  * The original name is preserved separately (as urlName) for URL query string building.
+ *
+ * Uses a linear character scan (via camelCaseSeparators) instead of the
+ * regex `/[^a-zA-Z0-9]+([a-zA-Z])/g` which is polynomial-backtracking
+ * vulnerable (CodeQL js/polynomial-redos, issue #261).
  */
-function normalizeQueryParamName(name: string): string {
-  return name
-    .replace(/\[\]$/, '') // strip trailing [] (array marker)
-    .replace(/'/g, '') // strip apostrophes
-    .replace(/[^a-zA-Z0-9]+([a-zA-Z])/g, (_, char: string) => char.toUpperCase()) // camelCase any separator
-    .replace(/[^a-zA-Z0-9]+$/, '') // strip trailing non-alphanumeric
-    .replace(/^[^a-zA-Z_$]/, '_') // ensure valid identifier start
+export function normalizeQueryParamName(name: string): string {
+  // Strip trailing [] (array marker) and apostrophes.
+  const s = (name.endsWith('[]') ? name.slice(0, -2) : name).replace(/'/g, '')
+
+  // CamelCase: discard separator runs followed by a letter, uppercase that letter.
+  let result = camelCaseSeparators(s)
+
+  // Strip trailing non-alphanumeric characters.
+  let end = result.length
+  while (end > 0 && !isAlphanumeric(result[end - 1])) end--
+  result = result.slice(0, end)
+
+  // Ensure valid identifier start: replace the first character if it is not a letter, _, or $.
+  if (result.length > 0 && !isIdentStart(result[0])) {
+    result = '_' + result.slice(1)
+  }
+
+  return result
 }
 
 function getQueryParams(
