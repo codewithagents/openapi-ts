@@ -492,6 +492,32 @@ function getHeaderParams(
     }))
 }
 
+/**
+ * Returns flags indicating whether an operation has a `params` object in its
+ * client function signature, and whether that object is required.
+ *
+ * Mirrors the client generator's exact rule: params is present when the
+ * operation has at least one query or header parameter; it is required when at
+ * least one of those parameters is required. Resolves $ref parameters and
+ * merges path-item level parameters so the result is accurate for specs that
+ * define parameters via $ref.
+ *
+ * Exported so the hooks generator can reuse this single source of truth
+ * instead of forking a subtly-different copy.
+ */
+export function getParamPresence(
+  pathItem: PathItemObject,
+  operation: OperationObject,
+  spec: OpenAPIV3_1.Document
+): { hasParams: boolean; hasRequiredParams: boolean } {
+  const queryParams = getQueryParams(pathItem, operation, spec)
+  const headerParams = getHeaderParams(pathItem, operation, spec)
+  const hasParams = queryParams.length > 0 || headerParams.length > 0
+  const hasRequiredParams =
+    queryParams.some((qp) => qp.required) || headerParams.some((hp) => hp.required)
+  return { hasParams, hasRequiredParams }
+}
+
 // Feature 4: Multipart/form-data request body info
 interface MultipartField {
   name: string
