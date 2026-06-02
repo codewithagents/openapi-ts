@@ -101,7 +101,7 @@ export default defineConfig({
         {
           label: 'Guides',
           items: [
-            { label: 'Types & fetch client', slug: 'openapi-gen' },
+            { label: 'Types & fetch client', slug: 'openapi-zod-ts' },
             { label: 'React Query hooks', slug: 'openapi-react-query' },
             { label: 'Server interface', slug: 'openapi-server' },
             { label: 'Form error mapping', slug: 'api-errors' },

@@ -31,7 +31,7 @@ jobs:
 
       # Coverage — run per-package with flags for per-package Codecov badges
       - run: pnpm --filter @codewithagents/api-errors run test:coverage
-      - run: pnpm --filter @codewithagents/openapi-gen run test:coverage
+      - run: pnpm --filter openapi-zod-ts run test:coverage
       - run: pnpm --filter @codewithagents/openapi-react-query run test:coverage
       - run: pnpm --filter @codewithagents/openapi-server run test:coverage
 
@@ -44,12 +44,12 @@ jobs:
           disable_search: true # prevent auto-discovery of other packages' lcov files
           fail_ci_if_error: false
 
-      - name: Upload coverage to Codecov (openapi-gen)
+      - name: Upload coverage to Codecov (openapi-zod-ts)
         uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
         with:
           use_oidc: true
-          files: ./packages/openapi-gen/coverage/lcov.info
-          flags: openapi-gen
+          files: ./packages/openapi-zod-ts/coverage/lcov.info
+          flags: openapi-zod-ts
           disable_search: true
           fail_ci_if_error: false
 

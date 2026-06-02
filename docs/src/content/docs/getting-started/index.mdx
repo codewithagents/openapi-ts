@@ -18,8 +18,8 @@ Everything flows from a single spec. One source of truth. When the spec changes,
 
 | Package                                                       | What it does                                                                       |
 | ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| [`@codewithagents/openapi-gen`](/openapi-gen)                 | Generates TypeScript interfaces, a native `fetch` client, and optional Zod schemas |
-| [`@codewithagents/openapi-react-query`](/openapi-react-query) | Generates typed React Query v5 hooks from the client `openapi-gen` produces        |
+| [`openapi-zod-ts`](/openapi-zod-ts)                 | Generates TypeScript interfaces, a native `fetch` client, and optional Zod schemas |
+| [`@codewithagents/openapi-react-query`](/openapi-react-query) | Generates typed React Query v5 hooks from the client `openapi-zod-ts` produces        |
 | [`@codewithagents/openapi-server`](/openapi-server)           | Generates a typed service interface and optional Hono, Express, or Fastify router  |
 | [`@codewithagents/api-errors`](/api-errors)                   | Maps API error responses to form field errors at runtime (no codegen step)         |
 
@@ -38,7 +38,7 @@ If your team maintains an OpenAPI spec, the toolchain turns it into a first-clas
 - TypeScript with `strict: true` recommended (all generated output passes it out of the box)
 
 <Aside type="tip">
-  Start with only `@codewithagents/openapi-gen`. Get a typed client working, then layer in hooks or
+  Start with only `openapi-zod-ts`. Get a typed client working, then layer in hooks or
   a server interface when you need them.
 </Aside>
 

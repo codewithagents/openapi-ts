@@ -3,7 +3,7 @@
 [![CI](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/codeql.yml/badge.svg)](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/codeql.yml)
 [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./packages/openapi-gen/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./packages/openapi-zod-ts/LICENSE)
 
 > TypeScript bridge between your OpenAPI spec and your frontend, zero runtime footprint.
 
@@ -16,7 +16,7 @@ You consume a REST API. You need TypeScript types, a fetch client, form error ma
 | Package | Version | Coverage | Description |
 |---|---|---|---|
 | [`@codewithagents/api-errors`](./packages/api-errors) | [![npm](https://img.shields.io/npm/v/@codewithagents/api-errors.svg)](https://npmjs.com/package/@codewithagents/api-errors) | [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=api-errors&branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts) | Map API error responses to form field errors, framework-agnostic core + React Hook Form adapter |
-| [`@codewithagents/openapi-gen`](./packages/openapi-gen) | [![npm](https://img.shields.io/npm/v/@codewithagents/openapi-gen.svg)](https://npmjs.com/package/@codewithagents/openapi-gen) | [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=openapi-gen&branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts) | Generate TypeScript models + native `fetch` client + Zod schemas from an OpenAPI 3.x spec |
+| [`openapi-zod-ts`](./packages/openapi-zod-ts) | [![npm](https://img.shields.io/npm/v/openapi-zod-ts.svg)](https://npmjs.com/package/openapi-zod-ts) | [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=openapi-zod-ts&branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts) | Generate TypeScript models + native `fetch` client + Zod schemas from an OpenAPI 3.x spec |
 | [`@codewithagents/openapi-react-query`](./packages/openapi-react-query) | [![npm](https://img.shields.io/npm/v/@codewithagents/openapi-react-query.svg)](https://npmjs.com/package/@codewithagents/openapi-react-query) | [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=openapi-react-query&branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts) | Generate typed React Query v5 hooks: `useQuery`, `useMutation`, key factories |
 | [`@codewithagents/openapi-server`](./packages/openapi-server) | [![npm](https://img.shields.io/npm/v/@codewithagents/openapi-server.svg)](https://npmjs.com/package/@codewithagents/openapi-server) | [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=openapi-server&branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts) | Generate a framework-agnostic service interface from OpenAPI 3.x. Optional Hono router included, or skip it and wire to any framework you choose |
 
@@ -30,7 +30,7 @@ One spec, four generators:
 
 ```
 spec/api.json
-  ├── openapi-gen          → models.ts, client.ts       (TypeScript types + fetch client)
+  ├── openapi-zod-ts          → models.ts, client.ts       (TypeScript types + fetch client)
   ├── openapi-server       → service.ts                 (framework-agnostic service interface)
   │                          router.ts                  (optional — Hono, or wire to any framework)
   └── openapi-react-query  → hooks.ts                   (React Query v5 hooks)
@@ -65,7 +65,7 @@ Code generators have a wide blast radius. A subtle regression in the generator t
 
 **Smoke tests against live public APIs.** The generated client code fires real HTTP requests against public no-auth APIs (Open-Meteo, Canada Holidays, Exchange Rate API, D&D 5e) on every push to main and weekly on a schedule. This is the generated code itself making network calls, not just checking that it compiles. If the generator produces a client that breaks at runtime, the smoke suite catches it.
 
-**Mutation testing with Stryker.** `openapi-gen` and `openapi-react-query` run [Stryker](https://stryker-mutator.io/) mutation tests locally. Mutation testing deliberately introduces bugs into the source code and verifies that the test suite catches them. High line coverage that doesn't actually catch regressions shows up here.
+**Mutation testing with Stryker.** `openapi-zod-ts` and `openapi-react-query` run [Stryker](https://stryker-mutator.io/) mutation tests locally. Mutation testing deliberately introduces bugs into the source code and verifies that the test suite catches them. High line coverage that doesn't actually catch regressions shows up here.
 
 **Full-stack E2E tests.** The [`petstore`](./packages/petstore-hono) package is a complete runnable full-stack app: one spec drives generated types, fetch client, React Query hooks, a Hono server with Zod validation, and end-to-end [Playwright](https://playwright.dev/) tests. Every PR runs the full round-trip — spec change to browser assertion.
 
@@ -91,4 +91,4 @@ This project is MIT-licensed and free to use. If it saves you time, consider spo
 
 ## License
 
-[MIT](./packages/openapi-gen/LICENSE) © codewithagents
+[MIT](./packages/openapi-zod-ts/LICENSE) © codewithagents

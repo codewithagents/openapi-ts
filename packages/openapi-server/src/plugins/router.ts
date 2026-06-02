@@ -1,6 +1,6 @@
 import type { OpenAPIV3_1 } from 'openapi-types'
-import type { GeneratedFile } from '@codewithagents/openapi-gen'
-import { toTypeName } from '@codewithagents/openapi-gen'
+import type { GeneratedFile } from 'openapi-zod-ts'
+import { toTypeName } from 'openapi-zod-ts'
 
 type OperationObject = OpenAPIV3_1.OperationObject
 type ReferenceObject = OpenAPIV3_1.ReferenceObject

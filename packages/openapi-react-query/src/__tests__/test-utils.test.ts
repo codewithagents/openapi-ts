@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateTestUtils } from '../plugins/test-utils.js'
 
-// Load fixture directly (no parseSpec — avoids needing openapi-gen dist built)
+// Load fixture directly (no parseSpec — avoids needing openapi-zod-ts dist built)
 const fixturePath = join(import.meta.dirname, '../../__fixtures__/specs/task-hooks.json')
 const spec = JSON.parse(readFileSync(fixturePath, 'utf-8')) as OpenAPIV3_1.Document
 

@@ -11,9 +11,9 @@ Generate typed React Query v5 hooks from OpenAPI 3.x specs (3.1 primary target, 
   - `Parameters<typeof fn>[N]` for variables type
 
 ## Dependencies
-- **Runtime dep**: `@codewithagents/openapi-gen` (uses `parseSpec`)
+- **Runtime dep**: `openapi-zod-ts` (uses `parseSpec`)
 - **Peer dep**: `@tanstack/react-query ^5`
-- Build openapi-gen first: `pnpm --filter @codewithagents/openapi-gen build`
+- Build openapi-zod-ts first: `pnpm --filter openapi-zod-ts build`
 
 ## Config
 Default: `openapi-react-query.config.json` in CWD. Fields:
@@ -25,7 +25,7 @@ Default: `openapi-react-query.config.json` in CWD. Fields:
 - `overrides?`: per-resource cache timing overrides; key is resource name, value is `{ stale_time?, gc_time? }`
 - `auto_invalidate?`: when true, mutation hooks auto-invalidate related resource queries on success (default: false)
 
-`--config <path>` resolves relative paths from config file's directory (same pattern as openapi-gen).
+`--config <path>` resolves relative paths from config file's directory (same pattern as openapi-zod-ts).
 
 ## Key non-obvious decisions
 - **Multiple detail ops → operation-name key segment** — when a resource has >1 GET with path params (e.g. `/items/{id}` and `/items/{id}/usage`), each key includes the operation name to prevent cache collisions: `['items', 'getItemById', id]` vs `['items', 'getItemUsage', id]`. Single detail ops keep the canonical `['resource', id]` shape.

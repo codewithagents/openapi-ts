@@ -1,4 +1,4 @@
-// Bootstrapped by @codewithagents/openapi-gen — this file is yours.
+// Bootstrapped by openapi-zod-ts — this file is yours.
 // Add error messages, refinements, and business rules freely.
 // Re-running the generator will NOT overwrite this file.
 // Requires zod v4 (z.record takes two args, z.lazy for circular refs).

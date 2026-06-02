@@ -23,7 +23,7 @@ Key guarantees:
 - **Zero runtime dependencies.** Pure TypeScript, nothing added to your bundle.
 - **Never throws.** Both functions return `[]` (or call `setError` zero times) for unrecognized or null input.
 - **Multiple error formats.** RFC 7807 / RFC 9457 Problem Details, Spring Boot validation arrays, flat objects, flat arrays. Detected automatically.
-- **Response unwrapping.** Handles `ApiError` from `@codewithagents/openapi-gen`, Axios-style `error.response.data`, and generic `{ data: ... }` wrappers before parsing.
+- **Response unwrapping.** Handles `ApiError` from `openapi-zod-ts`, Axios-style `error.response.data`, and generic `{ data: ... }` wrappers before parsing.
 - **Typed.** Ships full TypeScript declarations. No `@types` package needed.
 
 ## Install
@@ -232,7 +232,7 @@ Before parsing, the following wrappers are stripped:
 
 | Wrapper shape                       | Detected by                                                                                                       |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `{ status: number, body: unknown }` | `ApiError` from `@codewithagents/openapi-gen`                                                                     |
+| `{ status: number, body: unknown }` | `ApiError` from `openapi-zod-ts`                                                                     |
 | `{ response: { data: ... } }`       | Axios-style error objects                                                                                         |
 | `{ data: ... }`                     | Generic response wrappers (only when `data` is a plain object and `field` / `errors` are absent at the top level) |
 
@@ -290,7 +290,7 @@ function SignupForm() {
 
 ### With the generated `ApiError` and `statusCodes`
 
-When you use `@codewithagents/openapi-gen`, the generated client throws `ApiError` on non-2xx responses. Pass it directly to `extractFieldErrors`. Use `statusCodes` to restrict field-error parsing to validation responses only:
+When you use `openapi-zod-ts`, the generated client throws `ApiError` on non-2xx responses. Pass it directly to `extractFieldErrors`. Use `statusCodes` to restrict field-error parsing to validation responses only:
 
 ```typescript
 import { createTask } from './src/api'
@@ -452,9 +452,9 @@ function SignupForm() {
 
 <CardGrid>
   <Card title="Types and fetch client" icon="seti:typescript">
-    `@codewithagents/openapi-gen` generates the typed `ApiError` class that `api-errors` recognizes and unwraps automatically.
+    `openapi-zod-ts` generates the typed `ApiError` class that `api-errors` recognizes and unwraps automatically.
 
-    [Learn more](/openapi-gen)
+    [Learn more](/openapi-zod-ts)
 
   </Card>
   <Card title="React Query hooks" icon="seti:react">

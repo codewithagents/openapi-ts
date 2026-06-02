@@ -4,14 +4,14 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'packages/openapi-gen/**'
+      - 'packages/openapi-zod-ts/**'
       - 'packages/openapi-react-query/**'
       - 'packages/openapi-server/**'
       - 'examples/**'
   push:
     branches: [main]
     paths:
-      - 'packages/openapi-gen/**'
+      - 'packages/openapi-zod-ts/**'
       - 'packages/openapi-react-query/**'
       - 'packages/openapi-server/**'
       - 'examples/**'

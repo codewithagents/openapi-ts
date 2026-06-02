@@ -9,7 +9,7 @@
     "smoke": "vitest run --config smoke/vitest.config.ts"
   },
   "devDependencies": {
-    "@codewithagents/openapi-gen": "workspace:*",
+    "openapi-zod-ts": "workspace:*",
     "@codewithagents/openapi-react-query": "workspace:*",
     "@codewithagents/openapi-server": "workspace:*",
     "@tanstack/react-query": "catalog:",

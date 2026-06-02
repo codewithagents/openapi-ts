@@ -3,7 +3,7 @@
   "info": {
     "title": "Task Manager API",
     "version": "1.0.0",
-    "description": "Integration fixture: realistic task management API used to cross-test @codewithagents/openapi-gen and @codewithagents/api-errors."
+    "description": "Integration fixture: realistic task management API used to cross-test openapi-zod-ts and @codewithagents/api-errors."
   },
   "security": [{ "bearerAuth": [] }],
   "paths": {

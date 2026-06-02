@@ -61,7 +61,7 @@ The two tiers provide different guarantees.
 - Output is committed to `examples/generated/` and tracked in git.
 - The Showcase workflow regenerates them and runs `git diff --exit-code`. Any behavior change that affects output fails CI immediately.
 - All generated files pass `tsc --noEmit --strict` (TypeScript strict mode, no emit).
-- Runs on every PR that touches `packages/openapi-gen/**`, `packages/openapi-react-query/**`, `packages/openapi-server/**`, or `examples/**`, plus a weekly run on Monday at 6am UTC to catch upstream spec drift.
+- Runs on every PR that touches `packages/openapi-zod-ts/**`, `packages/openapi-react-query/**`, `packages/openapi-server/**`, or `examples/**`, plus a weekly run on Monday at 6am UTC to catch upstream spec drift.
 
 **Compatibility matrix specs (115):**
 

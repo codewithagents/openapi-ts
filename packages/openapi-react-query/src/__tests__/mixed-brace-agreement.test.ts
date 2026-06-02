@@ -1,5 +1,5 @@
 /**
- * Regression guard for #241: deriveOperationName diverged between openapi-gen
+ * Regression guard for #241: deriveOperationName diverged between openapi-zod-ts
  * (client.ts) and openapi-react-query (hooks.ts), causing hooks to import
  * function names that did not exist in the generated client.
  *
@@ -12,14 +12,14 @@
  *   -> the hook imported "...ByXByY" but the client exported "...ByXYpbf"
  *
  * After the fix both generators use the same deriveOperationName from
- * openapi-gen/src/utils/naming.ts, so the exported and imported names
+ * openapi-zod-ts/src/utils/naming.ts, so the exported and imported names
  * are always identical.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
-import { generateClient } from '@codewithagents/openapi-gen'
+import { generateClient } from 'openapi-zod-ts'
 import { generateHooks } from '../plugins/hooks.js'
 
 const fixturePath = join(import.meta.dirname, '../../__fixtures__/specs/mixed-brace-paths.json')

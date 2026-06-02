@@ -7,7 +7,7 @@ async function formatTs(content: string, filePath: string): Promise<string> {
   const config = await resolveConfig(filePath)
   return format(content, { ...config, parser: 'typescript' })
 }
-import { parseSpec } from '@codewithagents/openapi-gen'
+import { parseSpec } from 'openapi-zod-ts'
 import { generateService } from './plugins/service.js'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from './plugins/router.js'
 

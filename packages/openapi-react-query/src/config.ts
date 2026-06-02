@@ -3,7 +3,7 @@ import {
   validateConfigPath,
   validateInputPath,
   validateOutputPath,
-} from '@codewithagents/openapi-gen/config-core'
+} from 'openapi-zod-ts/config-core'
 
 export { validateConfigPath, validateInputPath, validateOutputPath }
 

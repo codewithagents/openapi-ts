@@ -1,4 +1,4 @@
-import { type CliAction, parseBaseCliArgs } from '@codewithagents/openapi-gen/cli-core'
+import { type CliAction, parseBaseCliArgs } from 'openapi-zod-ts/cli-core'
 
 export type { CliAction }
 

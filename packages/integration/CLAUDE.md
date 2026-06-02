@@ -1,6 +1,6 @@
 # integration
 
-Private cross-package test harness. Verifies `openapi-gen` + `openapi-react-query` + `api-errors` work together end-to-end.
+Private cross-package test harness. Verifies `openapi-zod-ts` + `openapi-react-query` + `api-errors` work together end-to-end.
 
 ## Key facts
 - `private: true` — never published to npm
@@ -10,7 +10,7 @@ Private cross-package test harness. Verifies `openapi-gen` + `openapi-react-quer
 ## Regenerating `generated/`
 Build packages first, then:
 ```
-pnpm run generate        # runs openapi-gen
+pnpm run generate        # runs openapi-zod-ts
 pnpm run generate:hooks  # runs openapi-react-query
 ```
 

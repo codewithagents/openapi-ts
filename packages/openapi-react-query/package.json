@@ -21,7 +21,7 @@
     "lint": "tsc -p tsconfig.build.json --noEmit"
   },
   "dependencies": {
-    "@codewithagents/openapi-gen": "workspace:*",
+    "openapi-zod-ts": "workspace:*",
     "openapi-types": "catalog:",
     "prettier": "catalog:"
   },

@@ -17,12 +17,12 @@ Generate typed [React Query v5](https://tanstack.com/query/v5) hooks from an Ope
 - **Suspense variants**: set `suspense: true` to generate `useSuspense*` hooks alongside every query hook.
 - **Prettier-clean output**: every generated file passes `prettier --check` out of the box.
 
-Works alongside [`@codewithagents/openapi-gen`](https://www.npmjs.com/package/@codewithagents/openapi-gen) which generates the underlying typed fetch client. All generated files are committed without running a formatter. See the [petstore demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-hono) for a full-stack example combining all four packages.
+Works alongside [`openapi-zod-ts`](https://www.npmjs.com/package/openapi-zod-ts) which generates the underlying typed fetch client. All generated files are committed without running a formatter. See the [petstore demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-hono) for a full-stack example combining all four packages.
 
 ## Install
 
 ```bash
-npm install -D @codewithagents/openapi-react-query @codewithagents/openapi-gen
+npm install -D @codewithagents/openapi-react-query openapi-zod-ts
 npm install @tanstack/react-query
 ```
 
@@ -46,7 +46,7 @@ Create `openapi-react-query.config.json` in your project root:
 | Field | Required | Default | Description |
 |---|---|---|---|
 | `input_openapi` | Yes | n/a | OpenAPI 3.x spec (JSON or YAML) |
-| `output` | Yes | n/a | Directory to write generated files (same as openapi-gen output) |
+| `output` | Yes | n/a | Directory to write generated files (same as openapi-zod-ts output) |
 | `stale_time` | No | `0` | `staleTime` in ms applied to all `useQuery` hooks |
 | `gc_time` | No | `300000` | `gcTime` in ms applied to all `useQuery` hooks |
 | `suspense` | No | `false` | When `true`, generates a `useSuspense*` variant alongside every query hook |
@@ -55,10 +55,10 @@ Create `openapi-react-query.config.json` in your project root:
 
 ## Generate
 
-Run both generators, openapi-gen first:
+Run both generators, openapi-zod-ts first:
 
 ```bash
-npx openapi-gen
+npx openapi-zod-ts
 npx openapi-react-query
 ```
 
@@ -67,7 +67,7 @@ Or add to `package.json`:
 ```json
 {
   "scripts": {
-    "generate": "openapi-gen && openapi-react-query"
+    "generate": "openapi-zod-ts && openapi-react-query"
   }
 }
 ```
@@ -300,7 +300,7 @@ function TaskList() {
 Use `--config` to point at different config files per vendor:
 
 ```bash
-npx openapi-gen --config ./config/payments.config.json
+npx openapi-zod-ts --config ./config/payments.config.json
 npx openapi-react-query --config ./config/payments.config.json
 ```
 

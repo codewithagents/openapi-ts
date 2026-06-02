@@ -14,9 +14,9 @@ flags:
     paths:
       - packages/api-errors/src/
     carryforward: true
-  openapi-gen:
+  openapi-zod-ts:
     paths:
-      - packages/openapi-gen/src/
+      - packages/openapi-zod-ts/src/
     carryforward: true
   openapi-react-query:
     paths:

@@ -1,17 +1,17 @@
 {
   "name": "@codewithagents/integration",
   "private": true,
-  "description": "Cross-package integration tests and live sample code for @codewithagents/openapi-gen + @codewithagents/api-errors.",
+  "description": "Cross-package integration tests and live sample code for openapi-zod-ts + @codewithagents/api-errors.",
   "type": "module",
   "scripts": {
-    "generate": "openapi-gen --config openapi-gen.config.json",
+    "generate": "openapi-zod-ts --config openapi-zod-ts.config.json",
     "generate:hooks": "openapi-react-query --config openapi-react-query.config.json",
     "test": "vitest run",
     "lint": "tsc --noEmit && eslint generated/"
   },
   "dependencies": {
     "@codewithagents/api-errors": "workspace:*",
-    "@codewithagents/openapi-gen": "workspace:*",
+    "openapi-zod-ts": "workspace:*",
     "@codewithagents/openapi-react-query": "workspace:*"
   },
   "devDependencies": {

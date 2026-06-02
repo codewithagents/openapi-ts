@@ -6,17 +6,17 @@ description: Go from an OpenAPI spec to a working typed fetch client in minutes.
 import { Steps, Card, CardGrid, Aside } from '@astrojs/starlight/components'
 import { PackageManagers } from 'starlight-package-managers'
 
-This guide walks you through installing `@codewithagents/openapi-gen` and generating a typed fetch client from an OpenAPI spec. It takes about five minutes.
+This guide walks you through installing `openapi-zod-ts` and generating a typed fetch client from an OpenAPI spec. It takes about five minutes.
 
 <Steps>
 
 1.  **Install**
 
-    <PackageManagers pkg="@codewithagents/openapi-gen" dev />
+    <PackageManagers pkg="openapi-zod-ts" dev />
 
 2.  **Add a config file**
 
-    Create `openapi-gen.config.json` in your project root:
+    Create `openapi-zod-ts.config.json` in your project root:
 
     ```json
     {
@@ -34,12 +34,12 @@ This guide walks you through installing `@codewithagents/openapi-gen` and genera
     | `input_openapi` | Path to your OpenAPI 3.x spec (JSON or YAML) |
     | `output`        | Directory to write the generated files       |
 
-    Optional fields let you set a default `baseUrl`, enable Zod schemas (`input_schema`), or generate a server-side client factory (`server_client: true`). See the [full options reference](/openapi-gen#options).
+    Optional fields let you set a default `baseUrl`, enable Zod schemas (`input_schema`), or generate a server-side client factory (`server_client: true`). See the [full options reference](/openapi-zod-ts#options).
 
 3.  **Run the generator**
 
     ```bash
-    npx openapi-gen
+    npx openapi-zod-ts
     ```
 
     This writes the following files to `./src/api/`:

@@ -1,6 +1,6 @@
 # examples
 
-128 real-world OpenAPI specs run through `@codewithagents/openapi-gen`. Two tiers: **showcase specs** with committed generated output and **compatibility matrix specs** that prove breadth.
+128 real-world OpenAPI specs run through `openapi-zod-ts`. Two tiers: **showcase specs** with committed generated output and **compatibility matrix specs** that prove breadth.
 
 ## Two tiers
 
@@ -54,7 +54,7 @@ Edge cases covered by the full 128-spec suite:
 
 ```bash
 cd examples
-pnpm generate    # runs openapi-gen on all 13 showcase specs
+pnpm generate    # runs openapi-zod-ts on all 13 showcase specs
 ```
 
 Or from the repo root:
@@ -73,7 +73,7 @@ pnpm --filter @codewithagents/examples run typecheck
 
 The `Examples` workflow (`.github/workflows/examples.yml`) runs on every relevant PR:
 
-- **Triggers**: path-filtered (`packages/openapi-gen/**`, `examples/**`) on PRs and pushes to main, plus weekly on Monday 6am UTC
+- **Triggers**: path-filtered (`packages/openapi-zod-ts/**`, `examples/**`) on PRs and pushes to main, plus weekly on Monday 6am UTC
 - **Steps**:
   1. Build the generator packages
   2. Run all 128 configs: all 115 compat matrix specs must generate without errors (parameterized tests via `pnpm test`)

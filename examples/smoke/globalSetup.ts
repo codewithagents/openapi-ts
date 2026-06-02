@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const REPO_ROOT = resolve(__dirname, '../..')
 const EXAMPLES_DIR = resolve(__dirname, '..')
-const CLI = resolve(REPO_ROOT, 'packages/openapi-gen/dist/cli.cjs')
+const CLI = resolve(REPO_ROOT, 'packages/openapi-zod-ts/dist/cli.cjs')
 
 /**
  * Specs to generate before smoke tests run.
