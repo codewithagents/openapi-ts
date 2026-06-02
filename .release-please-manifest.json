@@ -1,6 +1,6 @@
 {
-  "packages/api-errors": "1.1.0",
-  "packages/openapi-zod-ts": "1.0.0",
-  "packages/openapi-react-query": "3.9.1",
-  "packages/openapi-server": "1.6.0"
+  "packages/api-errors": "2.0.0",
+  "packages/openapi-zod-ts": "2.0.0",
+  "packages/openapi-react-query": "4.0.0",
+  "packages/openapi-server": "2.0.0"
 }

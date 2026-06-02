@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.0.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-react-query-v3.9.1...openapi-react-query-v4.0.0) (2026-06-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* @codewithagents/openapi-gen is renamed to openapi-zod-ts.
+
+### Features
+
+* rename @codewithagents/openapi-gen to openapi-zod-ts@1.0.0 ([#266](https://github.com/codewithagents/openapi-zod-ts/issues/266)) ([f2f69cd](https://github.com/codewithagents/openapi-zod-ts/commit/f2f69cdb9952308490721b1239f44d7fa94d1a4e))
+
 ## [3.9.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-react-query-v3.9.0...openapi-react-query-v3.9.1) (2026-06-02)
 
 
