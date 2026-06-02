@@ -6,10 +6,12 @@ import {
   buildWritableVariantMap,
   resolveBodyRefToWritableName,
   CLIENT_INTERNAL_NAMES,
+  getParamPresence,
 } from '@codewithagents/openapi-gen'
 
 type OperationObject = OpenAPIV3_1.OperationObject
 type ReferenceObject = OpenAPIV3_1.ReferenceObject
+type PathItemObject = OpenAPIV3_1.PathItemObject
 
 export interface HookGenOptions {
   staleTime: number
@@ -565,33 +567,6 @@ function buildMutationHook(
   return lines.join('\n')
 }
 
-// ── hasQueryParams detection ───────────────────────────────────────────────────
-
-function operationHasQueryParams(operation: OperationObject): boolean {
-  const params = operation.parameters as
-    | (OpenAPIV3_1.ParameterObject | ReferenceObject)[]
-    | undefined
-  if (params === undefined) return false
-  return params.some((p) => {
-    if (isRef(p)) return false
-    const param = p as OpenAPIV3_1.ParameterObject
-    return param.in === 'query'
-  })
-}
-
-/** Returns true if any query parameter has required: true */
-function operationHasRequiredQueryParams(operation: OperationObject): boolean {
-  const params = operation.parameters as
-    | (OpenAPIV3_1.ParameterObject | ReferenceObject)[]
-    | undefined
-  if (params === undefined) return false
-  return params.some((p) => {
-    if (isRef(p)) return false
-    const param = p as OpenAPIV3_1.ParameterObject
-    return param.in === 'query' && param.required === true
-  })
-}
-
 // ── Main generator ─────────────────────────────────────────────────────────────
 
 // pre-existing size; decomposition tracked in #244
@@ -634,8 +609,17 @@ export function generateHooks(
         const hookName = uniquifyName('use' + capitalize(funcName), usedHookNames)
         const pathParams = extractPathParams(path)
         const { hasBody, bodyTypeName } = getBodyInfo(operation, writableVariantMap)
-        const hasQueryParams = operationHasQueryParams(operation)
-        const hasRequiredQueryParams = operationHasRequiredQueryParams(operation)
+        // Use getParamPresence from openapi-gen — it resolves $ref parameters and
+        // merges path-item level parameters, exactly mirroring the client generator's
+        // rule: params is present when any query or header param exists; it is required
+        // when at least one of those params is required.
+        const { hasParams, hasRequiredParams } = getParamPresence(
+          pathItem as PathItemObject,
+          operation,
+          spec
+        )
+        const hasQueryParams = hasParams
+        const hasRequiredQueryParams = hasRequiredParams
         const deprecated = operation.deprecated === true
 
         operations.push({

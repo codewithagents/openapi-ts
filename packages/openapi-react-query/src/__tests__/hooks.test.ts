@@ -4,6 +4,72 @@ import { describe, expect, it } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateHooks } from '../plugins/hooks.js'
 
+// ── Bug #259: $ref params — mixed required+optional ───────────────────────────
+
+const refParamsFixturePath = join(
+  import.meta.dirname,
+  '../../__fixtures__/specs/mixed-ref-params.json'
+)
+const refParamsSpec = JSON.parse(
+  readFileSync(refParamsFixturePath, 'utf-8')
+) as OpenAPIV3_1.Document
+const { content: refParamsContent } = generateHooks(refParamsSpec, { staleTime: 0, gcTime: 0 })
+
+describe('generateHooks — bug #259: $ref params with mixed required+optional fields', () => {
+  it('query hook for mixed $ref params emits params as required arg', () => {
+    // getMultipleAlbums: ids (required $ref) + market (optional $ref)
+    // client signature: getMultipleAlbums(params: { ids: string; market?: string }, config?)
+    // The hook must emit `params` (not `params?`) because ids is required.
+    expect(refParamsContent).toContain(
+      'params: Parameters<typeof getMultipleAlbums>[0]'
+    )
+  })
+
+  it('queryOptions factory for mixed $ref params emits params as required arg', () => {
+    expect(refParamsContent).toContain(
+      'params: Parameters<typeof getMultipleAlbums>[0]'
+    )
+  })
+
+  it('queryFn for mixed $ref params passes params to the client', () => {
+    // Must call getMultipleAlbums(params) — not getMultipleAlbums() with 0 args.
+    expect(refParamsContent).toContain('() => getMultipleAlbums(params)')
+  })
+
+  it('key factory call for mixed $ref params includes params', () => {
+    // albumKeys.list(params) — not albumKeys.list()
+    expect(refParamsContent).toContain('albumKeys.list(params)')
+  })
+
+  it('mutation hook for body + required $ref param includes params in variables', () => {
+    // batchCreateAlbums: body + required format param
+    // variables type must include params; mutationFn must pass both body and params.
+    expect(refParamsContent).toContain('body, params')
+    expect(refParamsContent).toContain('batchCreateAlbums(body, params)')
+  })
+
+  it('query hook for all-optional $ref params emits params as optional', () => {
+    // listTracks: market (optional $ref) + limit (optional $ref)
+    // client signature: listTracks(params?: { market?: string; limit?: number }, config?)
+    // The hook must emit `params?` (optional).
+    expect(refParamsContent).toContain(
+      'params?: Parameters<typeof listTracks>[0]'
+    )
+  })
+
+  it('query hook for all-required $ref params emits params as required', () => {
+    // getMultipleArtists: ids (required $ref only)
+    // client signature: getMultipleArtists(params: { ids: string }, config?)
+    expect(refParamsContent).toContain(
+      'params: Parameters<typeof getMultipleArtists>[0]'
+    )
+  })
+
+  it('queryFn for all-required $ref params passes params to the client', () => {
+    expect(refParamsContent).toContain('() => getMultipleArtists(params)')
+  })
+})
+
 // Load fixture directly (no parseSpec — avoids needing openapi-gen dist built)
 const fixturePath = join(import.meta.dirname, '../../__fixtures__/specs/task-hooks.json')
 const spec = JSON.parse(readFileSync(fixturePath, 'utf-8')) as OpenAPIV3_1.Document

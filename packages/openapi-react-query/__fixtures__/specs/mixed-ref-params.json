@@ -1,0 +1,128 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Mixed $ref Params API", "version": "1.0.0" },
+  "paths": {
+    "/albums": {
+      "get": {
+        "operationId": "getMultipleAlbums",
+        "summary": "Get multiple albums — mixed required+optional $ref params",
+        "parameters": [
+          { "$ref": "#/components/parameters/RequiredIds" },
+          { "$ref": "#/components/parameters/OptionalMarket" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Albums",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Album" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "batchCreateAlbums",
+        "summary": "Batch create — body + required $ref param",
+        "parameters": [
+          { "$ref": "#/components/parameters/RequiredFormat" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Album" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Album" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tracks": {
+      "get": {
+        "operationId": "listTracks",
+        "summary": "List tracks — all-optional $ref params",
+        "parameters": [
+          { "$ref": "#/components/parameters/OptionalMarket" },
+          { "$ref": "#/components/parameters/OptionalLimit" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tracks",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Album" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artists": {
+      "get": {
+        "operationId": "getMultipleArtists",
+        "summary": "Get multiple artists — all-required $ref params",
+        "parameters": [
+          { "$ref": "#/components/parameters/RequiredIds" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Artists",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Album" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "RequiredIds": {
+        "name": "ids",
+        "in": "query",
+        "required": true,
+        "schema": { "type": "string" }
+      },
+      "OptionalMarket": {
+        "name": "market",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string" }
+      },
+      "OptionalLimit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "integer" }
+      },
+      "RequiredFormat": {
+        "name": "format",
+        "in": "query",
+        "required": true,
+        "schema": { "type": "string" }
+      }
+    },
+    "schemas": {
+      "Album": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" }
+        }
+      }
+    }
+  }
+}
