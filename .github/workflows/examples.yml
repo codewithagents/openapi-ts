@@ -41,7 +41,7 @@ jobs:
 
       - name: Verify showcase output is up to date
         run: |
-          git diff --exit-code examples/generated/ || (
+          git diff --exit-code examples/generated/ examples/generated-rq/ || (
             echo ""
             echo "Showcase generated output is out of date."
             echo "Run 'pnpm generate' in examples/ and commit the result."
