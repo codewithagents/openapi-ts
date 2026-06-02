@@ -8,7 +8,7 @@ Every package is a `devDependency` or a peer-dep-only tool. Nothing we publish a
 
 ## Packages
 
-### `@codewithagents/api-errors`: ✅ v1.0.6
+### `@codewithagents/api-errors`: ✅ v1.1.0
 
 Maps backend API error responses to form field errors. Framework-agnostic core with React Hook Form adapter.
 
@@ -16,7 +16,7 @@ Maps backend API error responses to form field errors. Framework-agnostic core w
 
 ---
 
-### `@codewithagents/openapi-gen`: ✅ v4.3.2
+### `@codewithagents/openapi-gen`: ✅ v4.9.0
 
 A CLI devDependency that reads an OpenAPI 3.x spec (3.1 primary target, 3.0.x best-effort) and an optional user-owned Zod schema, and generates self-contained TypeScript. No runtime package required; the generated code uses only native `fetch`.
 
@@ -58,7 +58,7 @@ A CLI devDependency that reads an OpenAPI 3.x spec (3.1 primary target, 3.0.x be
 
 ---
 
-### `@codewithagents/openapi-react-query`: ✅ v3.5.2
+### `@codewithagents/openapi-react-query`: ✅ v3.9.0
 
 Separate package on top of `openapi-gen`. Reads the same `openapi.json` and the output of `openapi-gen`, generates React Query v5 hooks.
 
@@ -75,7 +75,7 @@ Generates `hooks.ts`: key factories and `useQuery` hooks for GET endpoints, `use
 
 ---
 
-### `@codewithagents/openapi-server`: ✅ v1.3.2
+### `@codewithagents/openapi-server`: ✅ v1.6.0
 
 Server-side counterpart. Same `openapi.json`, generates a typed service interface and optional framework router. Supports Hono, Express, and Fastify out of the box; `"none"` skips the router entirely and lets you wire the interface to any framework.
 
