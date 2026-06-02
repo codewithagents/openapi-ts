@@ -1,5 +1,39 @@
 # Changelog
 
+## [2.0.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.7.0...openapi-server-v2.0.0) (2026-06-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* @codewithagents/openapi-gen is renamed to openapi-zod-ts.
+* generated files are now Prettier-formatted. Re-generate after upgrading if you run prettier --check on committed output.
+
+### Features
+
+* add @codewithagents/openapi-server package ([#91](https://github.com/codewithagents/openapi-zod-ts/issues/91)) ([44cbe80](https://github.com/codewithagents/openapi-zod-ts/commit/44cbe801317f29d22892ec92ef557189c0dbee2b))
+* **cli:** add --help and --version to all three CLIs ([#178](https://github.com/codewithagents/openapi-zod-ts/issues/178)) ([#203](https://github.com/codewithagents/openapi-zod-ts/issues/203)) ([6f641e0](https://github.com/codewithagents/openapi-zod-ts/commit/6f641e05d3d19c1a4394247c3c079556e8a52274))
+* **cli:** shared cli-core eliminates byte-identical parseCliArgs across packages ([#238](https://github.com/codewithagents/openapi-zod-ts/issues/238)) ([#252](https://github.com/codewithagents/openapi-zod-ts/issues/252)) ([200af1f](https://github.com/codewithagents/openapi-zod-ts/commit/200af1fcb94bb570bc18d79eedfdd3e0125c8d85))
+* **config:** shared config-core + JS config support for react-query/server ([#238](https://github.com/codewithagents/openapi-zod-ts/issues/238)) ([#239](https://github.com/codewithagents/openapi-zod-ts/issues/239)) ([b4559a9](https://github.com/codewithagents/openapi-zod-ts/commit/b4559a96bef3396dbd24ddfec0e2799ee93c7d9d))
+* examples directory — 11 real-world specs, 7 generator bug fixes ([#137](https://github.com/codewithagents/openapi-zod-ts/issues/137)) ([66edd3f](https://github.com/codewithagents/openapi-zod-ts/commit/66edd3feacad868ed24058370c910628ccd7dc5a))
+* **openapi-server:** add Express and Fastify router generation with Zod validation ([a1a9d53](https://github.com/codewithagents/openapi-zod-ts/commit/a1a9d5390ae8584afee183835d0976bae4239d28))
+* **openapi-server:** Zod request validation via input_schema + YAML spec support ([#102](https://github.com/codewithagents/openapi-zod-ts/issues/102)) ([5d9276e](https://github.com/codewithagents/openapi-zod-ts/commit/5d9276e55807e68a3ccce7a85b9950bd90242561))
+* regenerate with Prettier and add vitest unit tests ([#134](https://github.com/codewithagents/openapi-zod-ts/issues/134)) ([1d50c89](https://github.com/codewithagents/openapi-zod-ts/commit/1d50c8915432464bde64067720691431973bf494))
+* rename @codewithagents/openapi-gen to openapi-zod-ts@1.0.0 ([#266](https://github.com/codewithagents/openapi-zod-ts/issues/266)) ([f2f69cd](https://github.com/codewithagents/openapi-zod-ts/commit/f2f69cdb9952308490721b1239f44d7fa94d1a4e))
+* **smoke:** expand to 9 real API requests, run on every push to main ([#144](https://github.com/codewithagents/openapi-zod-ts/issues/144)) ([ba0c7c3](https://github.com/codewithagents/openapi-zod-ts/commit/ba0c7c39c97f4f0a152fed67676346c035de90fd))
+* YAML/Zod pipeline tests + openapi-server Prettier and 1.0.0 ([#133](https://github.com/codewithagents/openapi-zod-ts/issues/133)) ([8ec2f1e](https://github.com/codewithagents/openapi-zod-ts/commit/8ec2f1ec17486fc3645939e515cbb401500927f3))
+
+
+### Bug Fixes
+
+* add consistent package metadata (homepage, bugs, author) across all packages ([#166](https://github.com/codewithagents/openapi-zod-ts/issues/166)) ([dc2c1d3](https://github.com/codewithagents/openapi-zod-ts/commit/dc2c1d327e87dabbe07450a1664ba6158aff82de))
+* **ci:** isolate codecov uploads + expand compat matrix to all 3 generators ([#140](https://github.com/codewithagents/openapi-zod-ts/issues/140)) ([240b79a](https://github.com/codewithagents/openapi-zod-ts/commit/240b79a0360d2f89cc08db56e8629c8c068c07a2))
+* **coverage:** use lcov projectRoot option to emit repo-relative SF paths ([8cefc4f](https://github.com/codewithagents/openapi-zod-ts/commit/8cefc4fa39755c923b97c0938ccec72b3fe3768f))
+* generator handles 127/128 real-world specs + docs update ([#139](https://github.com/codewithagents/openapi-zod-ts/issues/139)) ([07fcd2a](https://github.com/codewithagents/openapi-zod-ts/commit/07fcd2a4c7c9e92b91ea0b3754e9774cf7ff1439))
+* **openapi-server:** validate path/query/header params ([#177](https://github.com/codewithagents/openapi-zod-ts/issues/177)) ([#202](https://github.com/codewithagents/openapi-zod-ts/issues/202)) ([c592234](https://github.com/codewithagents/openapi-zod-ts/commit/c59223487900d3276512ddc3465946148724a03f))
+* repair per-package Codecov badges and add openapi-server coverage ([#97](https://github.com/codewithagents/openapi-zod-ts/issues/97)) ([72b3b50](https://github.com/codewithagents/openapi-zod-ts/commit/72b3b50e6bb0502e21d2ae967ee20f6578fffc86))
+* resolve CodeQL security findings ([1775358](https://github.com/codewithagents/openapi-zod-ts/commit/17753583a2ae32fdd16e45cd476de74119c6a6ba))
+* **security:** escape spec-derived strings in generated code ([#169](https://github.com/codewithagents/openapi-zod-ts/issues/169)) ([35f232d](https://github.com/codewithagents/openapi-zod-ts/commit/35f232dbb6b4baaea652a87f44bbd9f4e2f3046c))
+
 ## [1.6.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.5.0...openapi-server-v1.6.0) (2026-06-02)
 
 

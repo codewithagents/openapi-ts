@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v1.0.0...openapi-zod-ts-v2.0.0) (2026-06-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* @codewithagents/openapi-gen is renamed to openapi-zod-ts.
+
+### Features
+
+* rename @codewithagents/openapi-gen to openapi-zod-ts@1.0.0 ([#266](https://github.com/codewithagents/openapi-zod-ts/issues/266)) ([f2f69cd](https://github.com/codewithagents/openapi-zod-ts/commit/f2f69cdb9952308490721b1239f44d7fa94d1a4e))
+
 ## [4.9.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-gen-v4.9.0...openapi-gen-v4.9.1) (2026-06-02)
 
 
