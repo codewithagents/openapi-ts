@@ -3,7 +3,7 @@ import {
   validateConfigPath,
   validateInputPath,
   validateOutputPath,
-} from '@codewithagents/openapi-gen/config-core'
+} from 'openapi-zod-ts/config-core'
 
 export { validateConfigPath, validateInputPath, validateOutputPath }
 
@@ -14,7 +14,7 @@ export interface ServerConfig {
   output: string
   /** Framework to generate a router for. Default: 'none' */
   framework?: 'hono' | 'express' | 'fastify' | 'none'
-  /** Path to user-owned Zod schema file (same file as openapi-gen's input_schema). Optional. */
+  /** Path to user-owned Zod schema file (same file as openapi-zod-ts's input_schema). Optional. */
   input_schema?: string
 }
 

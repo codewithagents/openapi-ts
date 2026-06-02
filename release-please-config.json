@@ -8,10 +8,10 @@
       "component": "api-errors",
       "changelog-path": "CHANGELOG.md"
     },
-    "packages/openapi-gen": {
+    "packages/openapi-zod-ts": {
       "release-type": "node",
-      "package-name": "@codewithagents/openapi-gen",
-      "component": "openapi-gen",
+      "package-name": "openapi-zod-ts",
+      "component": "openapi-zod-ts",
       "changelog-path": "CHANGELOG.md"
     },
     "packages/openapi-react-query": {

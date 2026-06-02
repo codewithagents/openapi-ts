@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { parseSpec, generateClient, generateTypes } from '@codewithagents/openapi-gen'
+import { parseSpec, generateClient, generateTypes } from 'openapi-zod-ts'
 import { generateHooks } from '../plugins/hooks.js'
 
 const configsDir = resolve(import.meta.dirname, '../../../../examples/configs')

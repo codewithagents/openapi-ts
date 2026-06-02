@@ -1,6 +1,6 @@
 # integration — cross-package test harness
 
-Private package (`private: true`, never published). Verifies that `openapi-gen`, `openapi-react-query`, and `api-errors` work correctly together at runtime — things that TypeScript alone cannot catch.
+Private package (`private: true`, never published). Verifies that `openapi-zod-ts`, `openapi-react-query`, and `api-errors` work correctly together at runtime — things that TypeScript alone cannot catch.
 
 ---
 
@@ -31,14 +31,14 @@ Vitest runs all three test files. No server or database required — MSW interce
 `generated/` is committed so tests can import it directly without a build step. To regenerate after spec or generator changes:
 
 ```bash
-pnpm generate        # runs openapi-gen
+pnpm generate        # runs openapi-zod-ts
 pnpm generate:hooks  # runs openapi-react-query
 ```
 
 Build the upstream packages first:
 
 ```bash
-pnpm --filter @codewithagents/openapi-gen build
+pnpm --filter openapi-zod-ts build
 pnpm --filter @codewithagents/openapi-react-query build
 ```
 

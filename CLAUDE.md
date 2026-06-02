@@ -9,8 +9,8 @@
 | Package | Purpose |
 |---|---|
 | `packages/api-errors` | Map API errors to form field errors |
-| `packages/openapi-gen` | Generate TS models + fetch client + Zod from OpenAPI 3.1 |
-| `packages/openapi-react-query` | Generate React Query v5 hooks (depends on openapi-gen) |
+| `packages/openapi-zod-ts` | Generate TS models + fetch client + Zod from OpenAPI 3.1 |
+| `packages/openapi-react-query` | Generate React Query v5 hooks (depends on openapi-zod-ts) |
 | `packages/integration` | Private cross-package test harness, committed sample output |
 | `examples` | 128 real-world OpenAPI specs — compatibility matrix + 11 showcase specs with committed output |
 
@@ -20,7 +20,7 @@ Run `pnpm fallow:audit` — catches dead code, duplication, and unresolved impor
 ## Key rules
 - **OpenAPI 3.x** — 3.1.x (including 3.1.1) is the primary target; 3.0.x is best-effort
 - **Never commit real/internal API specs** — all fixtures must be fictional
-- Build order matters: `openapi-gen` must be built before `openapi-react-query`
+- Build order matters: `openapi-zod-ts` must be built before `openapi-react-query`
 - `pnpm -r run build` / `pnpm -r run test` / `pnpm -r run lint` at root
 
 ## Release pipeline
@@ -34,7 +34,7 @@ Run `pnpm fallow:audit` — catches dead code, duplication, and unresolved impor
 | Workflow | Triggers | What it does |
 |---|---|---|
 | `CI` | Every PR | Build + Lint + Test |
-| `Examples` | Path-filtered (`packages/openapi-gen/**`, `examples/**`) + weekly | Generate all 128 specs (compat matrix), verify 11 showcase specs haven't drifted, typecheck |
+| `Examples` | Path-filtered (`packages/openapi-zod-ts/**`, `examples/**`) + weekly | Generate all 128 specs (compat matrix), verify 11 showcase specs haven't drifted, typecheck |
 | `E2E` | Every PR | Petstore Playwright tests |
 | `CodeQL` | Every PR | Security scanning |
 

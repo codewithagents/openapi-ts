@@ -1,0 +1,75 @@
+{
+  "name": "openapi-zod-ts",
+  "version": "1.0.0",
+  "description": "Generate TypeScript models, native fetch client and Zod schemas from OpenAPI 3.1, zero runtime footprint",
+  "type": "module",
+  "bin": {
+    "openapi-zod-ts": "./dist/cli.cjs"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./config-core": {
+      "import": "./dist/config-core.js",
+      "types": "./dist/config-core.d.ts"
+    },
+    "./cli-core": {
+      "import": "./dist/cli-core.js",
+      "types": "./dist/cli-core.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -f dist/cli.js dist/cli.js.map dist/cli.d.ts dist/cli.d.ts.map && tsc -p tsconfig.build.json && esbuild src/cli.ts --bundle --platform=node --format=cjs --target=node22 --external:prettier --outfile=dist/cli.cjs && chmod +x dist/cli.cjs",
+    "lint": "tsc -p tsconfig.build.json --noEmit",
+    "test": "vitest run --exclude 'src/__tests__/integration.test.ts'",
+    "test:integration": "vitest run src/__tests__/integration.test.ts",
+    "test:coverage": "vitest run --coverage --exclude 'src/__tests__/integration.test.ts'",
+    "test:mutation": "stryker run",
+    "dev": "tsc -p tsconfig.build.json --watch"
+  },
+  "dependencies": {
+    "@apidevtools/swagger-parser": "^12.1.0",
+    "openapi-types": "catalog:",
+    "prettier": "catalog:"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "catalog:",
+    "@stryker-mutator/vitest-runner": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "esbuild": "catalog:",
+    "fast-check": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "keywords": [
+    "openapi",
+    "openapi-3.1",
+    "codegen",
+    "typescript",
+    "fetch",
+    "zod",
+    "prettier",
+    "zero-dependency",
+    "code-generator",
+    "client-generator"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codewithagents/openapi-zod-ts"
+  },
+  "homepage": "https://openapi.codewithagents.de",
+  "bugs": {
+    "url": "https://github.com/codewithagents/openapi-zod-ts/issues"
+  },
+  "author": "CodeWithAgents (https://codewithagents.de)",
+  "publishConfig": {
+    "access": "public"
+  }
+}

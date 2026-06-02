@@ -25,7 +25,7 @@ pnpm install
 ```
 packages/
   api-errors/       # @codewithagents/api-errors
-  openapi-gen/      # @codewithagents/openapi-gen
+  openapi-zod-ts/      # openapi-zod-ts
 .github/
   workflows/        # CI (build + lint + test) and Release Please
 ```
@@ -37,7 +37,7 @@ packages/
 ### Run tests for a specific package
 
 ```bash
-pnpm --filter @codewithagents/openapi-gen test
+pnpm --filter openapi-zod-ts test
 pnpm --filter @codewithagents/api-errors test
 ```
 
@@ -50,25 +50,25 @@ pnpm test
 ### Run tests with coverage
 
 ```bash
-pnpm --filter @codewithagents/openapi-gen test:coverage
+pnpm --filter openapi-zod-ts test:coverage
 ```
 
 ### Build a package
 
 ```bash
-pnpm --filter @codewithagents/openapi-gen build
+pnpm --filter openapi-zod-ts build
 ```
 
 ### Type-check without emitting
 
 ```bash
-pnpm --filter @codewithagents/openapi-gen lint
+pnpm --filter openapi-zod-ts lint
 ```
 
 ### Update snapshots after intentional output changes
 
 ```bash
-pnpm --filter @codewithagents/openapi-gen test -- -u
+pnpm --filter openapi-zod-ts test -- -u
 ```
 
 ---
@@ -79,12 +79,12 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) with **packa
 
 | Type | When to use |
 |---|---|
-| `feat(openapi-gen): ...` | New feature in openapi-gen |
+| `feat(openapi-zod-ts): ...` | New feature in openapi-zod-ts |
 | `fix(api-errors): ...` | Bug fix in api-errors |
-| `chore(openapi-gen): ...` | Maintenance (deps, config, CI) |
-| `docs(openapi-gen): ...` | Documentation only |
-| `test(openapi-gen): ...` | Adding or fixing tests |
-| `refactor(openapi-gen): ...` | Refactoring with no behaviour change |
+| `chore(openapi-zod-ts): ...` | Maintenance (deps, config, CI) |
+| `docs(openapi-zod-ts): ...` | Documentation only |
+| `test(openapi-zod-ts): ...` | Adding or fixing tests |
+| `refactor(openapi-zod-ts): ...` | Refactoring with no behaviour change |
 
 **Why scopes matter:** An unscoped commit (`feat: ...`) is treated as a change to ALL packages and bumps every package's version. Always scope to the package you changed.
 
@@ -93,7 +93,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) with **packa
 Add `BREAKING CHANGE:` in the commit footer (or `!` after the type) to trigger a major version bump:
 
 ```
-feat(openapi-gen)!: drop TypeScript 5 support
+feat(openapi-zod-ts)!: drop TypeScript 5 support
 
 BREAKING CHANGE: TypeScript 6.0 is now required.
 ```

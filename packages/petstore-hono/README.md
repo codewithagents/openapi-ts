@@ -12,8 +12,8 @@ A complete, runnable full-stack application that shows the entire `@codewithagen
 
 | Layer | Technology | Generated from spec? |
 |---|---|---|
-| TypeScript types | `models.ts` | ✅ `@codewithagents/openapi-gen` |
-| Fetch client | `client.ts` | ✅ `@codewithagents/openapi-gen` |
+| TypeScript types | `models.ts` | ✅ `openapi-zod-ts` |
+| Fetch client | `client.ts` | ✅ `openapi-zod-ts` |
 | React Query hooks | `hooks.ts` | ✅ `@codewithagents/openapi-react-query` |
 | Server interface (framework-agnostic) | `service.ts` | ✅ `@codewithagents/openapi-server` |
 | Router + Zod validation (Hono — demo choice) | `router.ts` | ✅ `@codewithagents/openapi-server` |
@@ -63,7 +63,7 @@ Open `http://localhost:5173` and you'll see a pet management UI. Add a pet, dele
 This is the part that ties everything together. Open `generated/schemas.ts`:
 
 ```ts
-// Bootstrapped by openapi-gen — this file is yours. Never overwritten.
+// Bootstrapped by openapi-zod-ts — this file is yours. Never overwritten.
 import { z } from 'zod'
 
 export const PetSchema = z.object({
@@ -115,7 +115,7 @@ pnpm generate
 ```
 
 This runs all three generators in order:
-1. `openapi-gen` → `models.ts`, `client.ts`, `client-config.ts`, `index.ts`
+1. `openapi-zod-ts` → `models.ts`, `client.ts`, `client-config.ts`, `index.ts`
 2. `openapi-server` → `service.ts`, `router.ts` (with Zod validation wired in)
 3. `openapi-react-query` → `hooks.ts`, `test-utils.ts`
 
@@ -231,7 +231,7 @@ src/
 e2e/
   pets.spec.ts                Playwright tests (browser → Hono → Zod → React)
 
-openapi-gen.config.json       Generator config (client-side files)
+openapi-zod-ts.config.json       Generator config (client-side files)
 openapi-server.config.json    Generator config (server files + Zod validation)
 openapi-react-query.config.json  Generator config (React Query hooks)
 ```
@@ -240,7 +240,7 @@ openapi-react-query.config.json  Generator config (React Query hooks)
 
 ## Generator configs
 
-**`openapi-gen.config.json`**
+**`openapi-zod-ts.config.json`**
 ```json
 {
   "input_openapi": "spec/api.json",
@@ -267,4 +267,4 @@ openapi-react-query.config.json  Generator config (React Query hooks)
 }
 ```
 
-All three share the same spec and output directory. The `input_schema` points both `openapi-gen` and `openapi-server` at the same `schemas.ts`, so client-side and server-side validation use identical rules.
+All three share the same spec and output directory. The `input_schema` points both `openapi-zod-ts` and `openapi-server` at the same `schemas.ts`, so client-side and server-side validation use identical rules.

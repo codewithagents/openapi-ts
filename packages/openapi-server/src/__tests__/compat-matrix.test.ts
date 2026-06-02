@@ -2,7 +2,7 @@
 import { describe, it } from 'vitest'
 import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { parseSpec } from '@codewithagents/openapi-gen'
+import { parseSpec } from 'openapi-zod-ts'
 import { generateService } from '../plugins/service.js'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from '../plugins/router.js'
 

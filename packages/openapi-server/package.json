@@ -24,7 +24,7 @@
     "dev": "tsc -p tsconfig.build.json --watch"
   },
   "dependencies": {
-    "@codewithagents/openapi-gen": "workspace:*",
+    "openapi-zod-ts": "workspace:*",
     "openapi-types": "catalog:",
     "prettier": "catalog:"
   },

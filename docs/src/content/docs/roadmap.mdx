@@ -15,7 +15,7 @@ Maps backend API error responses to form field errors. Framework-agnostic core w
 
 Supported formats: RFC 7807 Problem Details, Spring Boot validation, flat field/message objects, and Axios response wrappers.
 
-### `@codewithagents/openapi-gen` (shipped)
+### `openapi-zod-ts` (shipped)
 
 A CLI `devDependency` that reads an OpenAPI 3.1 spec and an optional user-owned Zod schema, then generates self-contained TypeScript. No runtime package required. The generated client uses only native `fetch`.
 
@@ -32,11 +32,11 @@ Core features shipped:
 
 ### `@codewithagents/openapi-react-query`
 
-A separate package layered on top of `openapi-gen`. Reads the same `openapi.json` and the output of the generator, then produces React Query v5 hooks.
+A separate package layered on top of `openapi-zod-ts`. Reads the same `openapi.json` and the output of the generator, then produces React Query v5 hooks.
 
 - `queryOptions` factories for GET endpoints
 - `useMutation` hooks for write operations
-- Imports from `openapi-gen`'s `client.ts` output
+- Imports from `openapi-zod-ts`'s `client.ts` output
 - Peer dependency: `@tanstack/react-query`
 
 ### Full OpenAPI 3.0 normalization
@@ -47,14 +47,14 @@ OpenAPI 3.0.x is currently supported on a best-effort basis. One known gap: `nul
 
 ### `@codewithagents/openapi-server`
 
-Server-side counterpart to `openapi-gen`. Reads the same `openapi.json` and generates typed Fastify route definitions using the same Zod schemas.
+Server-side counterpart to `openapi-zod-ts`. Reads the same `openapi.json` and generates typed Fastify route definitions using the same Zod schemas.
 
 The full-stack story this enables:
 
 ```
 openapi.json + schemas.ts
-    ├── openapi-gen        → client validates responses with user's Zod schemas
-    └── openapi-gen-server → server validates requests with the same Zod schemas
+    ├── openapi-zod-ts        → client validates responses with user's Zod schemas
+    └── openapi-zod-ts-server → server validates requests with the same Zod schemas
 ```
 
 Peer dependencies: `fastify` and `fastify-type-provider-zod`.

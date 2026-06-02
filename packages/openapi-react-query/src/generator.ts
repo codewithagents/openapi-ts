@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { parseSpec } from '@codewithagents/openapi-gen'
+import { parseSpec } from 'openapi-zod-ts'
 import { loadConfig } from './config.js'
 import { generateHooks } from './plugins/hooks.js'
 import { generateTestUtils } from './plugins/test-utils.js'

@@ -16,7 +16,7 @@ Maps backend API error responses to form field errors. Framework-agnostic core w
 
 ---
 
-### `@codewithagents/openapi-gen`: ✅ v4.9.0
+### `openapi-zod-ts`: ✅ v4.9.0
 
 A CLI devDependency that reads an OpenAPI 3.x spec (3.1 primary target, 3.0.x best-effort) and an optional user-owned Zod schema, and generates self-contained TypeScript. No runtime package required; the generated code uses only native `fetch`.
 
@@ -34,8 +34,8 @@ A CLI devDependency that reads an OpenAPI 3.x spec (3.1 primary target, 3.0.x be
 **Usage:**
 ```json
 {
-  "scripts": { "generate": "openapi-gen" },
-  "devDependencies": { "@codewithagents/openapi-gen": "^1.0.0" }
+  "scripts": { "generate": "openapi-zod-ts" },
+  "devDependencies": { "openapi-zod-ts": "^1.0.0" }
 }
 ```
 ```json
@@ -60,18 +60,18 @@ A CLI devDependency that reads an OpenAPI 3.x spec (3.1 primary target, 3.0.x be
 
 ### `@codewithagents/openapi-react-query`: ✅ v3.9.0
 
-Separate package on top of `openapi-gen`. Reads the same `openapi.json` and the output of `openapi-gen`, generates React Query v5 hooks.
+Separate package on top of `openapi-zod-ts`. Reads the same `openapi.json` and the output of `openapi-zod-ts`, generates React Query v5 hooks.
 
 ```json
 {
   "devDependencies": {
-    "@codewithagents/openapi-gen": "^4.0.0",
+    "openapi-zod-ts": "^4.0.0",
     "@codewithagents/openapi-react-query": "^3.0.0"
   }
 }
 ```
 
-Generates `hooks.ts`: key factories and `useQuery` hooks for GET endpoints, `useMutation` hooks for writes. Imports from `openapi-gen`'s `client.ts` output. Peer dep: `@tanstack/react-query`.
+Generates `hooks.ts`: key factories and `useQuery` hooks for GET endpoints, `useMutation` hooks for writes. Imports from `openapi-zod-ts`'s `client.ts` output. Peer dep: `@tanstack/react-query`.
 
 ---
 
@@ -82,7 +82,7 @@ Server-side counterpart. Same `openapi.json`, generates a typed service interfac
 **The full-stack story:**
 ```
 openapi.json + schemas.ts
-    ├── openapi-gen        → client validates responses with user's Zod schemas
+    ├── openapi-zod-ts        → client validates responses with user's Zod schemas
     └── openapi-server     → server validates requests with same Zod schemas
 ```
 

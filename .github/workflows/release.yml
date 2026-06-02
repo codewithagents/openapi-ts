@@ -5,8 +5,8 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      publish_openapi_gen:
-        description: 'Re-publish @codewithagents/openapi-gen (for failed release recovery)'
+      publish_openapi_zod_ts:
+        description: 'Re-publish openapi-zod-ts (for failed release recovery)'
         type: boolean
         default: false
       publish_api_errors:
@@ -33,8 +33,8 @@ jobs:
     outputs:
       api-errors--release_created: ${{ steps.release.outputs['packages/api-errors--release_created'] }}
       api-errors--version: ${{ steps.release.outputs['packages/api-errors--version'] }}
-      openapi-gen--release_created: ${{ steps.release.outputs['packages/openapi-gen--release_created'] }}
-      openapi-gen--version: ${{ steps.release.outputs['packages/openapi-gen--version'] }}
+      openapi-zod-ts--release_created: ${{ steps.release.outputs['packages/openapi-zod-ts--release_created'] }}
+      openapi-zod-ts--version: ${{ steps.release.outputs['packages/openapi-zod-ts--version'] }}
       openapi-react-query--release_created: ${{ steps.release.outputs['packages/openapi-react-query--release_created'] }}
       openapi-react-query--version: ${{ steps.release.outputs['packages/openapi-react-query--version'] }}
       openapi-server--release_created: ${{ steps.release.outputs['packages/openapi-server--release_created'] }}
@@ -79,10 +79,10 @@ jobs:
       - run: npm publish --access public --provenance
         working-directory: packages/api-errors
 
-  publish-openapi-gen:
-    name: Publish @codewithagents/openapi-gen
+  publish-openapi-zod-ts:
+    name: Publish openapi-zod-ts
     needs: release-please
-    if: ${{ needs.release-please.outputs['openapi-gen--release_created'] || inputs.publish_openapi_gen }}
+    if: ${{ needs.release-please.outputs['openapi-zod-ts--release_created'] || inputs.publish_openapi_zod_ts }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -106,15 +106,15 @@ jobs:
       - name: Remove injected auth token (npm will use OIDC Trusted Publishing)
         run: npm config delete //registry.npmjs.org/:_authToken
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @codewithagents/openapi-gen build
+      - run: pnpm --filter openapi-zod-ts build
       # pnpm pack resolves catalog: and workspace:* references to actual version ranges
       # before creating the tarball. npm publish then publishes the pre-packed tarball
       # with OIDC Trusted Publishing auth. Using npm publish directly leaves catalog:
       # unresolved in the published package.json, causing EUNSUPPORTEDPROTOCOL for consumers.
       - run: pnpm pack
-        working-directory: packages/openapi-gen
+        working-directory: packages/openapi-zod-ts
       - run: npm publish --access public --provenance *.tgz
-        working-directory: packages/openapi-gen
+        working-directory: packages/openapi-zod-ts
 
   publish-openapi-react-query:
     name: Publish @codewithagents/openapi-react-query
@@ -143,7 +143,7 @@ jobs:
       - name: Remove injected auth token (npm will use OIDC Trusted Publishing)
         run: npm config delete //registry.npmjs.org/:_authToken
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @codewithagents/openapi-gen build
+      - run: pnpm --filter openapi-zod-ts build
       - run: pnpm --filter @codewithagents/openapi-react-query build
       # pnpm pack resolves workspace:* references to actual versions before creating the tarball.
       # npm publish then publishes that pre-packed tarball with OIDC Trusted Publishing auth.
@@ -175,7 +175,7 @@ jobs:
       - name: Remove injected auth token (npm will use OIDC Trusted Publishing)
         run: npm config delete //registry.npmjs.org/:_authToken
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @codewithagents/openapi-gen build
+      - run: pnpm --filter openapi-zod-ts build
       - run: pnpm --filter @codewithagents/openapi-server build
       # pnpm pack resolves workspace:* references to actual versions before creating the tarball.
       - run: pnpm pack

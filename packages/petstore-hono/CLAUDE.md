@@ -13,7 +13,7 @@ Not published to npm (`private: true`). No unit tests — integration-level test
 
 | Config | Generates |
 |---|---|
-| `openapi-gen.config.json` | `models.ts`, `client.ts`, `client-config.ts`, `index.ts` |
+| `openapi-zod-ts.config.json` | `models.ts`, `client.ts`, `client-config.ts`, `index.ts` |
 | `openapi-server.config.json` | `service.ts`, `router.ts` (Hono + Zod validation) |
 | `openapi-react-query.config.json` | `hooks.ts`, `test-utils.ts` |
 

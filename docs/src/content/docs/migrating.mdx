@@ -5,7 +5,7 @@ description: Switch to the CodeWithAgents OpenAPI toolchain from another TypeScr
 
 import { Steps, Tabs, TabItem, Aside, Card, CardGrid } from '@astrojs/starlight/components'
 
-This guide is for developers who already have a TypeScript project with an OpenAPI generator set up and want to switch to `@codewithagents/openapi-gen`. It covers the mental model shift, the step-by-step switch, and what to watch for.
+This guide is for developers who already have a TypeScript project with an OpenAPI generator set up and want to switch to `openapi-zod-ts`. It covers the mental model shift, the step-by-step switch, and what to watch for.
 
 ## The mental model shift
 
@@ -14,7 +14,7 @@ Many OpenAPI generators follow a pattern where the generated code depends on a r
 This toolchain works differently:
 
 - **Generated files are owned code.** `models.ts`, `client.ts`, `client-config.ts`, and (optionally) `schemas.ts` live in your repository. They are plain TypeScript you can read, extend, and commit like any other file.
-- **Zero runtime footprint.** The generator (`@codewithagents/openapi-gen`) is a `devDependency`. The generated `client.ts` uses only native `fetch`. Nothing is added to your production bundle that your project did not already have.
+- **Zero runtime footprint.** The generator (`openapi-zod-ts`) is a `devDependency`. The generated `client.ts` uses only native `fetch`. Nothing is added to your production bundle that your project did not already have.
 - **Runtime validation is opt-in and user-owned.** If you add `input_schema` to your config, the generator bootstraps a Zod `schemas.ts` file once, then never overwrites it. You add error messages and business rules. The generator warns on drift but your schema stays yours.
 - **Requests and responses are validated at runtime** when Zod integration is enabled: the client calls `Schema.parse(body)` before sending and `Schema.parse(await res.json())` after receiving.
 
@@ -36,10 +36,10 @@ This toolchain works differently:
 
    Delete the old generated output directory and any existing generator config files (`orval.config.ts`, `openapi-ts.config.ts`, etc.).
 
-2. **Install `@codewithagents/openapi-gen`.**
+2. **Install `openapi-zod-ts`.**
 
    ```bash
-   npm install -D @codewithagents/openapi-gen
+   npm install -D openapi-zod-ts
    ```
 
    If you also want React Query hooks, add the hooks package:
@@ -50,7 +50,7 @@ This toolchain works differently:
 
 3. **Create the config file.**
 
-   Create `openapi-gen.config.json` in your project root:
+   Create `openapi-zod-ts.config.json` in your project root:
 
    ```json
    {
@@ -82,7 +82,7 @@ This toolchain works differently:
 4. **Run the generator.**
 
    ```bash
-   npx openapi-gen
+   npx openapi-zod-ts
    ```
 
    This writes the following files to your `output` directory:
@@ -122,7 +122,7 @@ This toolchain works differently:
    ```json
    {
      "scripts": {
-       "generate": "openapi-gen"
+       "generate": "openapi-zod-ts"
      }
    }
    ```
@@ -163,7 +163,7 @@ This toolchain works differently:
   </TabItem>
   <TabItem label="After">
     ```json
-    // openapi-gen.config.json
+    // openapi-zod-ts.config.json
     {
       "input_openapi": "./openapi.json",
       "output": "./src/api"
@@ -174,10 +174,10 @@ This toolchain works differently:
     // package.json
     {
       "scripts": {
-        "generate": "openapi-gen"
+        "generate": "openapi-zod-ts"
       },
       "devDependencies": {
-        "@codewithagents/openapi-gen": "^1.0.0"
+        "openapi-zod-ts": "^1.0.0"
       }
     }
     ```
@@ -194,7 +194,7 @@ This toolchain works differently:
 
 **Runtime validation.** Add `input_schema` to get Zod validation on every request and response, with schemas you control and can extend with business rules.
 
-**Predictable re-generation.** Running `npx openapi-gen` again overwrites `models.ts`, `client.ts`, `client-config.ts`, and `index.ts`. Your `schemas.ts` is never overwritten.
+**Predictable re-generation.** Running `npx openapi-zod-ts` again overwrites `models.ts`, `client.ts`, `client-config.ts`, and `index.ts`. Your `schemas.ts` is never overwritten.
 
 </Aside>
 
@@ -223,7 +223,7 @@ This toolchain works differently:
   <Card title="Types and fetch client" icon="document">
     Complete configuration reference, generated file details, and advanced usage.
 
-    [openapi-gen guide](/openapi-gen)
+    [openapi-zod-ts guide](/openapi-zod-ts)
 
   </Card>
   <Card title="React Query hooks" icon="seti:react">

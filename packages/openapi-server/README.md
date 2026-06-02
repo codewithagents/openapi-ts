@@ -26,7 +26,7 @@ pnpm add -D @codewithagents/openapi-server
 npm install -D @codewithagents/openapi-server
 ```
 
-Requires [`@codewithagents/openapi-gen`](../openapi-gen). Run both generators together.
+Requires [`openapi-zod-ts`](../openapi-zod-ts). Run both generators together.
 
 ---
 
@@ -55,10 +55,10 @@ npx openapi-server
 | `service.ts` | TypeScript interface, one method per API operation |
 | `router.ts` | `createRouter(service)` factory, mounts every route on a Hono app |
 
-Run `openapi-gen` first (or together) so `models.ts` exists before `service.ts` imports from it:
+Run `openapi-zod-ts` first (or together) so `models.ts` exists before `service.ts` imports from it:
 
 ```bash
-npx openapi-gen && npx openapi-server
+npx openapi-zod-ts && npx openapi-server
 ```
 
 Or add to `package.json`:
@@ -66,7 +66,7 @@ Or add to `package.json`:
 ```json
 {
   "scripts": {
-    "generate": "openapi-gen && openapi-server"
+    "generate": "openapi-zod-ts && openapi-server"
   }
 }
 ```
@@ -241,7 +241,7 @@ Relative paths in the config resolve from the config file's directory.
 
 See the [Zod validation](https://openapi.codewithagents.de/openapi-server#zod-validation-input_schema) section in the docs for the two-pass generation flow and schema naming convention.
 
-Point `input_schema` at the same `schemas.ts` you use with `@codewithagents/openapi-gen`. The server generator adds runtime validation to every route that receives a request body:
+Point `input_schema` at the same `schemas.ts` you use with `openapi-zod-ts`. The server generator adds runtime validation to every route that receives a request body:
 
 **Config:**
 
@@ -278,7 +278,7 @@ Invalid requests get a structured `422` response instead of reaching your servic
 }
 ```
 
-**Same schemas, both sides of the wire**: `openapi-gen` validates outgoing requests in the browser; `openapi-server` validates incoming requests on the server. One `schemas.ts`, one source of truth.
+**Same schemas, both sides of the wire**: `openapi-zod-ts` validates outgoing requests in the browser; `openapi-server` validates incoming requests on the server. One `schemas.ts`, one source of truth.
 
 **Drift detection**: if schemas diverge from the spec (extra schema, missing schema), the generator warns to stderr. Builds still succeed; the warning is advisory.
 

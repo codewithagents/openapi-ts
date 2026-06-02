@@ -5,7 +5,7 @@
     "examples/generated-rq/**",
     "packages/*/dist/**",
     "packages/*/generated/**",
-    "packages/openapi-gen/src/__fixtures__/**",
+    "packages/openapi-zod-ts/src/__fixtures__/**",
     "packages/petstore-hono/**"
   ],
   "ignoreUnresolvedImports": ["**/generated/dnd5e/**"],

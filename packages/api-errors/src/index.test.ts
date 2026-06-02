@@ -425,7 +425,7 @@ describe('extractFieldErrors — RFC 9457 detail', () => {
 })
 
 // ---------------------------------------------------------------------------
-// ApiError body unwrapping (openapi-gen integration)
+// ApiError body unwrapping (openapi-zod-ts integration)
 // ---------------------------------------------------------------------------
 
 describe('extractFieldErrors — ApiError body unwrapping', () => {

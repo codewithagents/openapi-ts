@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateHooks } from '../plugins/hooks.js'
-import { generateClient } from '@codewithagents/openapi-gen'
+import { generateClient } from 'openapi-zod-ts'
 
 // Load fixture: Item schema has readOnly (id) and writeOnly (secret) properties.
 // This triggers the XWritable variant. The client function that takes Item as a

@@ -1,8 +1,8 @@
 /**
- * Integration tests: @codewithagents/openapi-gen + @codewithagents/api-errors
+ * Integration tests: openapi-zod-ts + @codewithagents/api-errors
  *
  * These tests prove that:
- *  1. The generated client (from openapi-gen) throws ApiError on non-2xx responses
+ *  1. The generated client (from openapi-zod-ts) throws ApiError on non-2xx responses
  *  2. extractFieldErrors (from api-errors) can consume that ApiError directly
  *
  * They serve double duty as living sample code showing the recommended pattern

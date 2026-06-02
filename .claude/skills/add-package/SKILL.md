@@ -116,7 +116,7 @@ publish_<name_underscored>:
 <name>--version: ${{ steps.release.outputs['packages/<name>--version'] }}
 ```
 
-**Add publish job** (copy `publish-openapi-gen` and adapt):
+**Add publish job** (copy `publish-openapi-zod-ts` and adapt):
 ```yaml
 publish-<name>:
   name: Publish @codewithagents/<name>
@@ -127,7 +127,7 @@ publish-<name>:
     contents: read
     id-token: write
   steps:
-    # Copy action pins from publish-openapi-gen job in release.yml — keep them identical
+    # Copy action pins from publish-openapi-zod-ts job in release.yml — keep them identical
     - uses: actions/checkout@...
     - uses: pnpm/action-setup@...
     - uses: actions/setup-node@... # node-version: 22, cache: pnpm, registry-url: https://registry.npmjs.org
@@ -135,7 +135,7 @@ publish-<name>:
     - run: npm config delete //registry.npmjs.org/:_authToken  # remove injected token
     - run: pnpm install --frozen-lockfile
     - run: pnpm --filter @codewithagents/<name> build
-    # Add extra build steps for workspace deps if needed (e.g. openapi-gen)
+    # Add extra build steps for workspace deps if needed (e.g. openapi-zod-ts)
     - run: npm publish --access public --provenance
       working-directory: packages/<name>
 ```

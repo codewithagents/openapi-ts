@@ -15,9 +15,9 @@ for config in "$SCRIPT_DIR/configs/"*.json; do
   # Only regenerate specs whose output directory is committed to git
   if git -C "$REPO_ROOT" ls-files --error-unmatch "$output_dir" > /dev/null 2>&1; then
     echo "Generating $name..."
-    node "$REPO_ROOT/packages/openapi-gen/dist/cli.cjs" --config "$config"
+    node "$REPO_ROOT/packages/openapi-zod-ts/dist/cli.cjs" --config "$config"
 
-    # Regenerate generated-rq/<name>: client (openapi-gen) + hooks (openapi-react-query).
+    # Regenerate generated-rq/<name>: client (openapi-zod-ts) + hooks (openapi-react-query).
     # The hooks import from ./client.js, so both must land in the same directory.
     rq_output="$SCRIPT_DIR/generated-rq/$name"
     echo "Generating generated-rq/$name..."
@@ -43,7 +43,7 @@ for config in "$SCRIPT_DIR/configs/"*.json; do
     gen_config="$GEN_TMP/$name.gen.json"
     printf '{\n  "input_openapi": "%s",\n  "output": "%s"\n}\n' \
       "$spec_file" "$rq_output" > "$gen_config"
-    node "$REPO_ROOT/packages/openapi-gen/dist/cli.cjs" --config "$gen_config"
+    node "$REPO_ROOT/packages/openapi-zod-ts/dist/cli.cjs" --config "$gen_config"
 
     # Step 2: generate hooks + test-utils into generated-rq/<name>.
     rq_config="$GEN_TMP/$name.rq.json"

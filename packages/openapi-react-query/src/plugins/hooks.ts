@@ -7,7 +7,7 @@ import {
   resolveBodyRefToWritableName,
   CLIENT_INTERNAL_NAMES,
   getParamPresence,
-} from '@codewithagents/openapi-gen'
+} from 'openapi-zod-ts'
 
 type OperationObject = OpenAPIV3_1.OperationObject
 type ReferenceObject = OpenAPIV3_1.ReferenceObject
@@ -597,7 +597,7 @@ export function generateHooks(
         if (operation === undefined) continue
 
         // Derive and deduplicate the client function name. Must mirror the dedup
-        // logic in openapi-gen/client.ts so the import list stays in sync.
+        // logic in openapi-zod-ts/client.ts so the import list stays in sync.
         let funcName: string
         if (operation.operationId !== undefined) {
           funcName = sanitizeOperationId(operation.operationId)
@@ -609,7 +609,7 @@ export function generateHooks(
         const hookName = uniquifyName('use' + capitalize(funcName), usedHookNames)
         const pathParams = extractPathParams(path)
         const { hasBody, bodyTypeName } = getBodyInfo(operation, writableVariantMap)
-        // Use getParamPresence from openapi-gen — it resolves $ref parameters and
+        // Use getParamPresence from openapi-zod-ts — it resolves $ref parameters and
         // merges path-item level parameters, exactly mirroring the client generator's
         // rule: params is present when any query or header param exists; it is required
         // when at least one of those params is required.
