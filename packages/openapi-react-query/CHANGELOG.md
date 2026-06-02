@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.9.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-react-query-v3.9.0...openapi-react-query-v3.9.1) (2026-06-02)
+
+
+### Bug Fixes
+
+* **openapi-react-query:** emit and thread params arg when client requires it ([#259](https://github.com/codewithagents/openapi-zod-ts/issues/259)) ([#260](https://github.com/codewithagents/openapi-zod-ts/issues/260)) ([0619b7f](https://github.com/codewithagents/openapi-zod-ts/commit/0619b7f7b7a4a2f125355009fa45ff15b3434726))
+* **openapi-react-query:** mirror client operationId uniquification in hooks ([#254](https://github.com/codewithagents/openapi-zod-ts/issues/254)) ([#257](https://github.com/codewithagents/openapi-zod-ts/issues/257)) ([d128037](https://github.com/codewithagents/openapi-zod-ts/commit/d128037dfd0d1e08498e9981afbd86e162222d40))
+
 ## [3.9.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-react-query-v3.8.0...openapi-react-query-v3.9.0) (2026-06-02)
 
 
