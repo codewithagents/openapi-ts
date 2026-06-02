@@ -10,6 +10,18 @@ import { parseCliArgs } from './cli-args.js'
 // This file is excluded from tsc (tsconfig.build.json) and processed only by esbuild.
 declare const __dirname: string
 
+// Deprecation notice: this package has been renamed to "openapi-zod-ts".
+// Printed to stderr so it never pollutes generated stdout.
+console.warn(
+  [
+    '',
+    '⚠️  @codewithagents/openapi-gen has been renamed to "openapi-zod-ts".',
+    '   This package is deprecated and will not receive further updates.',
+    '   Please switch:  npm install -D openapi-zod-ts',
+    '',
+  ].join('\n')
+)
+
 const parsed = parseCliArgs(process.argv, process.cwd())
 
 if (parsed.action === 'help') {

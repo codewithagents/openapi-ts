@@ -1,5 +1,12 @@
 # @codewithagents/openapi-gen
 
+> ⚠️ **This package has been renamed to [`openapi-zod-ts`](https://npmjs.com/package/openapi-zod-ts).**
+> It is deprecated and will not receive further updates. Please switch:
+>
+> ```bash
+> npm install -D openapi-zod-ts
+> ```
+
 [![npm](https://img.shields.io/npm/v/@codewithagents/openapi-gen.svg)](https://npmjs.com/package/@codewithagents/openapi-gen)
 [![CI](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=openapi-gen)](https://codecov.io/gh/codewithagents/openapi-zod-ts)
