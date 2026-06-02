@@ -5,6 +5,7 @@ import {
   uniquifyName,
   buildWritableVariantMap,
   resolveBodyRefToWritableName,
+  CLIENT_INTERNAL_NAMES,
 } from '@codewithagents/openapi-gen'
 
 type OperationObject = OpenAPIV3_1.OperationObject
@@ -608,7 +609,10 @@ export function generateHooks(
 
   // Collect all operations
   const operations: OperationMeta[] = []
-  const usedFuncNames = new Set<string>()
+  // Pre-seed with client-internal names so that operation names derived from the spec
+  // receive the same numeric suffix that the client generator assigns. This keeps hook
+  // imports in sync with client exports (e.g. getConfig -> getConfig_2, fetch -> fetch_2).
+  const usedFuncNames = new Set<string>(CLIENT_INTERNAL_NAMES)
   const usedHookNames = new Set<string>()
 
   if (paths !== undefined) {

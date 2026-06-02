@@ -1357,6 +1357,25 @@ export function hasCookieAuth(spec: OpenAPIV3_1.Document): boolean {
   )
 }
 
+/**
+ * Names that are defined or imported at file scope in the generated client output.
+ * Any spec-derived operation whose sanitized name matches one of these receives a
+ * numeric suffix (_2, _3, ...) so it never shadows a client-internal identifier.
+ *
+ * Exported so the hooks generator can pre-seed its own uniquification pass with the
+ * same set, keeping both generators in sync without duplicating this list.
+ */
+export const CLIENT_INTERNAL_NAMES: ReadonlySet<string> = new Set([
+  'getConfig', // imported from ./client-config.js; called inside every request helper
+  'fetch', // global built-in used in _request; typeof fetch drives _FetchResponse
+  'ApiError', // exported class defined in the generated file
+  'ClientConfig', // re-exported type from ./client-config.js
+  '_request', // private helper
+  '_requestForm', // private helper
+  '_buildSignal', // private helper
+  '_FetchResponse', // private type alias
+])
+
 // fallow-ignore-next-line complexity
 export function generateClient(
   spec: OpenAPIV3_1.Document,
@@ -1381,26 +1400,8 @@ export function generateClient(
   // Pre-seed used names with client-internal identifiers so that spec-derived
   // operation names cannot collide with them. Any spec operation whose sanitized
   // name matches a reserved identifier will receive a numeric suffix (_2, _3…).
-  //
-  // Reserved because they are defined/imported at file scope in the generated output:
-  //   getConfig   - imported from ./client-config.js, called inside every request helper
-  //   fetch       - global built-in used in _request; typeof fetch drives _FetchResponse
-  //   ApiError    - exported class defined in the same file
-  //   ClientConfig - re-exported type from ./client-config.js
-  //   _request    - private helper (underscore prefix, included for completeness)
-  //   _requestForm - private helper
-  //   _buildSignal - private helper
-  //   _FetchResponse - private type alias
-  const CLIENT_INTERNAL_NAMES = new Set([
-    'getConfig',
-    'fetch',
-    'ApiError',
-    'ClientConfig',
-    '_request',
-    '_requestForm',
-    '_buildSignal',
-    '_FetchResponse',
-  ])
+  // The CLIENT_INTERNAL_NAMES set is defined at module level and exported so that
+  // the hooks generator can reuse the same set (single source of truth).
   const usedFuncNames = new Set<string>(CLIENT_INTERNAL_NAMES)
 
   if (paths !== undefined) {
