@@ -260,12 +260,18 @@ function getReturnType(
   isArray: boolean
   isVoid: boolean
   bodyKind: ResponseBodyKind
+  mayBeEmpty: boolean
 } {
   const responses = operation.responses as
     | Record<string, ResponseObject | ReferenceObject>
     | undefined
   if (responses === undefined)
-    return { typeName: 'unknown', isArray: false, isVoid: false, bodyKind: 'json' }
+    return { typeName: 'unknown', isArray: false, isVoid: false, bodyKind: 'json', mayBeEmpty: false }
+
+  // When a 204 response is also present alongside a 200/201 body response, the
+  // operation can return an empty body at runtime. Flag this so callers can emit
+  // a no-content guard before parsing JSON.
+  const has204 = responses['204'] !== undefined
 
   // Check 200 first, then 201
   for (const code of ['200', '201']) {
@@ -285,11 +291,11 @@ function getReturnType(
     if (picked.kind === 'json') {
       if (picked.entry.schema === undefined) continue
       const resolved = resolveSchema(picked.entry.schema, spec)
-      return { ...resolved, isVoid: false, bodyKind: 'json' }
+      return { ...resolved, isVoid: false, bodyKind: 'json', mayBeEmpty: has204 }
     }
 
     if (picked.kind === 'text') {
-      return { typeName: 'string', isArray: false, isVoid: false, bodyKind: 'text' }
+      return { typeName: 'string', isArray: false, isVoid: false, bodyKind: 'text', mayBeEmpty: has204 }
     }
 
     if (picked.kind === 'event-stream') {
@@ -298,20 +304,21 @@ function getReturnType(
         isArray: false,
         isVoid: false,
         bodyKind: 'event-stream',
+        mayBeEmpty: has204,
       }
     }
 
     // binary: application/octet-stream, application/pdf, image/*, application/sdp, etc.
-    return { typeName: 'Blob', isArray: false, isVoid: false, bodyKind: 'binary' }
+    return { typeName: 'Blob', isArray: false, isVoid: false, bodyKind: 'binary', mayBeEmpty: has204 }
   }
 
   // Check for 204 (no content) or no successful response
-  if (responses['204'] !== undefined || Object.keys(responses).length === 0) {
-    return { typeName: 'void', isArray: false, isVoid: true, bodyKind: 'void' }
+  if (has204 || Object.keys(responses).length === 0) {
+    return { typeName: 'void', isArray: false, isVoid: true, bodyKind: 'void', mayBeEmpty: false }
   }
 
   // No recognized success response body
-  return { typeName: 'void', isArray: false, isVoid: true, bodyKind: 'void' }
+  return { typeName: 'void', isArray: false, isVoid: true, bodyKind: 'void', mayBeEmpty: false }
 }
 
 function resolveParamRef(
@@ -1205,7 +1212,7 @@ function generateFunctionCode(
   queryParams: QueryParam[],
   headerParams: HeaderParam[],
   bodyInfo: RequestBodyInfo | undefined,
-  returnType: { typeName: string; isArray: boolean; isVoid: boolean; bodyKind: ResponseBodyKind },
+  returnType: { typeName: string; isArray: boolean; isVoid: boolean; bodyKind: ResponseBodyKind; mayBeEmpty: boolean },
   deprecated: boolean,
   throwsTags: string[],
   options?: ClientOptions,
@@ -1244,11 +1251,16 @@ function generateFunctionCode(
   sigParts.push(`config?: Partial<ClientConfig>`)
 
   // For non-json body kinds, isArray is always false; the typeName is the full type string.
+  // When mayBeEmpty, the operation can return a 204 at runtime: union the body type with undefined.
   const returnTs = returnType.isVoid
     ? 'Promise<void>'
     : returnType.isArray
-      ? `Promise<${returnType.typeName}[]>`
-      : `Promise<${returnType.typeName}>`
+      ? returnType.mayBeEmpty
+        ? `Promise<${returnType.typeName}[] | undefined>`
+        : `Promise<${returnType.typeName}[]>`
+      : returnType.mayBeEmpty
+        ? `Promise<${returnType.typeName} | undefined>`
+        : `Promise<${returnType.typeName}>`
 
   // Feature 1 + 4: JSDoc block with @deprecated and/or @throws tags
   const hasJsDoc = deprecated || throwsTags.length > 0
@@ -1379,15 +1391,21 @@ function generateFunctionCode(
   if (!returnType.isVoid) {
     const kind = returnType.bodyKind
     if (kind === 'text') {
+      // Guard against 204 no-content before reading the body
+      if (returnType.mayBeEmpty) lines.push(`  if (res.status === 204) return undefined`)
       lines.push(`  return res.text()`)
     } else if (kind === 'binary') {
+      if (returnType.mayBeEmpty) lines.push(`  if (res.status === 204) return undefined`)
       lines.push(`  return res.blob()`)
     } else if (kind === 'event-stream') {
       // Full SSE parsing (EventSource / TransformStream) is tracked separately.
       // Expose the raw ReadableStream so callers can implement their own consumer.
+      if (returnType.mayBeEmpty) lines.push(`  if (res.status === 204) return undefined`)
       lines.push(`  return res.body`)
     } else {
       // json kind: apply Zod validation when schema-enhanced, otherwise plain res.json()
+      // Guard against 204 no-content: calling res.json() on an empty body throws.
+      if (returnType.mayBeEmpty) lines.push(`  if (res.status === 204) return undefined`)
       if (
         options?.schemaNames !== undefined &&
         responseSchemaName !== undefined &&
