@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.10.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-react-query-v3.10.0...openapi-react-query-v3.10.1) (2026-06-03)
+
+
+### Bug Fixes
+
+* **react-query:** correct key-factory singularization for -ies/-sses, fixes [#273](https://github.com/codewithagents/openapi-zod-ts/issues/273) ([888718a](https://github.com/codewithagents/openapi-zod-ts/commit/888718abe600803675964e8c7e3782f95811a7fb))
+
 ## [3.10.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-react-query-v3.9.1...openapi-react-query-v3.10.0) (2026-06-03)
 
 

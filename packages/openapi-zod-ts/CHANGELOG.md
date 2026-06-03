@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v1.0.0...openapi-zod-ts-v1.0.1) (2026-06-03)
+
+
+### Bug Fixes
+
+* **client:** guard against 204 no-content before res.json(), fixes [#272](https://github.com/codewithagents/openapi-zod-ts/issues/272) ([25320bd](https://github.com/codewithagents/openapi-zod-ts/commit/25320bd5bf4f5439448585f4a3b50ad1b6e395ed))
+
 ## 1.0.0 (2026-06-03)
 
 
