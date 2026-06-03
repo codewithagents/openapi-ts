@@ -184,7 +184,7 @@ export const topicKeys = {
   detail: (id: string) => ['topics', id] as const,
 }
 
-export const contactPropertieKeys = {
+export const contactPropertyKeys = {
   all: () => ['contact-properties'] as const,
   list: (params?: Parameters<typeof getContactProperties>[0]) =>
     ['contact-properties', 'list', params] as const,
@@ -645,7 +645,7 @@ export function getContactPropertiesQueryOptions(
   >
 ) {
   return queryOptions<Awaited<ReturnType<typeof getContactProperties>>, ApiError>({
-    queryKey: contactPropertieKeys.list(params),
+    queryKey: contactPropertyKeys.list(params),
     queryFn: () => getContactProperties(params),
     staleTime: 0,
     gcTime: 300000,
@@ -661,7 +661,7 @@ export function getContactPropertiesByIdQueryOptions(
   >
 ) {
   return queryOptions<Awaited<ReturnType<typeof getContactPropertiesById>>, ApiError>({
-    queryKey: contactPropertieKeys.detail(id),
+    queryKey: contactPropertyKeys.detail(id),
     queryFn: () => getContactPropertiesById(id),
     staleTime: 0,
     gcTime: 300000,
@@ -1280,7 +1280,7 @@ export function useGetContactProperties(
   >
 ) {
   return useQuery<Awaited<ReturnType<typeof getContactProperties>>, ApiError>({
-    queryKey: contactPropertieKeys.list(params),
+    queryKey: contactPropertyKeys.list(params),
     queryFn: () => getContactProperties(params),
     staleTime: 0,
     gcTime: 300000,
@@ -1296,7 +1296,7 @@ export function useGetContactPropertiesById(
   >
 ) {
   return useQuery<Awaited<ReturnType<typeof getContactPropertiesById>>, ApiError>({
-    queryKey: contactPropertieKeys.detail(id!),
+    queryKey: contactPropertyKeys.detail(id!),
     queryFn: () => getContactPropertiesById(id!),
     staleTime: 0,
     gcTime: 300000,

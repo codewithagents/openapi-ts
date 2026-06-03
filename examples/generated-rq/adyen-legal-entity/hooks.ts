@@ -58,7 +58,7 @@ export const documentKeys = {
     ['documents', id, params] as const,
 }
 
-export const legalEntitieKeys = {
+export const legalEntityKeys = {
   all: () => ['legalEntities'] as const,
   getLegalEntitiesId: (id: string) => ['legalEntities', 'getLegalEntitiesId', id] as const,
   getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference: (
@@ -141,7 +141,7 @@ export function getLegalEntitiesIdQueryOptions(
   >
 ) {
   return queryOptions<Awaited<ReturnType<typeof getLegalEntitiesId>>, ApiError>({
-    queryKey: legalEntitieKeys.getLegalEntitiesId(id),
+    queryKey: legalEntityKeys.getLegalEntitiesId(id),
     queryFn: () => getLegalEntitiesId(id),
     staleTime: 0,
     gcTime: 300000,
@@ -176,7 +176,7 @@ export function getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceac
     ApiError
   >({
     queryKey:
-      legalEntitieKeys.getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference(
+      legalEntityKeys.getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference(
         id,
         termsofserviceacceptancereference,
         params
@@ -201,7 +201,7 @@ export function getLegalEntitiesIdBusinessLinesQueryOptions(
   >
 ) {
   return queryOptions<Awaited<ReturnType<typeof getLegalEntitiesIdBusinessLines>>, ApiError>({
-    queryKey: legalEntitieKeys.getLegalEntitiesIdBusinessLines(id),
+    queryKey: legalEntityKeys.getLegalEntitiesIdBusinessLines(id),
     queryFn: () => getLegalEntitiesIdBusinessLines(id),
     staleTime: 0,
     gcTime: 300000,
@@ -217,7 +217,7 @@ export function getLegalEntitiesIdPciQuestionnairesQueryOptions(
   >
 ) {
   return queryOptions<Awaited<ReturnType<typeof getLegalEntitiesIdPciQuestionnaires>>, ApiError>({
-    queryKey: legalEntitieKeys.getLegalEntitiesIdPciQuestionnaires(id),
+    queryKey: legalEntityKeys.getLegalEntitiesIdPciQuestionnaires(id),
     queryFn: () => getLegalEntitiesIdPciQuestionnaires(id),
     staleTime: 0,
     gcTime: 300000,
@@ -237,7 +237,7 @@ export function getLegalEntitiesIdPciQuestionnairesPciidQueryOptions(
     Awaited<ReturnType<typeof getLegalEntitiesIdPciQuestionnairesPciid>>,
     ApiError
   >({
-    queryKey: legalEntitieKeys.getLegalEntitiesIdPciQuestionnairesPciid(id, pciid),
+    queryKey: legalEntityKeys.getLegalEntitiesIdPciQuestionnairesPciid(id, pciid),
     queryFn: () => getLegalEntitiesIdPciQuestionnairesPciid(id, pciid),
     staleTime: 0,
     gcTime: 300000,
@@ -259,7 +259,7 @@ export function getLegalEntitiesIdTermsOfServiceAcceptanceInfosQueryOptions(
     Awaited<ReturnType<typeof getLegalEntitiesIdTermsOfServiceAcceptanceInfos>>,
     ApiError
   >({
-    queryKey: legalEntitieKeys.getLegalEntitiesIdTermsOfServiceAcceptanceInfos(id),
+    queryKey: legalEntityKeys.getLegalEntitiesIdTermsOfServiceAcceptanceInfos(id),
     queryFn: () => getLegalEntitiesIdTermsOfServiceAcceptanceInfos(id),
     staleTime: 0,
     gcTime: 300000,
@@ -276,7 +276,7 @@ export function getLegalEntitiesIdTermsOfServiceStatusQueryOptions(
 ) {
   return queryOptions<Awaited<ReturnType<typeof getLegalEntitiesIdTermsOfServiceStatus>>, ApiError>(
     {
-      queryKey: legalEntitieKeys.getLegalEntitiesIdTermsOfServiceStatus(id),
+      queryKey: legalEntityKeys.getLegalEntitiesIdTermsOfServiceStatus(id),
       queryFn: () => getLegalEntitiesIdTermsOfServiceStatus(id),
       staleTime: 0,
       gcTime: 300000,
@@ -377,7 +377,7 @@ export function useGetLegalEntitiesId(
   >
 ) {
   return useQuery<Awaited<ReturnType<typeof getLegalEntitiesId>>, ApiError>({
-    queryKey: legalEntitieKeys.getLegalEntitiesId(id!),
+    queryKey: legalEntityKeys.getLegalEntitiesId(id!),
     queryFn: () => getLegalEntitiesId(id!),
     staleTime: 0,
     gcTime: 300000,
@@ -413,7 +413,7 @@ export function useGetLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofservic
     ApiError
   >({
     queryKey:
-      legalEntitieKeys.getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference(
+      legalEntityKeys.getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference(
         id!,
         termsofserviceacceptancereference!,
         params
@@ -439,7 +439,7 @@ export function useGetLegalEntitiesIdBusinessLines(
   >
 ) {
   return useQuery<Awaited<ReturnType<typeof getLegalEntitiesIdBusinessLines>>, ApiError>({
-    queryKey: legalEntitieKeys.getLegalEntitiesIdBusinessLines(id!),
+    queryKey: legalEntityKeys.getLegalEntitiesIdBusinessLines(id!),
     queryFn: () => getLegalEntitiesIdBusinessLines(id!),
     staleTime: 0,
     gcTime: 300000,
@@ -456,7 +456,7 @@ export function useGetLegalEntitiesIdPciQuestionnaires(
   >
 ) {
   return useQuery<Awaited<ReturnType<typeof getLegalEntitiesIdPciQuestionnaires>>, ApiError>({
-    queryKey: legalEntitieKeys.getLegalEntitiesIdPciQuestionnaires(id!),
+    queryKey: legalEntityKeys.getLegalEntitiesIdPciQuestionnaires(id!),
     queryFn: () => getLegalEntitiesIdPciQuestionnaires(id!),
     staleTime: 0,
     gcTime: 300000,
@@ -474,7 +474,7 @@ export function useGetLegalEntitiesIdPciQuestionnairesPciid(
   >
 ) {
   return useQuery<Awaited<ReturnType<typeof getLegalEntitiesIdPciQuestionnairesPciid>>, ApiError>({
-    queryKey: legalEntitieKeys.getLegalEntitiesIdPciQuestionnairesPciid(id!, pciid!),
+    queryKey: legalEntityKeys.getLegalEntitiesIdPciQuestionnairesPciid(id!, pciid!),
     queryFn: () => getLegalEntitiesIdPciQuestionnairesPciid(id!, pciid!),
     staleTime: 0,
     gcTime: 300000,
@@ -497,7 +497,7 @@ export function useGetLegalEntitiesIdTermsOfServiceAcceptanceInfos(
     Awaited<ReturnType<typeof getLegalEntitiesIdTermsOfServiceAcceptanceInfos>>,
     ApiError
   >({
-    queryKey: legalEntitieKeys.getLegalEntitiesIdTermsOfServiceAcceptanceInfos(id!),
+    queryKey: legalEntityKeys.getLegalEntitiesIdTermsOfServiceAcceptanceInfos(id!),
     queryFn: () => getLegalEntitiesIdTermsOfServiceAcceptanceInfos(id!),
     staleTime: 0,
     gcTime: 300000,
@@ -514,7 +514,7 @@ export function useGetLegalEntitiesIdTermsOfServiceStatus(
   >
 ) {
   return useQuery<Awaited<ReturnType<typeof getLegalEntitiesIdTermsOfServiceStatus>>, ApiError>({
-    queryKey: legalEntitieKeys.getLegalEntitiesIdTermsOfServiceStatus(id!),
+    queryKey: legalEntityKeys.getLegalEntitiesIdTermsOfServiceStatus(id!),
     queryFn: () => getLegalEntitiesIdTermsOfServiceStatus(id!),
     staleTime: 0,
     gcTime: 300000,

@@ -267,7 +267,7 @@ export const audioKeys = {
   detail: (consentId: string) => ['audio', consentId] as const,
 }
 
-export const batcheKeys = {
+export const batchKeys = {
   all: () => ['batches'] as const,
   list: (params?: Parameters<typeof listBatches>[0]) => ['batches', 'list', params] as const,
   detail: (batchId: string) => ['batches', batchId] as const,
@@ -617,7 +617,7 @@ export function listBatchesQueryOptions(
   >
 ) {
   return queryOptions<Awaited<ReturnType<typeof listBatches>>, ApiError>({
-    queryKey: batcheKeys.list(params),
+    queryKey: batchKeys.list(params),
     queryFn: () => listBatches(params),
     staleTime: 0,
     gcTime: 300000,
@@ -633,7 +633,7 @@ export function retrieveBatchQueryOptions(
   >
 ) {
   return queryOptions<Awaited<ReturnType<typeof retrieveBatch>>, ApiError>({
-    queryKey: batcheKeys.detail(batchId),
+    queryKey: batchKeys.detail(batchId),
     queryFn: () => retrieveBatch(batchId),
     staleTime: 0,
     gcTime: 300000,
@@ -2262,7 +2262,7 @@ export function useListBatches(
   >
 ) {
   return useQuery<Awaited<ReturnType<typeof listBatches>>, ApiError>({
-    queryKey: batcheKeys.list(params),
+    queryKey: batchKeys.list(params),
     queryFn: () => listBatches(params),
     staleTime: 0,
     gcTime: 300000,
@@ -2278,7 +2278,7 @@ export function useRetrieveBatch(
   >
 ) {
   return useQuery<Awaited<ReturnType<typeof retrieveBatch>>, ApiError>({
-    queryKey: batcheKeys.detail(batchId!),
+    queryKey: batchKeys.detail(batchId!),
     queryFn: () => retrieveBatch(batchId!),
     staleTime: 0,
     gcTime: 300000,
