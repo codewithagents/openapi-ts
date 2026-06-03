@@ -1912,3 +1912,148 @@ describe('coverage: schema-enhanced mode edge cases (lines 421-431, 437-439, 446
     expect(out).not.toContain('StatusSchema.parse(')
   })
 })
+
+// ── 204 no-content guard (fixes #272) ────────────────────────────────────────
+// Operations that declare a 204 alongside a 200/201 body response must not
+// call res.json() unconditionally (crashes on empty body). The generator must
+// emit a status check and return undefined for 204.
+
+describe('204 no-content guard (issue #272)', () => {
+  it('operation with 200 body + 204 emits undefined return type union', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/items/{id}': {
+          delete: {
+            operationId: 'deleteItem',
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+            responses: {
+              '200': {
+                description: 'error info',
+                content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+              },
+              '204': { description: 'no content' },
+            },
+          },
+        },
+      },
+      components: {
+        schemas: {
+          ErrorResponse: {
+            type: 'object',
+            properties: { message: { type: 'string' } },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec).content
+    // Return type must be union with undefined
+    expect(out).toContain('Promise<ErrorResponse | undefined>')
+    // Must not call res.json() without first guarding against 204
+    expect(out).toContain('if (res.status === 204) return undefined')
+    // The guard must appear before res.json()
+    const guardIdx = out.indexOf('if (res.status === 204) return undefined')
+    const jsonIdx = out.indexOf('return res.json()')
+    expect(guardIdx).toBeLessThan(jsonIdx)
+  })
+
+  it('operation with 200 body + 204 does not crash on 204 at runtime', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/items/{id}': {
+          delete: {
+            operationId: 'deleteItem',
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+            responses: {
+              '200': {
+                description: 'error info',
+                content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+              },
+              '204': { description: 'no content' },
+            },
+          },
+        },
+      },
+      components: {
+        schemas: {
+          ErrorResponse: {
+            type: 'object',
+            properties: { message: { type: 'string' } },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec).content
+    // The guard must be present so a real 204 returns undefined instead of throwing
+    expect(out).toContain('if (res.status === 204) return undefined')
+    // res.json() must still be present for the 200 case
+    expect(out).toContain('return res.json()')
+  })
+
+  it('204-only operation still returns Promise<void> and does not call res.json()', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/items/{id}': {
+          delete: {
+            operationId: 'deleteItem',
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+            responses: {
+              '204': { description: 'deleted' },
+            },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec).content
+    expect(out).toContain('Promise<void>')
+    // 204-only: no res captured, no res.json() call
+    const fnMatch = out.match(/export async function deleteItem[\s\S]*?^\}/m)
+    expect(fnMatch).toBeTruthy()
+    expect(fnMatch![0]).not.toContain('res.json()')
+    expect(fnMatch![0]).not.toContain('const res =')
+  })
+
+  it('operation with 200 body + 204 compiles without TypeScript errors', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/items/{id}': {
+          delete: {
+            operationId: 'deleteItem',
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+            responses: {
+              '200': {
+                description: 'error info',
+                content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+              },
+              '204': { description: 'no content' },
+            },
+          },
+        },
+      },
+      components: {
+        schemas: {
+          ErrorResponse: {
+            type: 'object',
+            properties: { message: { type: 'string' } },
+          },
+        },
+      },
+    }
+    const modelsContent = generateTypes(spec).content
+    const clientConfigContent = generateClientConfig().content
+    const clientContent = generateClient(spec).content
+    const diagnostics = compileFiles({
+      'models.ts': modelsContent,
+      'client-config.ts': clientConfigContent,
+      'client.ts': clientContent,
+    })
+    expect(diagnostics.length).toBe(0)
+  })
+})
