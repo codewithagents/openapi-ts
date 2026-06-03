@@ -545,6 +545,25 @@ describe('generateHooks — tag name to camelCase key factory', () => {
     expect(content).toContain('export const adSettingKeys')
     expect(content).not.toContain('ad-settingKeys')
   })
+
+  // Regression tests for issue #273: mis-singularization of -ies/-ses/-sses plurals
+  it('path /currencies → currencyKeys, not currencieKeys (issue #273)', () => {
+    const { content } = generateHooks(makeSpec('currencies'), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export const currencyKeys')
+    expect(content).not.toContain('currencieKeys')
+  })
+
+  it('path /categories → categoryKeys, not categorieKeys (issue #273)', () => {
+    const { content } = generateHooks(makeSpec('categories'), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export const categoryKeys')
+    expect(content).not.toContain('categorieKeys')
+  })
+
+  it('path /addresses → addressKeys, not addresseKeys (issue #273)', () => {
+    const { content } = generateHooks(makeSpec('addresses'), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export const addressKeys')
+    expect(content).not.toContain('addresseKeys')
+  })
 })
 
 // ── Feature #60: useSuspenseQuery variants ─────────────────────────────────────

@@ -54,11 +54,42 @@ function primaryResource(path: string): string {
   return firstSegment.replace(/[{}]/g, '')
 }
 
+/**
+ * Singularize a camelCase plural word using common English rules.
+ *
+ * Rules (applied in priority order):
+ * 1. ends in `ies` (but not just `ies`): replace with `y`
+ *    currencies → currency, categories → category
+ * 2. ends in `sses`, `xes`, `zes`, `ches`, `shes`: strip `es`
+ *    addresses → address, boxes → box, batches → batch
+ * 3. ends in `s` (but not `ss`): strip `s`
+ *    tasks → task, settings → setting, selections → selection
+ * 4. no change otherwise
+ */
+function singularize(word: string): string {
+  if (word.length > 3 && word.endsWith('ies')) {
+    return word.slice(0, -3) + 'y'
+  }
+  if (
+    word.endsWith('sses') ||
+    word.endsWith('xes') ||
+    word.endsWith('zes') ||
+    word.endsWith('ches') ||
+    word.endsWith('shes')
+  ) {
+    return word.slice(0, -2)
+  }
+  if (word.endsWith('s') && !word.endsWith('ss')) {
+    return word.slice(0, -1)
+  }
+  return word
+}
+
 /** Convert tag to valid camelCase identifier, then singularize. e.g. page-selections → pageSelection */
 function toKeyFactoryName(resource: string): string {
   // Sanitize the resource to a valid camelCase identifier, then singularize
   const camel = sanitizeOperationId(resource)
-  return camel.endsWith('s') ? camel.slice(0, -1) : camel
+  return singularize(camel)
 }
 
 interface OperationMeta {
