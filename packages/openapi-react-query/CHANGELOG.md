@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.10.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-react-query-v3.9.1...openapi-react-query-v3.10.0) (2026-06-03)
+
+
+### Miscellaneous
+
+* Dependency renamed from `@codewithagents/openapi-gen` to `openapi-zod-ts` (`^1.0.0`). No public API changes. ([#266](https://github.com/codewithagents/openapi-zod-ts/issues/266))
+
 ## [3.9.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-react-query-v3.9.0...openapi-react-query-v3.9.1) (2026-06-02)
 
 

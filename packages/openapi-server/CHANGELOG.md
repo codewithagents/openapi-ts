@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.6.0...openapi-server-v1.7.0) (2026-06-03)
+
+
+### Miscellaneous
+
+* Dependency renamed from `@codewithagents/openapi-gen` to `openapi-zod-ts` (`^1.0.0`). No public API changes. ([#266](https://github.com/codewithagents/openapi-zod-ts/issues/266))
+
 ## [1.6.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.5.0...openapi-server-v1.6.0) (2026-06-02)
 
 
