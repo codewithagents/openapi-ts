@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0 (2026-06-03)
+
+
+### Miscellaneous
+
+* Renamed from `@codewithagents/openapi-gen` to **`openapi-zod-ts`**. The generator is unchanged; install `openapi-zod-ts` instead. The CLI bin and default config file are now `openapi-zod-ts` / `openapi-zod-ts.config.json`. The prior package `@codewithagents/openapi-gen` (last release 4.9.1) is deprecated. ([#266](https://github.com/codewithagents/openapi-zod-ts/issues/266))
+
+---
+
+_Versions below were published under the previous name `@codewithagents/openapi-gen`._
+
 ## [4.9.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-gen-v4.9.0...openapi-gen-v4.9.1) (2026-06-02)
 
 
