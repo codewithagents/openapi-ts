@@ -95,6 +95,7 @@ export default defineConfig({
           items: [
             { label: 'Introduction', slug: 'getting-started' },
             { label: 'Quickstart', slug: 'getting-started/quickstart' },
+            { label: 'How it compares', slug: 'comparison' },
             { label: 'Migrating from hey-api or orval', slug: 'migrating' },
           ],
         },

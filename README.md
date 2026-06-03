@@ -5,9 +5,11 @@
 [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./packages/openapi-zod-ts/LICENSE)
 
-> TypeScript bridge between your OpenAPI spec and your frontend, zero runtime footprint.
+> OpenAPI to TypeScript you actually own. Native `fetch` client, React Query hooks, and Zod schemas you can extend, from one OpenAPI 3.1 spec. Zero runtime dependencies.
 
 You consume a REST API. You need TypeScript types, a fetch client, form error mapping, and React Query hooks. Instead of hand-writing all of this (and keeping it in sync every time the spec changes), you run one command. Everything here is a `devDependency` or generates code that only depends on what your project already has.
+
+Unlike most generators, the output is not a black box you regenerate and forget. The Zod schema file is bootstrapped once and then yours to extend, regen never overwrites it, and the generated client uses only native `fetch`. See [how it compares](https://openapi.codewithagents.de/comparison) to hey-api, orval, kubb, and openapi-fetch.
 
 ---
 
@@ -52,6 +54,25 @@ Everything else is generated and stays in sync when the spec changes.
 **Readable output.** Generated code looks like code you'd write yourself — no opaque abstractions, no minified magic. You can read it, review it, and commit it.
 
 **Agent-friendly.** One `devDependency`, one command, a fully-typed API client with runtime validation. Designed to work well when an AI agent is building or maintaining your project.
+
+---
+
+## How it compares
+
+[hey-api](https://heyapi.dev/), [orval](https://orval.dev/), [kubb](https://kubb.dev/), and [openapi-fetch](https://openapi-ts.dev/openapi-fetch/) are all good, actively maintained tools, and in some areas more featureful than this one. The honest trade-off: we are smaller and more opinionated, and we trade breadth for ownership and stability.
+
+| | `openapi-zod-ts` | hey-api | orval | kubb | openapi-fetch |
+|---|---|---|---|---|---|
+| Runtime library added to your app | None (native `fetch`) | None (bundled) | Mutator (often axios) | Client of choice | ~6 kb required |
+| Zod schema file you own, never overwritten | **Yes** | No | No | No | n/a |
+| Runtime request + response validation | Yes | Yes | Yes | Yes | No |
+| React Query hooks | Yes (React) | Yes (multi) | Yes (multi) | Yes (React, Vue, SWR) | Companion pkg |
+| Server-side service interface + router | **Yes** | No | No | No | No |
+| Mocks (MSW / faker) | No | Yes | Yes | Yes | No |
+| Swagger 2.0 | No | No | Yes | Yes | No |
+| Stable 1.0 | Yes | No (0.x) | Yes | Yes | Yes |
+
+**Pick something else if** your frontend is Vue/Svelte/Angular (hey-api, orval, kubb), you need generated mocks (orval, kubb), you have a Swagger 2.0 spec (orval, kubb), or you want the largest ecosystem (hey-api). Full breakdown, including where the alternatives win: **[How it compares](https://openapi.codewithagents.de/comparison)**.
 
 ---
 

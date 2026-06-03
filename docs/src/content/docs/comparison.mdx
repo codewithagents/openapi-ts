@@ -1,0 +1,118 @@
+---
+title: How it compares
+description: An honest comparison of openapi-zod-ts with hey-api, orval, kubb, and openapi-fetch, including where the alternatives are ahead.
+---
+
+import { Aside, CardGrid, Card, LinkButton } from '@astrojs/starlight/components'
+
+The TypeScript OpenAPI space is crowded and mature. [hey-api](https://heyapi.dev/),
+[orval](https://orval.dev/), [kubb](https://kubb.dev/), and
+[openapi-fetch](https://openapi-ts.dev/openapi-fetch/) are all good tools, actively maintained, and
+in some areas more featureful than this one. If you want the broadest plugin ecosystem, mocks, or
+hooks for every framework, one of them is probably the better pick, and that is fine.
+
+This page exists so you can decide quickly and fairly. It is kept deliberately honest: where the
+alternatives are ahead, that is stated plainly. A comparison that only flatters itself is not worth
+reading.
+
+<Aside type="note">
+  Accurate as of June 2026. These projects move fast, hey-api especially. Always confirm against each
+  project's own docs before making a decision. If anything here is out of date or wrong, please
+  [open an issue](https://github.com/codewithagents/openapi-zod-ts/issues) and we will fix it.
+</Aside>
+
+## The one-line difference
+
+Most generators treat your generated code as disposable: every run overwrites everything, so the
+output is a black box you are not meant to touch. `openapi-zod-ts` is built around the opposite idea.
+The Zod schema file is **bootstrapped once and then yours forever**, the client uses **native `fetch`
+with no runtime library**, and the whole thing is **1.0 and deliberately small** rather than a moving
+target. You trade breadth for ownership and stability.
+
+## Feature matrix
+
+| | `openapi-zod-ts` | hey-api | orval | kubb | openapi-fetch |
+|---|---|---|---|---|---|
+| TypeScript types | Yes | Yes | Yes | Yes | Yes |
+| Fetch client | Yes | Yes | Yes | Yes | Yes (is the client) |
+| Runtime library added to your app | None (native `fetch`) | None (client bundled) | Mutator, often axios | Client of choice | ~6 kb required |
+| Zod schemas generated | Yes (opt-in) | Yes (plugin) | Yes | Yes | No |
+| Runtime request + response validation | Yes | Yes (Zod plugin) | Yes (Zod) | Yes (Zod) | No |
+| **Schema file you own, never overwritten** | **Yes** | No | No | No | n/a |
+| React Query / TanStack hooks | Yes (React) | Yes (multi) | Yes (multi) | Yes (React, Vue, SWR) | Companion pkg |
+| Hooks for Vue / Svelte / Angular / Solid | No | Yes | Yes | Vue | Via ecosystem |
+| **Server-side service interface + router** | **Yes (Hono, Express, Fastify)** | No | No | No | No |
+| Mocks (MSW / faker) | No | Yes (plugin) | Yes | Yes | No |
+| OpenAPI 3.1 | Yes | Yes | Yes | Yes | Yes |
+| Swagger 2.0 | No | No | Yes | Yes | No |
+| Stable 1.0 with semver | Yes | No (0.x) | Yes | Yes | Yes |
+
+## Where this toolchain genuinely differs
+
+<CardGrid>
+  <Card title="You own the Zod schemas" icon="pencil">
+    With `input_schema` enabled, `schemas.ts` is written once and then never touched again. Add
+    refinements, custom error messages, and business rules. Re-running the generator overwrites the
+    client and types but leaves your schemas alone. Every other tool here regenerates schemas on every
+    run, so hand edits do not survive.
+  </Card>
+  <Card title="Full-stack from one spec" icon="laptop">
+    The only tool in this set that also generates the server side: a framework-agnostic service
+    interface plus an optional router for Hono, Express, or Fastify. One spec drives the client, the
+    hooks, and the server contract, validated at both ends.
+  </Card>
+  <Card title="Nothing in your bundle" icon="approve-check">
+    The generated client uses only native `fetch`. The generator is a `devDependency`. openapi-fetch
+    ships a small runtime library you import; orval and kubb generate code that calls a client you
+    install. Here, nothing the codegen produces lingers in production that your project did not already
+    have.
+  </Card>
+  <Card title="Boring on purpose" icon="approve-check-circle">
+    1.0 and semver-stable, proven on 128 real-world specs in CI with live smoke tests, mutation
+    testing, and published provenance. A code generator has a wide blast radius; for this layer of your
+    stack, predictable beats cutting-edge.
+  </Card>
+</CardGrid>
+
+## Where the alternatives are ahead
+
+Being honest about this is the point.
+
+- **Breadth of frameworks.** We generate React Query hooks only. hey-api, orval, and kubb generate
+  hooks for Vue, Svelte, Angular, Solid, and more. If your frontend is not React, they win outright.
+- **Mocks and test fixtures.** orval and kubb generate MSW handlers and faker mocks; hey-api has a
+  plugin for it. We do not generate mocks at all.
+- **Plugin ecosystems.** hey-api has 20+ plugins and is used by Vercel, OpenCode, and PayPal. kubb is
+  a plugin meta-framework. If you want to bolt on MSW, Cypress, MCP, or a custom transformer, they are
+  built for that. We are deliberately small and opinionated.
+- **Swagger 2.0.** orval and kubb read Swagger 2.0 specs. We only support OpenAPI 3.x.
+- **Adoption.** These projects have years of users and battle-testing behind them. We are new. That is
+  a real factor, and you should weigh it.
+
+## When to pick which
+
+<Aside type="tip" title="Pick openapi-zod-ts when">
+
+- You build in **React + TypeScript** and want the client, hooks, and Zod validation as one coherent set.
+- You want to **add your own validation rules to the schemas** and keep them across regenerations.
+- You also own the **backend** and want one spec to drive both ends.
+- You want **zero runtime footprint** and code you can read, review, and commit.
+- You value a **stable 1.0** for a generator that touches every API call in your app.
+
+</Aside>
+
+<Aside type="note" title="Pick something else when">
+
+- Your frontend is **Vue, Svelte, Angular, or Solid**: reach for hey-api, orval, or kubb.
+- You need **generated mocks** (MSW, faker): orval or kubb.
+- You have a **Swagger 2.0** spec: orval or kubb.
+- You want the **largest ecosystem and adoption**: hey-api.
+- You only need **types plus a tiny client**, no validation: openapi-fetch is the lightest option.
+
+</Aside>
+
+## Coming from one of these?
+
+<LinkButton href="/migrating" icon="right-arrow">
+  Read the migration guide
+</LinkButton>
