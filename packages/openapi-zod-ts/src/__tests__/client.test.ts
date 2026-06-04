@@ -7,96 +7,12 @@ import type { OpenAPIV3_1 } from 'openapi-types'
 import ts from 'typescript'
 import { fileURLToPath } from 'node:url'
 import { join, dirname } from 'node:path'
+import { compileFiles } from './helpers.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const taskApiFixture = join(__dirname, '../__fixtures__/specs/task-api.json')
 const featureShowcaseFixture = join(__dirname, '../__fixtures__/specs/feature-showcase.json')
 const deprecatedApiFixture = join(__dirname, '../__fixtures__/specs/deprecated-api.json')
-
-// TypeScript compilation helper — compiles multiple in-memory files together.
-// Files are keyed by bare names (e.g. 'models.ts') and stored under /virtual/.
-// Uses resolveModuleNameLiterals to handle relative imports between virtual files.
-function compileFiles(files: Record<string, string>): readonly ts.Diagnostic[] {
-  // Map bare names → virtual absolute paths
-  const virtualFiles: Record<string, string> = {}
-  for (const [name, content] of Object.entries(files)) {
-    virtualFiles[`/virtual/${name}`] = content
-  }
-
-  const { options } = ts.convertCompilerOptionsFromJson(
-    {
-      strict: true,
-      target: 'ES2025',
-      moduleResolution: 'Bundler',
-      noEmit: true,
-      skipLibCheck: true,
-      lib: ['ES2025', 'DOM'],
-    },
-    '.'
-  )
-
-  const fileNames = Object.keys(virtualFiles)
-  const defaultHost = ts.createCompilerHost(options)
-
-  const customHost: ts.CompilerHost = {
-    ...defaultHost,
-    getSourceFile: (name, lang) => {
-      if (name in virtualFiles) return ts.createSourceFile(name, virtualFiles[name]!, lang, true)
-      return defaultHost.getSourceFile(name, lang)
-    },
-    fileExists: (name) => name in virtualFiles || defaultHost.fileExists(name),
-    readFile: (name) => virtualFiles[name] ?? defaultHost.readFile(name),
-    getCurrentDirectory: () => '/virtual',
-    resolveModuleNameLiterals: (
-      moduleLiterals,
-      containingFile,
-      redirectedRef,
-      compilerOpts,
-      containingSf,
-      reusedNames
-    ) => {
-      return moduleLiterals.map((lit) => {
-        const specifier = lit.text
-        // Resolve relative imports within the virtual filesystem
-        if (specifier.startsWith('./') || specifier.startsWith('../')) {
-          const dir = containingFile.replace(/\/[^/]*$/, '')
-          // Strip leading ./ and any .js extension so both `./models` and
-          // `./models.js` resolve to the virtual `models.ts` file.
-          const baseName = specifier.replace(/^\.\//, '').replace(/\.js$/, '')
-          const candidates = [`${dir}/${baseName}.ts`, `${dir}/${baseName}/index.ts`]
-          for (const cand of candidates) {
-            if (cand in virtualFiles) {
-              return {
-                resolvedModule: {
-                  resolvedFileName: cand,
-                  isExternalLibraryImport: false,
-                  extension: ts.Extension.Ts,
-                },
-              }
-            }
-          }
-        }
-        // Fall back to default resolution for external modules
-        if (defaultHost.resolveModuleNameLiterals) {
-          return defaultHost.resolveModuleNameLiterals(
-            [lit],
-            containingFile,
-            redirectedRef,
-            compilerOpts,
-            containingSf,
-            reusedNames
-          )[0]!
-        }
-        return { resolvedModule: undefined }
-      })
-    },
-  }
-
-  const program = ts.createProgram(fileNames, options, customHost)
-  return ts
-    .getPreEmitDiagnostics(program)
-    .filter((d) => d.file?.fileName !== undefined && d.file.fileName in virtualFiles)
-}
 
 describe('generateClient', () => {
   let content: string
