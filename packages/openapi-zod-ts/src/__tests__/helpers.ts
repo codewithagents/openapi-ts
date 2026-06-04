@@ -3,7 +3,7 @@
  *
  * Extracted to avoid duplicating boilerplate across test files.
  * Import with the .js extension as required by NodeNext module resolution:
- *   import { compileFiles, makeSpec } from './helpers.js'
+ *   import { compileFiles, compileSingleFile, makeSpec } from './helpers.js'
  */
 import ts from 'typescript'
 import type { OpenAPIV3_1 } from 'openapi-types'
@@ -131,4 +131,50 @@ export function compileFiles(files: Record<string, string>): readonly ts.Diagnos
   return ts
     .getPreEmitDiagnostics(program)
     .filter((d) => d.file?.fileName !== undefined && d.file.fileName in virtualFiles)
+}
+
+// ---------------------------------------------------------------------------
+// compileSingleFile
+// ---------------------------------------------------------------------------
+
+/**
+ * Compile a single in-memory TypeScript source string. Use this for tests
+ * that verify a standalone generated file (e.g. models.ts, client-config.ts)
+ * without needing cross-file imports.
+ *
+ * The `lib` option defaults to ['ES2022']. Pass `{ lib: ['ES2022', 'DOM'] }`
+ * when the generated file uses browser globals (e.g. RequestInit, fetch).
+ */
+export function compileSingleFile(
+  filename: string,
+  source: string,
+  opts: { lib?: string[] } = {}
+): readonly ts.Diagnostic[] {
+  const { options } = ts.convertCompilerOptionsFromJson(
+    {
+      strict: true,
+      target: 'ES2022',
+      moduleResolution: 'Bundler',
+      noEmit: true,
+      skipLibCheck: true,
+      lib: opts.lib ?? ['ES2022'],
+    },
+    '.'
+  )
+
+  const sourceFile = ts.createSourceFile(filename, source, ts.ScriptTarget.ES2022, true)
+  const defaultHost = ts.createCompilerHost(options)
+
+  const customHost: ts.CompilerHost = {
+    ...defaultHost,
+    getSourceFile: (name, lang) =>
+      name === filename ? sourceFile : defaultHost.getSourceFile(name, lang),
+    fileExists: (name) => name === filename || defaultHost.fileExists(name),
+    readFile: (name) => (name === filename ? source : defaultHost.readFile(name)),
+  }
+
+  const program = ts.createProgram([filename], options, customHost)
+  return ts
+    .getPreEmitDiagnostics(program, sourceFile)
+    .filter((d) => d.file?.fileName === filename)
 }
