@@ -16,6 +16,7 @@ import { generateClient } from '../plugins/client.js'
 import { generateClientConfig } from '../plugins/client-config.js'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import ts from 'typescript'
+import { compileFiles } from './helpers.js'
 
 // A fictional spec with header params of various non-string types.
 const headerCoercionSpec: OpenAPIV3_1.Document = {
@@ -65,84 +66,6 @@ const headerCoercionSpec: OpenAPIV3_1.Document = {
       },
     },
   },
-}
-
-// Compile virtual files using the TypeScript compiler API (in-process, no disk I/O).
-function compileFiles(files: Record<string, string>): readonly ts.Diagnostic[] {
-  const virtualFiles: Record<string, string> = {}
-  for (const [name, content] of Object.entries(files)) {
-    virtualFiles[`/virtual/${name}`] = content
-  }
-
-  const { options } = ts.convertCompilerOptionsFromJson(
-    {
-      strict: true,
-      target: 'ES2025',
-      moduleResolution: 'Bundler',
-      noEmit: true,
-      skipLibCheck: true,
-      lib: ['ES2025', 'DOM'],
-    },
-    '.'
-  )
-
-  const fileNames = Object.keys(virtualFiles)
-  const defaultHost = ts.createCompilerHost(options)
-
-  const customHost: ts.CompilerHost = {
-    ...defaultHost,
-    getSourceFile: (name, lang) => {
-      if (name in virtualFiles) return ts.createSourceFile(name, virtualFiles[name]!, lang, true)
-      return defaultHost.getSourceFile(name, lang)
-    },
-    fileExists: (name) => name in virtualFiles || defaultHost.fileExists(name),
-    readFile: (name) => virtualFiles[name] ?? defaultHost.readFile(name),
-    getCurrentDirectory: () => '/virtual',
-    resolveModuleNameLiterals: (
-      moduleLiterals,
-      containingFile,
-      redirectedRef,
-      compilerOpts,
-      containingSf,
-      reusedNames
-    ) => {
-      return moduleLiterals.map((lit) => {
-        const specifier = lit.text
-        if (specifier.startsWith('./') || specifier.startsWith('../')) {
-          const dir = containingFile.replace(/\/[^/]*$/, '')
-          const baseName = specifier.replace(/^\.\//, '').replace(/\.js$/, '')
-          const candidates = [`${dir}/${baseName}.ts`, `${dir}/${baseName}/index.ts`]
-          for (const cand of candidates) {
-            if (cand in virtualFiles) {
-              return {
-                resolvedModule: {
-                  resolvedFileName: cand,
-                  isExternalLibraryImport: false,
-                  extension: ts.Extension.Ts,
-                },
-              }
-            }
-          }
-        }
-        if (defaultHost.resolveModuleNameLiterals) {
-          return defaultHost.resolveModuleNameLiterals(
-            [lit],
-            containingFile,
-            redirectedRef,
-            compilerOpts,
-            containingSf,
-            reusedNames
-          )[0]!
-        }
-        return { resolvedModule: undefined }
-      })
-    },
-  }
-
-  const program = ts.createProgram(fileNames, options, customHost)
-  return ts
-    .getPreEmitDiagnostics(program)
-    .filter((d) => d.file?.fileName !== undefined && d.file.fileName in virtualFiles)
 }
 
 describe('header param coercion: generated code wraps values in String()', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import ts from 'typescript'
 import { generateClientConfig } from '../plugins/client-config.js'
+import { compileSingleFile, assertNoTsDiagnostics } from './helpers.js'
 
 describe('generateClientConfig', () => {
   it('returns filename client-config.ts', () => {
@@ -37,44 +37,12 @@ describe('generateClientConfig', () => {
 
   it('generated content compiles with TypeScript strict mode', () => {
     const content = generateClientConfig().content
-    const filename = 'client-config.ts'
 
-    // Use convertCompilerOptionsFromJson so lib names are resolved correctly
-    const { options } = ts.convertCompilerOptionsFromJson(
-      {
-        strict: true,
-        target: 'ES2022',
-        moduleResolution: 'Bundler',
-        noEmit: true,
-        skipLibCheck: true,
-        lib: ['ES2022', 'DOM'],
-      },
-      '.'
-    )
+    const diagnostics = compileSingleFile('client-config.ts', content, {
+      lib: ['ES2022', 'DOM'],
+    })
 
-    const sourceFile = ts.createSourceFile(filename, content, ts.ScriptTarget.ES2022, true)
-    const defaultHost = ts.createCompilerHost(options)
-
-    const customHost: ts.CompilerHost = {
-      ...defaultHost,
-      getSourceFile: (name, lang) =>
-        name === filename ? sourceFile : defaultHost.getSourceFile(name, lang),
-      fileExists: (name) => name === filename || defaultHost.fileExists(name),
-      readFile: (name) => (name === filename ? content : defaultHost.readFile(name)),
-    }
-
-    const program = ts.createProgram([filename], options, customHost)
-    const diagnostics = ts
-      .getPreEmitDiagnostics(program, sourceFile)
-      .filter((d) => d.file?.fileName === filename)
-
-    if (diagnostics.length > 0) {
-      const messages = diagnostics
-        .map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'))
-        .join('\n')
-      throw new Error(`TypeScript errors in generated client-config.ts:\n${messages}`)
-    }
-
+    assertNoTsDiagnostics(diagnostics, 'generated client-config.ts')
     expect(diagnostics.length).toBe(0)
   })
 })
