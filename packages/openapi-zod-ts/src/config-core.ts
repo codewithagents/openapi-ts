@@ -10,6 +10,14 @@ export interface BaseConfig {
   output: string
 }
 
+/**
+ * String-prefix blocklist for common system directories.
+ *
+ * Threat model: interactive CLI misconfiguration (e.g. a typo in the output path).
+ * This is NOT an exhaustive security control. It does not cover symlinks that point
+ * into allowed dirs, relative traversal through an allowed directory, or Windows
+ * short (8.3) names. Do not rely on it as a sandbox boundary.
+ */
 export const FORBIDDEN_OUTPUT_PREFIXES = [
   '/etc',
   '/usr',
@@ -26,6 +34,10 @@ export const FORBIDDEN_OUTPUT_PREFIXES = [
   'C:\\Program Files',
 ]
 
+/**
+ * Same constraint as FORBIDDEN_OUTPUT_PREFIXES, applied to the input spec path.
+ * See that constant's JSDoc for threat-model limitations.
+ */
 export const FORBIDDEN_INPUT_PREFIXES = [
   '/etc',
   '/usr',
