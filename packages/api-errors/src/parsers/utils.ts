@@ -9,7 +9,7 @@ export function isStringArray(value: unknown): value is string[] {
 }
 
 /** Extract field + message from a single keyed-array item. Returns null when message is absent. */
-export function parseKeyedItem(
+function parseKeyedItem(
   item: Record<string, unknown>,
   fieldKey: string,
   messageKey: string
@@ -61,7 +61,7 @@ const FORBIDDEN_FIELD_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype
 const MAX_FIELD_ERRORS = 1000
 
 /** True if no path segment of `field` is a prototype-pollution gadget key. */
-export function isSafeFieldPath(field: string): boolean {
+function isSafeFieldPath(field: string): boolean {
   for (const segment of field.split(/[.[\]]+/)) {
     if (FORBIDDEN_FIELD_SEGMENTS.has(segment)) return false
   }

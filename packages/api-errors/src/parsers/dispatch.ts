@@ -15,7 +15,7 @@ export interface MatchResult {
 }
 
 /** Wrap a ParsedErrors result with its format tag, applying transformField to field names. */
-export function wrapMatch(
+function wrapMatch(
   parsed: ParsedErrors,
   format: ErrorFormat,
   transformField: (f: string) => string
@@ -36,7 +36,7 @@ export function wrapMatch(
  * Try all object-body parsers in priority order.
  * Returns the first match, or null if no parser recognized the shape.
  */
-export function matchObjectBody(
+function matchObjectBody(
   body: Record<string, unknown>,
   fallbackField: string,
   transformField: (f: string) => string
@@ -90,7 +90,7 @@ export function matchObjectBody(
  * Run custom parsers (if any) before the built-in ones.
  * Returns the first match, or null to fall through.
  */
-export function tryCustomParsers(
+function tryCustomParsers(
   body: unknown,
   customParsers: ReadonlyArray<CustomParser>
 ): MatchResult | null {
@@ -104,7 +104,7 @@ export function tryCustomParsers(
 /**
  * Dispatch an array body through the flat-array parser.
  */
-export function matchArrayBody(
+function matchArrayBody(
   body: unknown[],
   fallbackField: string,
   transformField: (f: string) => string
