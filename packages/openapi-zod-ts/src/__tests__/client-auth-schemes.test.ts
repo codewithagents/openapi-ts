@@ -16,7 +16,7 @@ import { generateClientConfig } from '../plugins/client-config.js'
 import { generateTypes } from '../plugins/types.js'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import ts from 'typescript'
-import { compileFiles } from './helpers.js'
+import { compileFiles, compileSingleFile } from './helpers.js'
 
 // ---------------------------------------------------------------------------
 // Fictional spec fixtures
@@ -522,28 +522,7 @@ describe('ClientConfig compiles without TypeScript errors', () => {
     const content = generateClientConfig({
       authSchemes: detectAuthSchemes(apiKeyHeaderSpec),
     }).content
-    const { options } = ts.convertCompilerOptionsFromJson(
-      {
-        strict: true,
-        target: 'ES2022',
-        moduleResolution: 'Bundler',
-        noEmit: true,
-        skipLibCheck: true,
-        lib: ['ES2022', 'DOM'],
-      },
-      '.'
-    )
-    const filename = 'client-config.ts'
-    const sf = ts.createSourceFile(filename, content, ts.ScriptTarget.ES2022, true)
-    const host = ts.createCompilerHost(options)
-    const customHost: ts.CompilerHost = {
-      ...host,
-      getSourceFile: (n, l) => (n === filename ? sf : host.getSourceFile(n, l)),
-      fileExists: (n) => n === filename || host.fileExists(n),
-      readFile: (n) => (n === filename ? content : host.readFile(n)),
-    }
-    const prog = ts.createProgram([filename], options, customHost)
-    const diags = ts.getPreEmitDiagnostics(prog, sf).filter((d) => d.file?.fileName === filename)
+    const diags = compileSingleFile('client-config.ts', content, { lib: ['ES2022', 'DOM'] })
     expect(diags.length).toBe(0)
   })
 })
