@@ -178,3 +178,26 @@ export function compileSingleFile(
     .getPreEmitDiagnostics(program, sourceFile)
     .filter((d) => d.file?.fileName === filename)
 }
+
+// ---------------------------------------------------------------------------
+// assertNoTsDiagnostics
+// ---------------------------------------------------------------------------
+
+/**
+ * Assert that a TypeScript compilation produced no diagnostics. Throws a
+ * descriptive error listing all messages when diagnostics are present.
+ *
+ * @param diagnostics - result from compileFiles or compileSingleFile
+ * @param context - short label for the error message, e.g. "generated models.ts"
+ */
+export function assertNoTsDiagnostics(
+  diagnostics: readonly ts.Diagnostic[],
+  context: string
+): void {
+  if (diagnostics.length > 0) {
+    const messages = diagnostics
+      .map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'))
+      .join('\n')
+    throw new Error(`TypeScript errors in ${context}:\n${messages}`)
+  }
+}

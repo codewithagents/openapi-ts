@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import ts from 'typescript'
 import { parseSpec } from '../parser.js'
 import { generateTypes } from '../plugins/types.js'
 import { fileURLToPath } from 'node:url'
 import { join, dirname } from 'node:path'
-import { compileSingleFile } from './helpers.js'
+import { compileSingleFile, assertNoTsDiagnostics } from './helpers.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const fixturesDir = join(__dirname, '../__fixtures__/specs')
@@ -22,13 +21,7 @@ describe('generated models.ts compiles with TypeScript strict mode', () => {
 
     const diagnostics = compileSingleFile('models.ts', content)
 
-    if (diagnostics.length > 0) {
-      const messages = diagnostics
-        .map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'))
-        .join('\n')
-      throw new Error(`TypeScript errors in generated output for "${name}":\n${messages}`)
-    }
-
+    assertNoTsDiagnostics(diagnostics, `generated output for "${name}"`)
     expect(diagnostics.length).toBe(0)
   })
 })

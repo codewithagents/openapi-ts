@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import ts from 'typescript'
 import { generateClientConfig } from '../plugins/client-config.js'
-import { compileSingleFile } from './helpers.js'
+import { compileSingleFile, assertNoTsDiagnostics } from './helpers.js'
 
 describe('generateClientConfig', () => {
   it('returns filename client-config.ts', () => {
@@ -43,13 +42,7 @@ describe('generateClientConfig', () => {
       lib: ['ES2022', 'DOM'],
     })
 
-    if (diagnostics.length > 0) {
-      const messages = diagnostics
-        .map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'))
-        .join('\n')
-      throw new Error(`TypeScript errors in generated client-config.ts:\n${messages}`)
-    }
-
+    assertNoTsDiagnostics(diagnostics, 'generated client-config.ts')
     expect(diagnostics.length).toBe(0)
   })
 })
