@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.11.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-react-query-v3.10.1...openapi-react-query-v3.11.0) (2026-06-05)
+
+
+### Features
+
+* **openapi-react-query:** generate useInfiniteQuery hooks for paginated endpoints ([#189](https://github.com/codewithagents/openapi-zod-ts/issues/189)) ([#281](https://github.com/codewithagents/openapi-zod-ts/issues/281)) ([7d7aa2d](https://github.com/codewithagents/openapi-zod-ts/commit/7d7aa2de479616c76a76786ff02db62a65c7a784))
+
 ## [3.10.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-react-query-v3.10.0...openapi-react-query-v3.10.1) (2026-06-03)
 
 
