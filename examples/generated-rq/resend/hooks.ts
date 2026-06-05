@@ -4,6 +4,10 @@ import {
   queryOptions,
   useQuery,
   type UseQueryOptions,
+  useInfiniteQuery,
+  type UseInfiniteQueryOptions,
+  type InfiniteData,
+  type QueryKey,
   useMutation,
   type UseMutationOptions,
 } from '@tanstack/react-query'
@@ -854,6 +858,37 @@ export function useGetEmails(
   })
 }
 
+export function useGetEmailsInfinite(
+  params?: Parameters<typeof getEmails>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getEmails>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getEmails>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getEmails>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getEmails>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...emailKeys.getEmails(params), 'infinite'],
+    queryFn: ({ pageParam }) => getEmails({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetEmailsByEmailId(
   emailId: string | undefined | null,
   options?: Omit<
@@ -923,6 +958,37 @@ export function useGetEmailsReceiving(
   return useQuery<Awaited<ReturnType<typeof getEmailsReceiving>>, ApiError>({
     queryKey: emailKeys.getEmailsReceiving(params),
     queryFn: () => getEmailsReceiving(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetEmailsReceivingInfinite(
+  params?: Parameters<typeof getEmailsReceiving>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getEmailsReceiving>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getEmailsReceiving>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getEmailsReceiving>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getEmailsReceiving>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...emailKeys.getEmailsReceiving(params), 'infinite'],
+    queryFn: ({ pageParam }) => getEmailsReceiving({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -1007,6 +1073,37 @@ export function useGetDomains(
   })
 }
 
+export function useGetDomainsInfinite(
+  params?: Parameters<typeof getDomains>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getDomains>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getDomains>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getDomains>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getDomains>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...domainKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getDomains({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetDomainsByDomainId(
   domainId: string | undefined | null,
   options?: Omit<
@@ -1040,6 +1137,37 @@ export function useGetApiKeys(
   })
 }
 
+export function useGetApiKeysInfinite(
+  params?: Parameters<typeof getApiKeys>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getApiKeys>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getApiKeys>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getApiKeys>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getApiKeys>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeyKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getApiKeys({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetTemplates(
   params?: Parameters<typeof getTemplates>[0],
   options?: Omit<
@@ -1050,6 +1178,37 @@ export function useGetTemplates(
   return useQuery<Awaited<ReturnType<typeof getTemplates>>, ApiError>({
     queryKey: templateKeys.list(params),
     queryFn: () => getTemplates(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetTemplatesInfinite(
+  params?: Parameters<typeof getTemplates>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getTemplates>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getTemplates>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getTemplates>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getTemplates>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...templateKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getTemplates({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -1123,6 +1282,37 @@ export function useGetContacts(
   })
 }
 
+export function useGetContactsInfinite(
+  params?: Parameters<typeof getContacts>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getContacts>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getContacts>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getContacts>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getContacts>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...contactKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getContacts({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetContactsById(
   id: string | undefined | null,
   options?: Omit<
@@ -1150,6 +1340,37 @@ export function useGetBroadcasts(
   return useQuery<Awaited<ReturnType<typeof getBroadcasts>>, ApiError>({
     queryKey: broadcastKeys.list(params),
     queryFn: () => getBroadcasts(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetBroadcastsInfinite(
+  params?: Parameters<typeof getBroadcasts>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getBroadcasts>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getBroadcasts>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getBroadcasts>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getBroadcasts>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...broadcastKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getBroadcasts({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -1189,6 +1410,37 @@ export function useGetWebhooks(
   })
 }
 
+export function useGetWebhooksInfinite(
+  params?: Parameters<typeof getWebhooks>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getWebhooks>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getWebhooks>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getWebhooks>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getWebhooks>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...webhookKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getWebhooks({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetWebhooksByWebhookId(
   webhookId: string | undefined | null,
   options?: Omit<
@@ -1216,6 +1468,37 @@ export function useGetSegments(
   return useQuery<Awaited<ReturnType<typeof getSegments>>, ApiError>({
     queryKey: segmentKeys.list(params),
     queryFn: () => getSegments(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetSegmentsInfinite(
+  params?: Parameters<typeof getSegments>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getSegments>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getSegments>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getSegments>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getSegments>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...segmentKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getSegments({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -1255,6 +1538,37 @@ export function useGetTopics(
   })
 }
 
+export function useGetTopicsInfinite(
+  params?: Parameters<typeof getTopics>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getTopics>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getTopics>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getTopics>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getTopics>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...topicKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getTopics({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetTopicsById(
   id: string | undefined | null,
   options?: Omit<
@@ -1282,6 +1596,37 @@ export function useGetContactProperties(
   return useQuery<Awaited<ReturnType<typeof getContactProperties>>, ApiError>({
     queryKey: contactPropertyKeys.list(params),
     queryFn: () => getContactProperties(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetContactPropertiesInfinite(
+  params?: Parameters<typeof getContactProperties>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getContactProperties>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getContactProperties>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getContactProperties>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getContactProperties>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...contactPropertyKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getContactProperties({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -1357,6 +1702,37 @@ export function useGetLogs(
   })
 }
 
+export function useGetLogsInfinite(
+  params?: Parameters<typeof getLogs>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getLogs>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getLogs>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getLogs>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getLogs>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...logKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getLogs({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetLogsByLogId(
   logId: string | undefined | null,
   options?: Omit<
@@ -1384,6 +1760,37 @@ export function useGetAutomations(
   return useQuery<Awaited<ReturnType<typeof getAutomations>>, ApiError>({
     queryKey: automationKeys.list(params),
     queryFn: () => getAutomations(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetAutomationsInfinite(
+  params?: Parameters<typeof getAutomations>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getAutomations>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getAutomations>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getAutomations>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getAutomations>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...automationKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getAutomations({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -1453,6 +1860,37 @@ export function useGetEvents(
   return useQuery<Awaited<ReturnType<typeof getEvents>>, ApiError>({
     queryKey: eventKeys.list(params),
     queryFn: () => getEvents(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetEventsInfinite(
+  params?: Parameters<typeof getEvents>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getEvents>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getEvents>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getEvents>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getEvents>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...eventKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getEvents({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,

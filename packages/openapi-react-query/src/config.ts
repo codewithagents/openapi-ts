@@ -22,6 +22,13 @@ export interface ReactQueryConfig {
   overrides?: Record<string, { stale_time?: number; gc_time?: number }>
   /** When true, mutation hooks auto-invalidate related resource queries on success (default: false) */
   auto_invalidate?: boolean
+  /**
+   * Controls infinite query hook generation.
+   * - 'auto' (default): emit useXxxInfinite when pagination params are detected.
+   * - true: emit useXxxInfinite for all list GET ops regardless of param names.
+   * - false: never emit useXxxInfinite hooks.
+   */
+  infinite_query?: boolean | 'auto'
 }
 
 function validateTiming(resource: string, timing: unknown): void {
@@ -54,11 +61,18 @@ function expectBoolean(raw: Record<string, unknown>, key: string, message: strin
   if (raw[key] !== undefined && typeof raw[key] !== 'boolean') throw new Error(message)
 }
 
+function validateInfiniteQuery(value: unknown): void {
+  if (value !== undefined && typeof value !== 'boolean' && value !== 'auto') {
+    throw new Error('"infinite_query" must be a boolean or "auto"')
+  }
+}
+
 function validateReactQueryFields(raw: Record<string, unknown>): void {
   expectNumber(raw, 'stale_time', '"stale_time" must be a number (milliseconds)')
   expectNumber(raw, 'gc_time', '"gc_time" must be a number (milliseconds)')
   expectBoolean(raw, 'suspense', '"suspense" must be a boolean')
   expectBoolean(raw, 'auto_invalidate', '"auto_invalidate" must be a boolean')
+  validateInfiniteQuery(raw['infinite_query'])
   if (raw['overrides'] !== undefined) validateOverrides(raw['overrides'])
 }
 
@@ -78,6 +92,7 @@ export async function loadConfig(cwd: string, configPath?: string): Promise<Reac
           | Record<string, { stale_time?: number; gc_time?: number }>
           | undefined,
         auto_invalidate: raw['auto_invalidate'] as boolean | undefined,
+        infinite_query: raw['infinite_query'] as boolean | 'auto' | undefined,
       }
     },
   })

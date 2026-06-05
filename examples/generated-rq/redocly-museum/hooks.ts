@@ -4,6 +4,10 @@ import {
   queryOptions,
   useQuery,
   type UseQueryOptions,
+  useInfiniteQuery,
+  type UseInfiniteQueryOptions,
+  type InfiniteData,
+  type QueryKey,
   useMutation,
   type UseMutationOptions,
 } from '@tanstack/react-query'
@@ -123,6 +127,37 @@ export function useGetMuseumHours(
   })
 }
 
+export function useGetMuseumHoursInfinite(
+  params?: Parameters<typeof getMuseumHours>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getMuseumHours>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getMuseumHours>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getMuseumHours>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getMuseumHours>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...museumHourKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getMuseumHours({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useListSpecialEvents(
   params?: Parameters<typeof listSpecialEvents>[0],
   options?: Omit<
@@ -133,6 +168,37 @@ export function useListSpecialEvents(
   return useQuery<Awaited<ReturnType<typeof listSpecialEvents>>, ApiError>({
     queryKey: specialEventKeys.list(params),
     queryFn: () => listSpecialEvents(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useListSpecialEventsInfinite(
+  params?: Parameters<typeof listSpecialEvents>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof listSpecialEvents>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof listSpecialEvents>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof listSpecialEvents>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof listSpecialEvents>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...specialEventKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => listSpecialEvents({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,

@@ -2,7 +2,7 @@
 // tsc --noEmit exercises all these patterns on every `pnpm lint` run in CI.
 
 import type { Task, CreateTaskRequest } from '../generated/models.js'
-import { useListTasks, useGetTask, useCreateTask } from '../generated/hooks.js'
+import { useListTasks, useListTasksInfinite, useGetTask, useCreateTask } from '../generated/hooks.js'
 import { createServerClient } from '../generated/server.js'
 
 // Pattern 1: useQuery with no params (list hook)
@@ -57,6 +57,17 @@ async function _serverClientUsage() {
   await api.deleteTask('some-id')
 }
 
+// Pattern 7: useXxxInfinite — partial options object (only enabled); must not
+// require getNextPageParam or initialPageParam at the call site (Fix #189-CR1).
+function _useListTasksInfinitePartialOptions(enabled: boolean) {
+  return useListTasksInfinite({ status: 'pending' }, { enabled })
+}
+
+// Pattern 8: useXxxInfinite — no options argument at all; must typecheck.
+function _useListTasksInfiniteNoOptions() {
+  return useListTasksInfinite()
+}
+
 // Ensure all _-prefixed functions are referenced so TypeScript doesn't elide them
 void _useListTasksNoParams
 void _useListTasksWithParams
@@ -64,3 +75,5 @@ void _useGetTaskNullish
 void _useCreateTaskOnSuccess
 void _useCreateTaskOnError
 void _serverClientUsage
+void _useListTasksInfinitePartialOptions
+void _useListTasksInfiniteNoOptions

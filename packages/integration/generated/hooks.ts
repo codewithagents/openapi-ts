@@ -4,6 +4,10 @@ import {
   queryOptions,
   useQuery,
   type UseQueryOptions,
+  useInfiniteQuery,
+  type UseInfiniteQueryOptions,
+  type InfiniteData,
+  type QueryKey,
   useMutation,
   type UseMutationOptions,
 } from '@tanstack/react-query'
@@ -71,6 +75,37 @@ export function useListTasks(
   return useQuery<Awaited<ReturnType<typeof listTasks>>, ApiError>({
     queryKey: taskKeys.list(params),
     queryFn: () => listTasks(params),
+    staleTime: 30000,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useListTasksInfinite(
+  params?: Parameters<typeof listTasks>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof listTasks>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof listTasks>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof listTasks>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof listTasks>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...taskKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => listTasks({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 30000,
     gcTime: 300000,
     ...options,

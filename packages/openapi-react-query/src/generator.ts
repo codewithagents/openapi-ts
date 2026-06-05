@@ -37,6 +37,7 @@ export async function generate(cwd: string, configPath?: string): Promise<void> 
       suspense: config.suspense,
       overrides: Object.keys(overrides).length > 0 ? overrides : undefined,
       autoInvalidate: config.auto_invalidate,
+      infiniteQuery: config.infinite_query,
     }),
     generateTestUtils(spec),
   ]
