@@ -6,15 +6,18 @@
   "scripts": {
     "generate": "openapi-zod-ts --config openapi-zod-ts.config.json",
     "generate:hooks": "openapi-react-query --config openapi-react-query.config.json",
+    "generate:mocks": "openapi-msw --config openapi-msw.config.json",
     "test": "vitest run",
     "lint": "tsc --noEmit && eslint generated/"
   },
   "dependencies": {
     "@codewithagents/api-errors": "workspace:*",
     "openapi-zod-ts": "workspace:*",
-    "@codewithagents/openapi-react-query": "workspace:*"
+    "@codewithagents/openapi-react-query": "workspace:*",
+    "@codewithagents/openapi-msw": "workspace:*"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.8.0",
     "@tanstack/react-query": "catalog:",
     "@testing-library/react": "^16.0.0",
     "@types/node": "catalog:",
