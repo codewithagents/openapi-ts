@@ -25,6 +25,13 @@
       "package-name": "@codewithagents/openapi-server",
       "component": "openapi-server",
       "changelog-path": "CHANGELOG.md"
+    },
+    "packages/openapi-msw": {
+      "release-type": "node",
+      "package-name": "@codewithagents/openapi-msw",
+      "component": "openapi-msw",
+      "changelog-path": "CHANGELOG.md",
+      "bump-major-pre-major": true
     }
   }
 }

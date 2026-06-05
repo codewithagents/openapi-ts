@@ -158,6 +158,9 @@ importers:
       '@codewithagents/api-errors':
         specifier: workspace:*
         version: link:../api-errors
+      '@codewithagents/openapi-msw':
+        specifier: workspace:*
+        version: link:../openapi-msw
       '@codewithagents/openapi-react-query':
         specifier: workspace:*
         version: link:../openapi-react-query
@@ -165,6 +168,9 @@ importers:
         specifier: workspace:*
         version: link:../openapi-zod-ts
     devDependencies:
+      '@faker-js/faker':
+        specifier: ^9.8.0
+        version: 9.9.0
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.100.14(react@19.2.6)
@@ -192,6 +198,37 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.6(react@19.2.6)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@8.0.14(@types/node@25.9.1)(esbuild@0.28.0)(tsx@4.22.3))
+
+  packages/openapi-msw:
+    dependencies:
+      openapi-types:
+        specifier: 'catalog:'
+        version: 12.1.3
+      openapi-zod-ts:
+        specifier: workspace:*
+        version: link:../openapi-zod-ts
+      prettier:
+        specifier: 'catalog:'
+        version: 3.8.3
+    devDependencies:
+      '@faker-js/faker':
+        specifier: ^9.8.0
+        version: 9.9.0
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.1
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.7(vitest@4.1.7)
+      msw:
+        specifier: ^2.14.6
+        version: 2.14.6(@types/node@25.9.1)(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -1085,6 +1122,10 @@ packages:
 
   '@expressive-code/plugin-text-markers@0.42.0':
     resolution: {integrity: sha512-l59lUx8fq1v5g6SpmbDjiU0+7IdfbiWnAyRmtTVSpfhyq+nZMN4UcmYyu2b9Mynhzt7Gr+O+cXyEPDNb2AVWVQ==}
+
+  '@faker-js/faker@9.9.0':
+    resolution: {integrity: sha512-OEl393iCOoo/z8bMezRlJu+GlRGlsKbUAN7jKB6LhnKoqKve5DXRpalbItIIcwnCjs1k/FOPjFzcA6Qn+H+YbA==}
+    engines: {node: '>=18.0.0', npm: '>=9.0.0'}
 
   '@fallow-cli/darwin-arm64@2.85.0':
     resolution: {integrity: sha512-GmV5+f6TqhQWraymXN2L4JNRPjJ3N2i9KvAzAnQsonipCCDJ7Y1QbBMCvwzLSM5e3tKXC8hRgcc5pUnwInuocg==}
@@ -5319,6 +5360,8 @@ snapshots:
   '@expressive-code/plugin-text-markers@0.42.0':
     dependencies:
       '@expressive-code/core': 0.42.0
+
+  '@faker-js/faker@9.9.0': {}
 
   '@fallow-cli/darwin-arm64@2.85.0':
     optional: true

@@ -1,0 +1,63 @@
+{
+  "name": "@codewithagents/openapi-msw",
+  "version": "0.1.0",
+  "description": "Generate MSW v2 handlers with seeded Faker mock data from OpenAPI 3.1 specs",
+  "type": "module",
+  "bin": {
+    "openapi-msw": "dist/cli.cjs"
+  },
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && esbuild src/cli.ts --bundle --platform=node --format=cjs --target=node22 --external:prettier --external:msw --external:@faker-js/faker --outfile=dist/cli.cjs && chmod +x dist/cli.cjs",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc -p tsconfig.build.json --noEmit"
+  },
+  "dependencies": {
+    "openapi-zod-ts": "workspace:*",
+    "openapi-types": "catalog:",
+    "prettier": "catalog:"
+  },
+  "peerDependencies": {
+    "msw": "^2.0.0",
+    "@faker-js/faker": "^9.0.0"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^9.8.0",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "msw": "^2.14.6",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "keywords": [
+    "openapi",
+    "openapi-3.1",
+    "msw",
+    "mock-service-worker",
+    "faker",
+    "codegen",
+    "typescript",
+    "mock",
+    "code-generator"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codewithagents/openapi-zod-ts"
+  },
+  "homepage": "https://openapi.codewithagents.de/openapi-msw",
+  "bugs": {
+    "url": "https://github.com/codewithagents/openapi-zod-ts/issues"
+  },
+  "author": "CodeWithAgents (https://codewithagents.de)",
+  "publishConfig": {
+    "access": "public"
+  }
+}

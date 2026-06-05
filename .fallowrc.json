@@ -9,7 +9,7 @@
     "packages/petstore-hono/**"
   ],
   "ignoreUnresolvedImports": ["**/generated/dnd5e/**"],
-  "ignoreDependencies": ["zod"],
+  "ignoreDependencies": ["zod", "@faker-js/faker"],
   "rules": {
     "unused-files": "warn",
     "unused-exports": "warn",
