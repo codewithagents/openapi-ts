@@ -153,7 +153,8 @@ Standard squash merge. CI must be green first.
 **Why manual?** OIDC Trusted Publishing only works for packages that already exist on npm. The very first publish must be done by a human with 2FA.
 
 ```bash
-# From the monorepo root — build deps first
+# From the monorepo root — build deps first (workspace deps too, e.g. openapi-zod-ts)
+pnpm --filter openapi-zod-ts build
 pnpm --filter @codewithagents/<name> build
 
 # ⚠️ cd into the package — NOT the monorepo root
@@ -161,11 +162,33 @@ pnpm --filter @codewithagents/<name> build
 #   "Cannot read properties of null (reading 'prerelease')"
 # because the root package.json has no version field.
 cd packages/<name>
-npm publish --access public
+
+# ⚠️ pack FIRST, publish the tarball — NOT the directory.
+# pnpm pack resolves workspace:* and catalog: specifiers to real versions.
+# npm publish on the directory ships them unresolved, breaking all consumers
+# (EUNSUPPORTEDPROTOCOL on install).
+pnpm pack
+npm publish --access public codewithagents-<name>-0.1.0.tgz
 # npm will prompt for 2FA OTP
 ```
 
 Check it landed: `npm info @codewithagents/<name>`
+
+---
+
+## Step 5b — Create the 0.1.0 anchor release on GitHub (one-time, REQUIRED)
+
+Release Please needs a release anchor for every package in the manifest. Seeding the manifest alone is NOT enough: without a `<name>-v0.1.0` tag + GitHub release, the next Release Please run cannot find a "latest release" for the package and walks deep into repo history. That deep walk poisons the shared commit collection and can produce bogus MAJOR bump proposals for OTHER packages (observed 2026-06-05: missing openapi-msw anchor caused a spurious api-errors 2.0.0 proposal replaying the full repo history).
+
+```bash
+# Target the squash-merge commit that introduced the package (full SHA required)
+gh release create <name>-v0.1.0 \
+  --target "$(git rev-parse <merge-commit>)" \
+  --title "<name>: v0.1.0" \
+  --notes "Initial release of @codewithagents/<name>. Published manually (one-time bootstrap for npm Trusted Publishing)."
+```
+
+Verify the next Release Please run proposes no spurious bumps: `gh workflow run release.yml --ref main`, then check that the resulting release PR (if any) only contains expected versions.
 
 ---
 
@@ -201,5 +224,7 @@ Make a `feat:` commit touching `packages/<name>/` and open a PR. After merge, Re
 - [ ] `.release-please-manifest.json` seeded at `0.1.0`
 - [ ] `release.yml` updated (input + output + job)
 - [ ] PR merged, CI green
-- [ ] Owner ran `npm publish --access public` locally with 2FA
+- [ ] Build script deps declared in the package's own devDependencies (e.g. `esbuild`) — hoisting hides this locally, CI clean install fails
+- [ ] Owner ran `pnpm pack` + `npm publish --access public <tarball>` locally with 2FA
+- [ ] `<name>-v0.1.0` anchor release created on GitHub (Step 5b)
 - [ ] Owner configured Trusted Publisher on npmjs.com
