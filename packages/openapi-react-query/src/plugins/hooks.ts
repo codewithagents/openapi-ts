@@ -12,6 +12,7 @@ import {
 type OperationObject = OpenAPIV3_1.OperationObject
 type ReferenceObject = OpenAPIV3_1.ReferenceObject
 type PathItemObject = OpenAPIV3_1.PathItemObject
+type ParameterObject = OpenAPIV3_1.ParameterObject
 
 export interface HookGenOptions {
   staleTime: number
@@ -19,6 +20,13 @@ export interface HookGenOptions {
   suspense?: boolean
   overrides?: Record<string, { staleTime: number; gcTime: number }>
   autoInvalidate?: boolean
+  /**
+   * Controls infinite query hook generation.
+   * - 'auto' (default): emit useXxxInfinite when pagination params are detected.
+   * - true: emit useXxxInfinite for all list GET ops regardless of param names.
+   * - false: never emit useXxxInfinite hooks.
+   */
+  infiniteQuery?: boolean | 'auto'
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -103,6 +111,149 @@ interface OperationMeta {
   hasQueryParams: boolean
   hasRequiredQueryParams: boolean
   deprecated: boolean
+  isPaginated: boolean
+  pageParamName: string | undefined
+}
+
+// ── Pagination detection ───────────────────────────────────────────────────────
+
+/** Param names that signal a paginated list endpoint. First match wins. */
+const PAGINATION_PARAM_NAMES = new Set([
+  'page',
+  'cursor',
+  'offset',
+  'pageToken',
+  'pagetoken',
+  'after',
+  'before',
+  'next_page',
+  'nextPage',
+  'page_token',
+])
+
+// Intentional mirror of openapi-zod-ts client.ts resolveParamRef — kept local to
+// avoid a circular dependency between the two packages. Component-ref resolution
+// only; deep JSON-pointer refs are out of scope for pagination detection.
+function resolveParamRef(
+  p: ParameterObject | ReferenceObject,
+  spec: OpenAPIV3_1.Document,
+  visited?: Set<string>
+): ParameterObject | null {
+  if (!isRef(p)) return p as ParameterObject
+  const ref = (p as ReferenceObject).$ref
+  const visitedSet = visited ?? new Set<string>()
+  if (visitedSet.has(ref)) return null
+  visitedSet.add(ref)
+
+  const match = /^#\/components\/parameters\/(.+)$/.exec(ref)
+  if (match !== null) {
+    const name = match[1]!
+    const params = spec.components?.parameters as
+      | Record<string, ParameterObject | ReferenceObject>
+      | undefined
+    const resolved = params?.[name]
+    if (resolved === undefined) return null
+    return resolveParamRef(resolved, spec, visitedSet)
+  }
+  return null
+}
+
+/**
+ * Returns resolved query parameter names for an operation.
+ * Merges path-item and operation parameters, resolves $ref params, and
+ * returns the names of all query-in parameters.
+ */
+function getResolvedQueryParamNames(
+  pathItem: PathItemObject,
+  operation: OperationObject,
+  spec: OpenAPIV3_1.Document
+): string[] {
+  const pathItemParams = (pathItem.parameters ?? []) as (ParameterObject | ReferenceObject)[]
+  const operationParams = (operation.parameters ?? []) as (ParameterObject | ReferenceObject)[]
+  const all = [...pathItemParams, ...operationParams]
+  const resolved = all
+    .map((p) => resolveParamRef(p, spec))
+    .filter((p): p is ParameterObject => p !== null)
+  // Deduplicate by (name, in) — operation wins over path-item
+  const seen = new Map<string, ParameterObject>()
+  for (const p of resolved) {
+    seen.set(`${p.name}::${p.in}`, p)
+  }
+  return [...seen.values()]
+    .filter((p) => p.in === 'query')
+    .map((p) => p.name)
+}
+
+const PAGINATED_FALSE = { isPaginated: false, pageParamName: undefined } as const
+
+/**
+ * Handles the explicit `x-infinite: true` case.
+ * Warns and returns a no-op when no query params exist to inject pageParam into.
+ */
+function detectPaginationXInfiniteTrue(
+  operation: OperationObject,
+  pathItem: PathItemObject,
+  spec: OpenAPIV3_1.Document
+): { isPaginated: boolean; pageParamName: string | undefined } {
+  const queryNames = getResolvedQueryParamNames(pathItem, operation, spec)
+  const match = queryNames.find((n) => PAGINATION_PARAM_NAMES.has(n))
+  const pageParam = match ?? queryNames[0]
+  if (pageParam === undefined) {
+    const opId = operation.operationId ?? '(unknown operationId)'
+    console.warn(
+      `[openapi-react-query] x-infinite: true on "${opId}" but no query params were found. ` +
+        `No useXxxInfinite hook will be emitted. ` +
+        `Add at least one query parameter to the operation or remove x-infinite.`
+    )
+    return PAGINATED_FALSE
+  }
+  return { isPaginated: true, pageParamName: pageParam }
+}
+
+/**
+ * Heuristic path: checks for pagination param names among resolved query params.
+ * Respects the `infiniteQuery` option (force-on / auto).
+ */
+function detectPaginationHeuristic(
+  pathItem: PathItemObject,
+  operation: OperationObject,
+  spec: OpenAPIV3_1.Document,
+  infiniteQuery: boolean | 'auto'
+): { isPaginated: boolean; pageParamName: string | undefined } {
+  const queryNames = getResolvedQueryParamNames(pathItem, operation, spec)
+  const match = queryNames.find((n) => PAGINATION_PARAM_NAMES.has(n))
+  if (infiniteQuery === true) {
+    return { isPaginated: true, pageParamName: match ?? queryNames[0] }
+  }
+  // Default 'auto': only emit when a recognized pagination param is present
+  return match !== undefined ? { isPaginated: true, pageParamName: match } : PAGINATED_FALSE
+}
+
+/**
+ * Detects whether an operation should receive an infinite query hook.
+ *
+ * Priority order:
+ * 1. `x-infinite: true/false` on the operation (explicit opt-in/out).
+ * 2. Heuristic: list-level GET (no path params) with a recognized pagination
+ *    query param name.
+ * 3. `infiniteQuery: true` forces detection for all list GET ops even without
+ *    standard param names.
+ *
+ * Returns `{ isPaginated, pageParamName }`.
+ */
+function detectPagination(
+  operation: OperationObject,
+  pathItem: PathItemObject,
+  spec: OpenAPIV3_1.Document,
+  pathParams: string[],
+  infiniteQuery: boolean | 'auto'
+): { isPaginated: boolean; pageParamName: string | undefined } {
+  const xInfinite = (operation as Record<string, unknown>)['x-infinite']
+  if (xInfinite === true) return detectPaginationXInfiniteTrue(operation, pathItem, spec)
+  if (xInfinite === false) return PAGINATED_FALSE
+  if (pathParams.length > 0) return PAGINATED_FALSE
+  if (infiniteQuery === false) return PAGINATED_FALSE
+  return detectPaginationHeuristic(pathItem, operation, spec, infiniteQuery)
 }
 
 // getBodyInfo gained the writable-variant redirect (#242); complexity is under
@@ -452,6 +603,87 @@ function buildSuspenseQueryHook(
   return lines.join('\n')
 }
 
+// ── Infinite query hook generation ────────────────────────────────────────────
+
+/**
+ * Builds the query key call for the infinite hook.
+ * Reuses the existing list key entry with an appended 'infinite' segment so
+ * infinite queries are namespaced away from regular list queries.
+ */
+function buildInfiniteQueryKeyCall(
+  keyFactoryName: string,
+  keyEntry: KeyEntry,
+  hasQueryParams: boolean
+): string {
+  const base = `${keyFactoryName}.${keyEntry.key}`
+  const listCall = hasQueryParams ? `${base}(params)` : `${base}()`
+  return `[...${listCall}, 'infinite']`
+}
+
+/**
+ * Builds a `useXxxInfinite` hook for a paginated list operation.
+ *
+ * The hook:
+ * - Is named `use${capitalize(funcName)}Infinite` (mirrors useSuspense* suffix).
+ * - Accepts all params as the regular list hook (path params are none for list ops).
+ * - Injects `pageParam` from React Query into the client call.
+ * - Provides default `initialPageParam: undefined` and a placeholder
+ *   `getNextPageParam: () => undefined`; callers override both via `options`.
+ */
+function buildInfiniteQueryHook(
+  op: OperationMeta,
+  keyFactoryName: string,
+  keyEntry: KeyEntry,
+  pageParamName: string,
+  staleTime: number,
+  gcTime: number
+): string {
+  const lines: string[] = []
+  const { funcName, hasQueryParams, hasRequiredQueryParams, deprecated } = op
+  const infiniteHookName = `use${capitalize(funcName)}Infinite`
+
+  const sigParts: string[] = []
+  if (hasQueryParams) {
+    const paramsToken = hasRequiredQueryParams ? 'params' : 'params?'
+    sigParts.push(`${paramsToken}: Parameters<typeof ${funcName}>[0]`)
+  }
+  sigParts.push(
+    `options?: Omit<UseInfiniteQueryOptions<Awaited<ReturnType<typeof ${funcName}>>, ApiError, InfiniteData<Awaited<ReturnType<typeof ${funcName}>>>, QueryKey, unknown>, 'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'>`
+  )
+
+  const queryKeyCall = buildInfiniteQueryKeyCall(keyFactoryName, keyEntry, hasQueryParams)
+
+  // Build queryFn: merges pageParam into the params object under the detected param name
+  let queryFnBody: string
+  if (hasQueryParams) {
+    queryFnBody = `({ pageParam }) => ${funcName}({ ...params, ${JSON.stringify(pageParamName)}: pageParam as never })`
+  } else {
+    queryFnBody = `({ pageParam }) => ${funcName}({ ${JSON.stringify(pageParamName)}: pageParam as never } as never)`
+  }
+
+  if (deprecated) {
+    lines.push(`/** @deprecated */`)
+  }
+  lines.push(`export function ${infiniteHookName}(`)
+  lines.push(`  ${sigParts.join(',\n  ')},`)
+  lines.push(`) {`)
+  lines.push(
+    `  return useInfiniteQuery<Awaited<ReturnType<typeof ${funcName}>>, ApiError, InfiniteData<Awaited<ReturnType<typeof ${funcName}>>>, QueryKey, unknown>({`
+  )
+  lines.push(`    queryKey: ${queryKeyCall},`)
+  lines.push(`    queryFn: ${queryFnBody},`)
+  lines.push(`    initialPageParam: undefined,`)
+  lines.push(`    // Override getNextPageParam in options to enable actual pagination.`)
+  lines.push(`    getNextPageParam: () => undefined,`)
+  lines.push(`    staleTime: ${staleTime},`)
+  lines.push(`    gcTime: ${gcTime},`)
+  lines.push(`    ...options,`)
+  lines.push(`  })`)
+  lines.push(`}`)
+
+  return lines.join('\n')
+}
+
 // ── Mutation hook generation ───────────────────────────────────────────────────
 
 interface MutationInvalidateInfo {
@@ -637,13 +869,19 @@ function buildMutationHook(
 
 // ── Main generator ─────────────────────────────────────────────────────────────
 
+// Cognitive complexity is dominated by the two nested for-loops that existed
+// before #189; the pagination detection call added here is a single ternary.
+// fallow-ignore-next-line complexity
 /**
  * Walks all paths in the spec and produces a flat list of OperationMeta records.
  *
  * Name deduplication mirrors the client generator so that funcName values stay in
  * sync with client exports (e.g. getConfig -> getConfig_2, fetch -> fetch_2).
  */
-function collectOperations(spec: OpenAPIV3_1.Document): OperationMeta[] {
+function collectOperations(
+  spec: OpenAPIV3_1.Document,
+  infiniteQuery: boolean | 'auto' = 'auto'
+): OperationMeta[] {
   const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
 
   // Build the writable-variant map so getBodyInfo can redirect request-body schemas
@@ -690,6 +928,18 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationMeta[] {
         const hasRequiredQueryParams = hasRequiredParams
         const deprecated = operation.deprecated === true
 
+        // Pagination detection only applies to GET operations
+        const { isPaginated, pageParamName } =
+          method === 'get'
+            ? detectPagination(
+                operation,
+                pathItem as PathItemObject,
+                spec,
+                pathParams,
+                infiniteQuery
+              )
+            : { isPaginated: false, pageParamName: undefined }
+
         operations.push({
           funcName,
           hookName,
@@ -701,6 +951,8 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationMeta[] {
           hasQueryParams,
           hasRequiredQueryParams,
           deprecated,
+          isPaginated,
+          pageParamName,
         })
       }
     }
@@ -713,10 +965,11 @@ export function generateHooks(
   spec: OpenAPIV3_1.Document,
   options: HookGenOptions
 ): { filename: string; content: string } {
-  const { staleTime, gcTime, suspense = false, autoInvalidate = false } = options
+  const { staleTime, gcTime, suspense = false, autoInvalidate = false, infiniteQuery = 'auto' } =
+    options
 
   // Collect all operations (metadata extraction separated from string emission)
-  const operations = collectOperations(spec)
+  const operations = collectOperations(spec, infiniteQuery)
 
   // Separate GET vs mutation operations
   const getOps = operations.filter((op) => op.method === 'get')
@@ -797,9 +1050,10 @@ export function generateHooks(
     keyFactoryBlocks.push(buildKeyFactory(resource, entries))
   }
 
-  // Build queryOptions factories and query hooks (and suspense variants if enabled)
+  // Build queryOptions factories and query hooks (and suspense/infinite variants if enabled)
   const queryOptionsBlocks: string[] = []
   const queryHookBlocks: string[] = []
+  let needsUseInfiniteQuery = false
   for (const op of getOps) {
     const info = opToKeyInfo.get(op.funcName)
     if (info === undefined) continue
@@ -817,6 +1071,19 @@ export function generateHooks(
     if (suspense) {
       queryHookBlocks.push(
         buildSuspenseQueryHook(op, factoryName, keyEntry, effectiveStaleTime, effectiveGcTime)
+      )
+    }
+    if (op.isPaginated && op.pageParamName !== undefined) {
+      needsUseInfiniteQuery = true
+      queryHookBlocks.push(
+        buildInfiniteQueryHook(
+          op,
+          factoryName,
+          keyEntry,
+          op.pageParamName,
+          effectiveStaleTime,
+          effectiveGcTime
+        )
       )
     }
   }
@@ -858,6 +1125,13 @@ export function generateHooks(
   if (needsQueryOptions) rqImports.push('queryOptions')
   if (needsUseQuery) rqImports.push('useQuery', 'type UseQueryOptions')
   if (needsUseSuspenseQuery) rqImports.push('useSuspenseQuery', 'type UseSuspenseQueryOptions')
+  if (needsUseInfiniteQuery)
+    rqImports.push(
+      'useInfiniteQuery',
+      'type UseInfiniteQueryOptions',
+      'type InfiniteData',
+      'type QueryKey'
+    )
   if (needsUseMutation) rqImports.push('useMutation', 'type UseMutationOptions')
   if (needsUseQueryClient) rqImports.push('useQueryClient')
 

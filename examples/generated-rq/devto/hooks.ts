@@ -4,6 +4,10 @@ import {
   queryOptions,
   useQuery,
   type UseQueryOptions,
+  useInfiniteQuery,
+  type UseInfiniteQueryOptions,
+  type InfiniteData,
+  type QueryKey,
   useMutation,
   type UseMutationOptions,
 } from '@tanstack/react-query'
@@ -786,6 +790,37 @@ export function useGetArticles(
   })
 }
 
+export function useGetArticlesInfinite(
+  params?: Parameters<typeof getArticles>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getArticles>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getArticles>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getArticles>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getArticles>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getArticles(params), 'infinite'],
+    queryFn: ({ pageParam }) => getArticles({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetLatestArticles(
   params?: Parameters<typeof getLatestArticles>[0],
   options?: Omit<
@@ -796,6 +831,37 @@ export function useGetLatestArticles(
   return useQuery<Awaited<ReturnType<typeof getLatestArticles>>, ApiError>({
     queryKey: apiKeys.getLatestArticles(params),
     queryFn: () => getLatestArticles(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetLatestArticlesInfinite(
+  params?: Parameters<typeof getLatestArticles>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getLatestArticles>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getLatestArticles>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getLatestArticles>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getLatestArticles>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getLatestArticles(params), 'infinite'],
+    queryFn: ({ pageParam }) => getLatestArticles({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -853,6 +919,37 @@ export function useGetUserArticles(
   })
 }
 
+export function useGetUserArticlesInfinite(
+  params?: Parameters<typeof getUserArticles>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getUserArticles>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getUserArticles>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getUserArticles>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getUserArticles>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getUserArticles(params), 'infinite'],
+    queryFn: ({ pageParam }) => getUserArticles({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetUserPublishedArticles(
   params?: Parameters<typeof getUserPublishedArticles>[0],
   options?: Omit<
@@ -863,6 +960,37 @@ export function useGetUserPublishedArticles(
   return useQuery<Awaited<ReturnType<typeof getUserPublishedArticles>>, ApiError>({
     queryKey: apiKeys.getUserPublishedArticles(params),
     queryFn: () => getUserPublishedArticles(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetUserPublishedArticlesInfinite(
+  params?: Parameters<typeof getUserPublishedArticles>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getUserPublishedArticles>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getUserPublishedArticles>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getUserPublishedArticles>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getUserPublishedArticles>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getUserPublishedArticles(params), 'infinite'],
+    queryFn: ({ pageParam }) => getUserPublishedArticles({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -885,6 +1013,37 @@ export function useGetUserUnpublishedArticles(
   })
 }
 
+export function useGetUserUnpublishedArticlesInfinite(
+  params?: Parameters<typeof getUserUnpublishedArticles>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getUserUnpublishedArticles>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getUserUnpublishedArticles>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getUserUnpublishedArticles>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getUserUnpublishedArticles>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getUserUnpublishedArticles(params), 'infinite'],
+    queryFn: ({ pageParam }) => getUserUnpublishedArticles({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetUserAllArticles(
   params?: Parameters<typeof getUserAllArticles>[0],
   options?: Omit<
@@ -895,6 +1054,37 @@ export function useGetUserAllArticles(
   return useQuery<Awaited<ReturnType<typeof getUserAllArticles>>, ApiError>({
     queryKey: apiKeys.getUserAllArticles(params),
     queryFn: () => getUserAllArticles(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetUserAllArticlesInfinite(
+  params?: Parameters<typeof getUserAllArticles>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getUserAllArticles>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getUserAllArticles>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getUserAllArticles>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getUserAllArticles>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getUserAllArticles(params), 'infinite'],
+    queryFn: ({ pageParam }) => getUserAllArticles({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -1000,6 +1190,37 @@ export function useGetCommentsByArticleId(
   })
 }
 
+export function useGetCommentsByArticleIdInfinite(
+  params?: Parameters<typeof getCommentsByArticleId>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getCommentsByArticleId>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getCommentsByArticleId>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getCommentsByArticleId>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getCommentsByArticleId>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getCommentsByArticleId(params), 'infinite'],
+    queryFn: ({ pageParam }) => getCommentsByArticleId({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetCommentById(
   id: string | undefined | null,
   options?: Omit<
@@ -1042,6 +1263,37 @@ export function useGetFollowers(
   return useQuery<Awaited<ReturnType<typeof getFollowers>>, ApiError>({
     queryKey: apiKeys.getFollowers(params),
     queryFn: () => getFollowers(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetFollowersInfinite(
+  params?: Parameters<typeof getFollowers>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getFollowers>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getFollowers>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getFollowers>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getFollowers>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getFollowers(params), 'infinite'],
+    queryFn: ({ pageParam }) => getFollowers({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -1117,6 +1369,37 @@ export function useGetOrganizations(
   })
 }
 
+export function useGetOrganizationsInfinite(
+  params?: Parameters<typeof getOrganizations>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getOrganizations>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getOrganizations>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getOrganizations>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getOrganizations>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getOrganizations(params), 'infinite'],
+    queryFn: ({ pageParam }) => getOrganizations({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetOrganizationById(
   id: string | undefined | null,
   options?: Omit<
@@ -1182,6 +1465,37 @@ export function useGetPodcastEpisodes(
   })
 }
 
+export function useGetPodcastEpisodesInfinite(
+  params?: Parameters<typeof getPodcastEpisodes>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getPodcastEpisodes>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getPodcastEpisodes>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getPodcastEpisodes>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getPodcastEpisodes>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getPodcastEpisodes(params), 'infinite'],
+    queryFn: ({ pageParam }) => getPodcastEpisodes({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetProfileImage(
   username: string | undefined | null,
   options?: Omit<
@@ -1215,6 +1529,37 @@ export function useGetReadinglist(
   })
 }
 
+export function useGetReadinglistInfinite(
+  params?: Parameters<typeof getReadinglist>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getReadinglist>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getReadinglist>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getReadinglist>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getReadinglist>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getReadinglist(params), 'infinite'],
+    queryFn: ({ pageParam }) => getReadinglist({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetSurveys(
   params?: Parameters<typeof getSurveys>[0],
   options?: Omit<
@@ -1225,6 +1570,37 @@ export function useGetSurveys(
   return useQuery<Awaited<ReturnType<typeof getSurveys>>, ApiError>({
     queryKey: apiKeys.getSurveys(params),
     queryFn: () => getSurveys(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetSurveysInfinite(
+  params?: Parameters<typeof getSurveys>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getSurveys>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getSurveys>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getSurveys>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getSurveys>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getSurveys(params), 'infinite'],
+    queryFn: ({ pageParam }) => getSurveys({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -1300,6 +1676,37 @@ export function useGetTags(
   })
 }
 
+export function useGetTagsInfinite(
+  params?: Parameters<typeof getTags>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getTags>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getTags>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getTags>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getTags>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.getTags(params), 'infinite'],
+    queryFn: ({ pageParam }) => getTags({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetUserMe(
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUserMe>>, ApiError>,
@@ -1342,6 +1749,37 @@ export function useVideos(
   return useQuery<Awaited<ReturnType<typeof videos>>, ApiError>({
     queryKey: apiKeys.videos(params),
     queryFn: () => videos(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useVideosInfinite(
+  params?: Parameters<typeof videos>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof videos>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof videos>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof videos>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof videos>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...apiKeys.videos(params), 'infinite'],
+    queryFn: ({ pageParam }) => videos({ ...params, page: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,

@@ -4,6 +4,10 @@ import {
   queryOptions,
   useQuery,
   type UseQueryOptions,
+  useInfiniteQuery,
+  type UseInfiniteQueryOptions,
+  type InfiniteData,
+  type QueryKey,
   useMutation,
   type UseMutationOptions,
 } from '@tanstack/react-query'
@@ -1614,6 +1618,37 @@ export function useGetUsersSavedAudiobooks(
   })
 }
 
+export function useGetUsersSavedAudiobooksInfinite(
+  params?: Parameters<typeof getUsersSavedAudiobooks>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getUsersSavedAudiobooks>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getUsersSavedAudiobooks>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getUsersSavedAudiobooks>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getUsersSavedAudiobooks>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...meKeys.getUsersSavedAudiobooks(params), 'infinite'],
+    queryFn: ({ pageParam }) => getUsersSavedAudiobooks({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 /** @deprecated */
 export function useCheckUsersSavedAudiobooks(
   params: Parameters<typeof checkUsersSavedAudiobooks>[0],
@@ -1717,6 +1752,37 @@ export function useSearch(
   })
 }
 
+export function useSearchInfinite(
+  params: Parameters<typeof search>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof search>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof search>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof search>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof search>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...searchKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => search({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetCurrentUsersProfile(
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getCurrentUsersProfile>>, ApiError>,
@@ -1803,6 +1869,38 @@ export function useGetAListOfCurrentUsersPlaylists(
   })
 }
 
+export function useGetAListOfCurrentUsersPlaylistsInfinite(
+  params?: Parameters<typeof getAListOfCurrentUsersPlaylists>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getAListOfCurrentUsersPlaylists>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getAListOfCurrentUsersPlaylists>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getAListOfCurrentUsersPlaylists>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getAListOfCurrentUsersPlaylists>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...meKeys.getAListOfCurrentUsersPlaylists(params), 'infinite'],
+    queryFn: ({ pageParam }) =>
+      getAListOfCurrentUsersPlaylists({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useCheckLibraryContains(
   params: Parameters<typeof checkLibraryContains>[0],
   options?: Omit<
@@ -1829,6 +1927,37 @@ export function useGetUsersSavedAlbums(
   return useQuery<Awaited<ReturnType<typeof getUsersSavedAlbums>>, ApiError>({
     queryKey: meKeys.getUsersSavedAlbums(params),
     queryFn: () => getUsersSavedAlbums(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetUsersSavedAlbumsInfinite(
+  params?: Parameters<typeof getUsersSavedAlbums>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getUsersSavedAlbums>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getUsersSavedAlbums>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getUsersSavedAlbums>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getUsersSavedAlbums>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...meKeys.getUsersSavedAlbums(params), 'infinite'],
+    queryFn: ({ pageParam }) => getUsersSavedAlbums({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -1868,6 +1997,37 @@ export function useGetUsersSavedTracks(
   })
 }
 
+export function useGetUsersSavedTracksInfinite(
+  params?: Parameters<typeof getUsersSavedTracks>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getUsersSavedTracks>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getUsersSavedTracks>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getUsersSavedTracks>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getUsersSavedTracks>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...meKeys.getUsersSavedTracks(params), 'infinite'],
+    queryFn: ({ pageParam }) => getUsersSavedTracks({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 /** @deprecated */
 export function useCheckUsersSavedTracks(
   params: Parameters<typeof checkUsersSavedTracks>[0],
@@ -1901,6 +2061,37 @@ export function useGetUsersSavedEpisodes(
   })
 }
 
+export function useGetUsersSavedEpisodesInfinite(
+  params?: Parameters<typeof getUsersSavedEpisodes>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getUsersSavedEpisodes>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getUsersSavedEpisodes>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getUsersSavedEpisodes>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getUsersSavedEpisodes>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...meKeys.getUsersSavedEpisodes(params), 'infinite'],
+    queryFn: ({ pageParam }) => getUsersSavedEpisodes({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 /** @deprecated */
 export function useCheckUsersSavedEpisodes(
   params: Parameters<typeof checkUsersSavedEpisodes>[0],
@@ -1928,6 +2119,37 @@ export function useGetUsersSavedShows(
   return useQuery<Awaited<ReturnType<typeof getUsersSavedShows>>, ApiError>({
     queryKey: meKeys.getUsersSavedShows(params),
     queryFn: () => getUsersSavedShows(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetUsersSavedShowsInfinite(
+  params?: Parameters<typeof getUsersSavedShows>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getUsersSavedShows>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getUsersSavedShows>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getUsersSavedShows>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getUsersSavedShows>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...meKeys.getUsersSavedShows(params), 'infinite'],
+    queryFn: ({ pageParam }) => getUsersSavedShows({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -2006,6 +2228,38 @@ export function useGetFeaturedPlaylists(
 }
 
 /** @deprecated */
+export function useGetFeaturedPlaylistsInfinite(
+  params?: Parameters<typeof getFeaturedPlaylists>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getFeaturedPlaylists>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getFeaturedPlaylists>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getFeaturedPlaylists>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getFeaturedPlaylists>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...browseKeys.getFeaturedPlaylists(params), 'infinite'],
+    queryFn: ({ pageParam }) => getFeaturedPlaylists({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+/** @deprecated */
 export function useGetCategories(
   params?: Parameters<typeof getCategories>[0],
   options?: Omit<
@@ -2016,6 +2270,38 @@ export function useGetCategories(
   return useQuery<Awaited<ReturnType<typeof getCategories>>, ApiError>({
     queryKey: browseKeys.getCategories(params),
     queryFn: () => getCategories(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+/** @deprecated */
+export function useGetCategoriesInfinite(
+  params?: Parameters<typeof getCategories>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getCategories>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getCategories>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getCategories>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getCategories>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...browseKeys.getCategories(params), 'infinite'],
+    queryFn: ({ pageParam }) => getCategories({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -2094,6 +2380,38 @@ export function useGetNewReleases(
   })
 }
 
+/** @deprecated */
+export function useGetNewReleasesInfinite(
+  params?: Parameters<typeof getNewReleases>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getNewReleases>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getNewReleases>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getNewReleases>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getNewReleases>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...browseKeys.getNewReleases(params), 'infinite'],
+    queryFn: ({ pageParam }) => getNewReleases({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetFollowed(
   params: Parameters<typeof getFollowed>[0],
   options?: Omit<
@@ -2104,6 +2422,37 @@ export function useGetFollowed(
   return useQuery<Awaited<ReturnType<typeof getFollowed>>, ApiError>({
     queryKey: meKeys.getFollowed(params),
     queryFn: () => getFollowed(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetFollowedInfinite(
+  params: Parameters<typeof getFollowed>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getFollowed>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getFollowed>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getFollowed>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getFollowed>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...meKeys.getFollowed(params), 'infinite'],
+    queryFn: ({ pageParam }) => getFollowed({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,
@@ -2300,6 +2649,37 @@ export function useGetRecentlyPlayed(
   })
 }
 
+export function useGetRecentlyPlayedInfinite(
+  params?: Parameters<typeof getRecentlyPlayed>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getRecentlyPlayed>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getRecentlyPlayed>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getRecentlyPlayed>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getRecentlyPlayed>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...meKeys.getRecentlyPlayed(params), 'infinite'],
+    queryFn: ({ pageParam }) => getRecentlyPlayed({ ...params, after: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetQueue(
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getQueue>>, ApiError>,
@@ -2347,6 +2727,37 @@ export function useGetUsersTopArtists(
   })
 }
 
+export function useGetUsersTopArtistsInfinite(
+  params?: Parameters<typeof getUsersTopArtists>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getUsersTopArtists>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getUsersTopArtists>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getUsersTopArtists>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getUsersTopArtists>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...meKeys.getUsersTopArtists(params), 'infinite'],
+    queryFn: ({ pageParam }) => getUsersTopArtists({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
 export function useGetUsersTopTracks(
   params?: Parameters<typeof getUsersTopTracks>[0],
   options?: Omit<
@@ -2357,6 +2768,37 @@ export function useGetUsersTopTracks(
   return useQuery<Awaited<ReturnType<typeof getUsersTopTracks>>, ApiError>({
     queryKey: meKeys.getUsersTopTracks(params),
     queryFn: () => getUsersTopTracks(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetUsersTopTracksInfinite(
+  params?: Parameters<typeof getUsersTopTracks>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getUsersTopTracks>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getUsersTopTracks>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getUsersTopTracks>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getUsersTopTracks>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...meKeys.getUsersTopTracks(params), 'infinite'],
+    queryFn: ({ pageParam }) => getUsersTopTracks({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,

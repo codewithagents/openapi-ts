@@ -4,6 +4,10 @@ import {
   queryOptions,
   useQuery,
   type UseQueryOptions,
+  useInfiniteQuery,
+  type UseInfiniteQueryOptions,
+  type InfiniteData,
+  type QueryKey,
   useMutation,
   type UseMutationOptions,
 } from '@tanstack/react-query'
@@ -267,6 +271,37 @@ export function useGetApiActivity(
   return useQuery<Awaited<ReturnType<typeof getApiActivity>>, ApiError>({
     queryKey: activityKeys.list(params),
     queryFn: () => getApiActivity(params),
+    staleTime: 0,
+    gcTime: 300000,
+    ...options,
+  })
+}
+
+export function useGetApiActivityInfinite(
+  params?: Parameters<typeof getApiActivity>[0],
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Awaited<ReturnType<typeof getApiActivity>>,
+      ApiError,
+      InfiniteData<Awaited<ReturnType<typeof getApiActivity>>>,
+      QueryKey,
+      unknown
+    >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
+) {
+  return useInfiniteQuery<
+    Awaited<ReturnType<typeof getApiActivity>>,
+    ApiError,
+    InfiniteData<Awaited<ReturnType<typeof getApiActivity>>>,
+    QueryKey,
+    unknown
+  >({
+    queryKey: [...activityKeys.list(params), 'infinite'],
+    queryFn: ({ pageParam }) => getApiActivity({ ...params, offset: pageParam as never }),
+    initialPageParam: undefined,
+    // Override getNextPageParam in options to enable actual pagination.
+    getNextPageParam: () => undefined,
     staleTime: 0,
     gcTime: 300000,
     ...options,

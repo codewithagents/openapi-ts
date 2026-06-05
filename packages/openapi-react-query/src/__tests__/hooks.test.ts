@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateHooks } from '../plugins/hooks.js'
 
@@ -2231,5 +2231,521 @@ describe('generateHooks — operationId collides with client-internal helper (#2
     // The raw colliding names must not appear in the client import list.
     expect(hooksContent).not.toMatch(/import\s*\{[^}]*\bgetConfig\b(?!_)[^}]*\}/)
     expect(hooksContent).not.toMatch(/import\s*\{[^}]*\bfetch\b(?!_)[^}]*\}/)
+  })
+})
+
+// ── Feature #189: useInfiniteQuery hook generation ────────────────────────────
+
+describe('generateHooks — #189: infinite query generation', () => {
+  // Base helper for building minimal list specs
+  const makeListSpec = (
+    paramNames: string[],
+    xInfinite?: boolean
+  ): OpenAPIV3_1.Document => ({
+    openapi: '3.1.0',
+    info: { title: 'Test', version: '1.0.0' },
+    paths: {
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          ...(xInfinite !== undefined ? { 'x-infinite': xInfinite } : {}),
+          parameters: paramNames.map((name) => ({
+            name,
+            in: 'query' as const,
+            schema: { type: 'integer' as const },
+          })),
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    },
+  })
+
+  // ── Heuristic detection: positive cases ─────────────────────────────────────
+
+  it('detects pagination by "page" param name', () => {
+    const { content } = generateHooks(makeListSpec(['page']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export function useListItemsInfinite')
+  })
+
+  it('detects pagination by "cursor" param name', () => {
+    const { content } = generateHooks(makeListSpec(['cursor']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export function useListItemsInfinite')
+  })
+
+  it('detects pagination by "offset" param name', () => {
+    const { content } = generateHooks(makeListSpec(['offset']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export function useListItemsInfinite')
+  })
+
+  it('detects pagination by "pageToken" param name', () => {
+    const { content } = generateHooks(makeListSpec(['pageToken']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export function useListItemsInfinite')
+  })
+
+  it('detects pagination by "after" param name', () => {
+    const { content } = generateHooks(makeListSpec(['after']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export function useListItemsInfinite')
+  })
+
+  it('detects pagination by "before" param name', () => {
+    const { content } = generateHooks(makeListSpec(['before']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export function useListItemsInfinite')
+  })
+
+  it('detects pagination by "next_page" param name', () => {
+    const { content } = generateHooks(makeListSpec(['next_page']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export function useListItemsInfinite')
+  })
+
+  it('detects pagination by "nextPage" param name', () => {
+    const { content } = generateHooks(makeListSpec(['nextPage']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export function useListItemsInfinite')
+  })
+
+  it('detects pagination by "page_token" param name', () => {
+    const { content } = generateHooks(makeListSpec(['page_token']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export function useListItemsInfinite')
+  })
+
+  // ── Heuristic detection: negative cases ─────────────────────────────────────
+
+  it('does NOT detect pagination for unrelated param names (limit, size, sort)', () => {
+    const { content } = generateHooks(makeListSpec(['limit', 'size', 'sort']), {
+      staleTime: 0,
+      gcTime: 0,
+    })
+    expect(content).not.toContain('useListItemsInfinite')
+    expect(content).not.toContain('useInfiniteQuery')
+  })
+
+  it('does NOT detect pagination for detail GET ops (with path params)', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/items/{id}': {
+          get: {
+            operationId: 'getItem',
+            parameters: [
+              { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+              { name: 'page', in: 'query', schema: { type: 'integer' } },
+            ],
+            responses: { '200': { description: 'ok' } },
+          },
+        },
+      },
+    }
+    const { content } = generateHooks(spec, { staleTime: 0, gcTime: 0 })
+    expect(content).not.toContain('useGetItemInfinite')
+    expect(content).not.toContain('useInfiniteQuery')
+  })
+
+  it('does NOT generate infinite hooks for mutation ops', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/items': {
+          post: {
+            operationId: 'createItem',
+            parameters: [{ name: 'page', in: 'query', schema: { type: 'integer' } }],
+            responses: { '201': { description: 'created' } },
+          },
+        },
+      },
+    }
+    const { content } = generateHooks(spec, { staleTime: 0, gcTime: 0 })
+    expect(content).not.toContain('Infinite')
+  })
+
+  it('does NOT emit infinite hook when spec has no GET ops with pagination params', () => {
+    const { content } = generateHooks(makeListSpec(['filter', 'search']), {
+      staleTime: 0,
+      gcTime: 0,
+    })
+    expect(content).not.toContain('useInfiniteQuery')
+    // Should not import InfiniteData or UseInfiniteQueryOptions
+    expect(content).not.toContain('InfiniteData')
+  })
+
+  // ── x-infinite extension ─────────────────────────────────────────────────────
+
+  it('x-infinite: true forces pagination detection even without standard param name', () => {
+    const { content } = generateHooks(makeListSpec(['filter'], true), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export function useListItemsInfinite')
+    expect(content).toContain('useInfiniteQuery')
+  })
+
+  it('x-infinite: false suppresses infinite hook even when standard page param is present', () => {
+    const { content } = generateHooks(makeListSpec(['page'], false), { staleTime: 0, gcTime: 0 })
+    expect(content).not.toContain('useListItemsInfinite')
+    expect(content).not.toContain('useInfiniteQuery')
+  })
+
+  // ── infiniteQuery config option ──────────────────────────────────────────────
+
+  it('infiniteQuery: false suppresses all infinite hooks globally', () => {
+    const { content } = generateHooks(makeListSpec(['page']), {
+      staleTime: 0,
+      gcTime: 0,
+      infiniteQuery: false,
+    })
+    expect(content).not.toContain('useListItemsInfinite')
+    expect(content).not.toContain('useInfiniteQuery')
+  })
+
+  it('infiniteQuery: true forces infinite hooks on all list GET ops regardless of param names', () => {
+    const { content } = generateHooks(makeListSpec(['filter', 'search']), {
+      staleTime: 0,
+      gcTime: 0,
+      infiniteQuery: true,
+    })
+    expect(content).toContain('export function useListItemsInfinite')
+    expect(content).toContain('useInfiniteQuery')
+  })
+
+  it('infiniteQuery: auto (default) uses heuristic detection', () => {
+    const withPage = generateHooks(makeListSpec(['page']), {
+      staleTime: 0,
+      gcTime: 0,
+      infiniteQuery: 'auto',
+    })
+    expect(withPage.content).toContain('export function useListItemsInfinite')
+
+    const withoutPage = generateHooks(makeListSpec(['limit']), {
+      staleTime: 0,
+      gcTime: 0,
+      infiniteQuery: 'auto',
+    })
+    expect(withoutPage.content).not.toContain('useListItemsInfinite')
+  })
+
+  // ── Naming convention ────────────────────────────────────────────────────────
+
+  it('hook name follows use${capitalize(funcName)}Infinite suffix pattern', () => {
+    const { content } = generateHooks(makeListSpec(['cursor']), { staleTime: 0, gcTime: 0 })
+    // funcName is "listItems" → hook is "useListItemsInfinite"
+    expect(content).toContain('export function useListItemsInfinite')
+    // Must NOT use "useInfiniteListItems" (prefix pattern is wrong)
+    expect(content).not.toContain('export function useInfiniteListItems')
+  })
+
+  // ── Generated hook structure ─────────────────────────────────────────────────
+
+  it('generated hook calls useInfiniteQuery (not useQuery)', () => {
+    const { content } = generateHooks(makeListSpec(['page']), { staleTime: 0, gcTime: 0 })
+    const hookStart = content.indexOf('export function useListItemsInfinite')
+    const hookEnd = content.indexOf('\n}', hookStart) + 2
+    const hookBody = content.slice(hookStart, hookEnd)
+    expect(hookBody).toContain('return useInfiniteQuery<')
+    expect(hookBody).not.toContain('useQuery<')
+  })
+
+  it('generated hook includes initialPageParam: undefined', () => {
+    const { content } = generateHooks(makeListSpec(['page']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('initialPageParam: undefined,')
+  })
+
+  it('generated hook includes getNextPageParam placeholder', () => {
+    const { content } = generateHooks(makeListSpec(['page']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('getNextPageParam: () => undefined,')
+  })
+
+  it('queryKey appends "infinite" segment to the list key', () => {
+    const { content } = generateHooks(makeListSpec(['page']), { staleTime: 0, gcTime: 0 })
+    const hookStart = content.indexOf('export function useListItemsInfinite')
+    const hookEnd = content.indexOf('\n}', hookStart) + 2
+    const hookBody = content.slice(hookStart, hookEnd)
+    expect(hookBody).toContain(`queryKey: [...itemKeys.list(params), 'infinite']`)
+  })
+
+  it('queryFn injects pageParam into params under the detected param name', () => {
+    const { content } = generateHooks(makeListSpec(['cursor']), { staleTime: 0, gcTime: 0 })
+    const hookStart = content.indexOf('export function useListItemsInfinite')
+    const hookEnd = content.indexOf('\n}', hookStart) + 2
+    const hookBody = content.slice(hookStart, hookEnd)
+    expect(hookBody).toContain('"cursor": pageParam as never')
+  })
+
+  it('...options spread is last so caller can override getNextPageParam and initialPageParam', () => {
+    const { content } = generateHooks(makeListSpec(['page']), { staleTime: 0, gcTime: 0 })
+    const hookStart = content.indexOf('export function useListItemsInfinite')
+    const hookEnd = content.indexOf('\n}', hookStart) + 2
+    const hookBody = content.slice(hookStart, hookEnd)
+    const getNextPageParamIdx = hookBody.indexOf('getNextPageParam:')
+    const spreadIdx = hookBody.indexOf('...options,')
+    expect(getNextPageParamIdx).toBeGreaterThan(-1)
+    expect(spreadIdx).toBeGreaterThan(getNextPageParamIdx)
+  })
+
+  it('options type omits queryKey, queryFn, getNextPageParam, initialPageParam so partial options like { enabled } typecheck', () => {
+    const { content } = generateHooks(makeListSpec(['page']), { staleTime: 0, gcTime: 0 })
+    // Omitting getNextPageParam and initialPageParam from the options type makes them
+    // optional at the call site; the hook body provides defaults and ...options overrides.
+    expect(content).toContain(`Omit<UseInfiniteQueryOptions<`)
+    expect(content).toContain(`'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'`)
+  })
+
+  // ── Regular + infinite hooks co-exist (non-breaking) ────────────────────────
+
+  it('both useListItems (regular) and useListItemsInfinite hooks are generated', () => {
+    const { content } = generateHooks(makeListSpec(['page']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('export function useListItems(')
+    expect(content).toContain('export function useListItemsInfinite(')
+  })
+
+  it('regular useListItems hook is not affected when infinite is generated alongside', () => {
+    const { content } = generateHooks(makeListSpec(['page']), { staleTime: 0, gcTime: 0 })
+    const regularHookStart = content.indexOf('export function useListItems(')
+    const regularHookEnd = content.indexOf('\n}', regularHookStart) + 2
+    const regularHookBody = content.slice(regularHookStart, regularHookEnd)
+    // Regular hook must still use useQuery, not useInfiniteQuery
+    expect(regularHookBody).toContain('return useQuery<')
+    expect(regularHookBody).not.toContain('useInfiniteQuery')
+  })
+
+  // ── React Query imports ──────────────────────────────────────────────────────
+
+  it('imports useInfiniteQuery, UseInfiniteQueryOptions, InfiniteData, QueryKey when paginated op exists', () => {
+    const { content } = generateHooks(makeListSpec(['page']), { staleTime: 0, gcTime: 0 })
+    expect(content).toContain('useInfiniteQuery')
+    expect(content).toContain('type UseInfiniteQueryOptions')
+    expect(content).toContain('type InfiniteData')
+    expect(content).toContain('type QueryKey')
+  })
+
+  it('does NOT import infinite query types when no paginated op exists', () => {
+    const { content } = generateHooks(makeListSpec(['filter']), { staleTime: 0, gcTime: 0 })
+    expect(content).not.toContain('UseInfiniteQueryOptions')
+    expect(content).not.toContain('InfiniteData')
+  })
+
+  // ── staleTime/gcTime ─────────────────────────────────────────────────────────
+
+  it('infinite hook uses effective staleTime and gcTime', () => {
+    const { content } = generateHooks(makeListSpec(['page']), {
+      staleTime: 5000,
+      gcTime: 60000,
+    })
+    const hookStart = content.indexOf('export function useListItemsInfinite')
+    const hookEnd = content.indexOf('\n}', hookStart) + 2
+    const hookBody = content.slice(hookStart, hookEnd)
+    expect(hookBody).toContain('staleTime: 5000,')
+    expect(hookBody).toContain('gcTime: 60000,')
+  })
+
+  // ── Deprecated operation ─────────────────────────────────────────────────────
+
+  it('deprecated GET with pagination emits @deprecated JSDoc on the infinite hook', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/items': {
+          get: {
+            operationId: 'listItems',
+            deprecated: true,
+            parameters: [{ name: 'page', in: 'query', schema: { type: 'integer' } }],
+            responses: { '200': { description: 'ok' } },
+          },
+        },
+      },
+    }
+    const { content } = generateHooks(spec, { staleTime: 0, gcTime: 0 })
+    const hookIdx = content.indexOf('export function useListItemsInfinite')
+    expect(hookIdx).toBeGreaterThan(-1)
+    const before = content.slice(0, hookIdx)
+    expect(before.slice(before.lastIndexOf('/**'))).toContain('@deprecated')
+  })
+
+  // ── $ref param resolution ────────────────────────────────────────────────────
+
+  it('detects pagination from $ref query params (resolves component $refs)', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/items': {
+          get: {
+            operationId: 'listItems',
+            parameters: [
+              { $ref: '#/components/parameters/PageParam' },
+              { $ref: '#/components/parameters/LimitParam' },
+            ],
+            responses: { '200': { description: 'ok' } },
+          },
+        },
+      },
+      components: {
+        parameters: {
+          PageParam: {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer' },
+          } as OpenAPIV3_1.ParameterObject,
+          LimitParam: {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer' },
+          } as OpenAPIV3_1.ParameterObject,
+        },
+      },
+    }
+    const { content } = generateHooks(spec, { staleTime: 0, gcTime: 0 })
+    // Should detect 'page' from $ref-resolved parameter
+    expect(content).toContain('export function useListItemsInfinite')
+    expect(content).toContain('useInfiniteQuery')
+  })
+
+  it('does NOT detect pagination from $ref params when resolved names are non-pagination', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/items': {
+          get: {
+            operationId: 'listItems',
+            parameters: [
+              { $ref: '#/components/parameters/FilterParam' },
+              { $ref: '#/components/parameters/SortParam' },
+            ],
+            responses: { '200': { description: 'ok' } },
+          },
+        },
+      },
+      components: {
+        parameters: {
+          FilterParam: {
+            name: 'filter',
+            in: 'query',
+            schema: { type: 'string' },
+          } as OpenAPIV3_1.ParameterObject,
+          SortParam: {
+            name: 'sort',
+            in: 'query',
+            schema: { type: 'string' },
+          } as OpenAPIV3_1.ParameterObject,
+        },
+      },
+    }
+    const { content } = generateHooks(spec, { staleTime: 0, gcTime: 0 })
+    expect(content).not.toContain('useListItemsInfinite')
+    expect(content).not.toContain('useInfiniteQuery')
+  })
+
+  // ── Snapshot test ────────────────────────────────────────────────────────────
+
+  it('snapshot: paginated list spec generates correct infinite hook output', () => {
+    const paginatedSpec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Paginated API', version: '1.0.0' },
+      paths: {
+        '/posts': {
+          get: {
+            operationId: 'listPosts',
+            parameters: [
+              { name: 'cursor', in: 'query', schema: { type: 'string' } },
+              { name: 'limit', in: 'query', schema: { type: 'integer' } },
+            ],
+            responses: { '200': { description: 'ok' } },
+          },
+          post: {
+            operationId: 'createPost',
+            requestBody: {
+              required: true,
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+            responses: { '201': { description: 'created' } },
+          },
+        },
+        '/posts/{id}': {
+          get: {
+            operationId: 'getPost',
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+            responses: { '200': { description: 'ok' } },
+          },
+        },
+      },
+    }
+    const { content } = generateHooks(paginatedSpec, { staleTime: 0, gcTime: 300000 })
+    expect(content).toMatchSnapshot()
+  })
+
+  // ── x-infinite: true with zero query params (CR fix #2) ─────────────────────
+
+  it('x-infinite: true on an operation with no query params emits a console.warn and skips the hook', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/items': {
+          get: {
+            operationId: 'listItems',
+            'x-infinite': true,
+            // No parameters at all
+            responses: { '200': { description: 'ok' } },
+          },
+        },
+      },
+    }
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const { content } = generateHooks(spec as OpenAPIV3_1.Document, { staleTime: 0, gcTime: 0 })
+    expect(warnSpy).toHaveBeenCalledOnce()
+    expect(warnSpy.mock.calls[0]![0]).toContain('x-infinite: true')
+    expect(warnSpy.mock.calls[0]![0]).toContain('listItems')
+    expect(warnSpy.mock.calls[0]![0]).toContain('no query params')
+    // No infinite hook emitted because there is no page param to inject
+    expect(content).not.toContain('useListItemsInfinite')
+    expect(content).not.toContain('useInfiniteQuery')
+    warnSpy.mockRestore()
+  })
+
+  it('x-infinite: true with query params emits the hook without warning', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/items': {
+          get: {
+            operationId: 'listItems',
+            'x-infinite': true,
+            parameters: [{ name: 'filter', in: 'query', schema: { type: 'string' } }],
+            responses: { '200': { description: 'ok' } },
+          },
+        },
+      },
+    }
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const { content } = generateHooks(spec as OpenAPIV3_1.Document, { staleTime: 0, gcTime: 0 })
+    expect(warnSpy).not.toHaveBeenCalled()
+    expect(content).toContain('useListItemsInfinite')
+    warnSpy.mockRestore()
+  })
+
+  // ── x-infinite: true on a detail endpoint (has path params) — extension wins ─
+
+  it('x-infinite: true on a detail endpoint (with path params) emits the infinite hook (extension wins)', () => {
+    // The heuristic would skip this (path params present), but the explicit
+    // x-infinite: true override takes priority and forces emission.
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/items/{id}': {
+          get: {
+            operationId: 'getItem',
+            'x-infinite': true,
+            parameters: [
+              { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+              { name: 'cursor', in: 'query', schema: { type: 'string' } },
+            ],
+            responses: { '200': { description: 'ok' } },
+          },
+        },
+      },
+    }
+    const { content } = generateHooks(spec as OpenAPIV3_1.Document, { staleTime: 0, gcTime: 0 })
+    // x-infinite: true overrides the "no path params" heuristic guard
+    expect(content).toContain('export function useGetItemInfinite')
   })
 })
