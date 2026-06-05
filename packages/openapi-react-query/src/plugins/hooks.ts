@@ -168,7 +168,7 @@ interface KeyEntry {
   hasRequiredQueryParams: boolean
 }
 
-// pre-existing size; full decomposition tracked in #244
+// pre-existing size; decomposition deferred (buildMutationHook and generateHooks were the #244 targets)
 // fallow-ignore-next-line complexity
 function buildKeyFactory(resource: string, entries: KeyEntry[]): string {
   const factoryName = `${toKeyFactoryName(resource)}Keys`
@@ -459,8 +459,106 @@ interface MutationInvalidateInfo {
   detailKeyName: string | undefined
 }
 
-// pre-existing size; decomposition tracked in #244
-// fallow-ignore-next-line complexity
+/**
+ * Computes the `variablesType` and `mutationFnBody` strings for a mutation hook.
+ *
+ * The client function argument order is: ...pathParams, body?, params?
+ * The dispatch is over three boolean flags: pathParam count (0, 1, >1) x hasBody x hasQueryParams.
+ */
+function buildMutationVars(
+  op: OperationMeta,
+  paramsArgIndex: number
+): { variablesType: string; mutationFnBody: string } {
+  const { funcName, pathParams, hasBody, hasQueryParams } = op
+
+  // No path params
+  if (pathParams.length === 0) {
+    if (!hasBody && !hasQueryParams) {
+      return { variablesType: 'void', mutationFnBody: `() => ${funcName}()` }
+    }
+    if (!hasBody && hasQueryParams) {
+      // params-only mutation: fn(params)
+      return {
+        variablesType: `Parameters<typeof ${funcName}>[0]`,
+        mutationFnBody: `(vars) => ${funcName}(vars)`,
+      }
+    }
+    if (hasBody && !hasQueryParams) {
+      // body-only mutation: fn(body)
+      return {
+        variablesType: `Parameters<typeof ${funcName}>[0]`,
+        mutationFnBody: `(vars) => ${funcName}(vars)`,
+      }
+    }
+    // body + params: fn(body, params)
+    return {
+      variablesType: `{ body: Parameters<typeof ${funcName}>[0]; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`,
+      mutationFnBody: `({ body, params }) => ${funcName}(body, params)`,
+    }
+  }
+
+  // Exactly one path param
+  if (pathParams.length === 1) {
+    const param = pathParams[0]!
+    if (!hasBody && !hasQueryParams) {
+      return {
+        variablesType: 'string',
+        mutationFnBody: `(${param}) => ${funcName}(${param})`,
+      }
+    }
+    if (!hasBody && hasQueryParams) {
+      // 1 path param + params only
+      return {
+        variablesType: `{ ${param}: string; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`,
+        mutationFnBody: `({ ${param}, params }) => ${funcName}(${param}, params)`,
+      }
+    }
+    if (hasBody && !hasQueryParams) {
+      return {
+        variablesType: `{ ${param}: string; body: Parameters<typeof ${funcName}>[1] }`,
+        mutationFnBody: `({ ${param}, body }) => ${funcName}(${param}, body)`,
+      }
+    }
+    // 1 path param + body + params
+    return {
+      variablesType: `{ ${param}: string; body: Parameters<typeof ${funcName}>[1]; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`,
+      mutationFnBody: `({ ${param}, body, params }) => ${funcName}(${param}, body, params)`,
+    }
+  }
+
+  // Multiple path params
+  const fields = pathParams.map((p) => `${p}: string`).join('; ')
+  if (!hasBody && !hasQueryParams) {
+    const destructured = pathParams.join(', ')
+    return {
+      variablesType: `{ ${fields} }`,
+      mutationFnBody: `({ ${destructured} }) => ${funcName}(${destructured})`,
+    }
+  }
+  if (!hasBody && hasQueryParams) {
+    // multiple path params + params only
+    const destructured = [...pathParams, 'params'].join(', ')
+    return {
+      variablesType: `{ ${fields}; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`,
+      mutationFnBody: `({ ${destructured} }) => ${funcName}(${[...pathParams, 'params'].join(', ')})`,
+    }
+  }
+  if (hasBody && !hasQueryParams) {
+    // multiple path params + body
+    const destructured = [...pathParams, 'body'].join(', ')
+    return {
+      variablesType: `{ ${fields}; body: Parameters<typeof ${funcName}>[${pathParams.length}] }`,
+      mutationFnBody: `({ ${destructured} }) => ${funcName}(${[...pathParams, 'body'].join(', ')})`,
+    }
+  }
+  // multiple path params + body + params
+  const destructured = [...pathParams, 'body', 'params'].join(', ')
+  return {
+    variablesType: `{ ${fields}; body: Parameters<typeof ${funcName}>[${pathParams.length}]; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`,
+    mutationFnBody: `({ ${destructured} }) => ${funcName}(${[...pathParams, 'body', 'params'].join(', ')})`,
+  }
+}
+
 function buildMutationHook(
   op: OperationMeta,
   autoInvalidate: boolean,
@@ -469,71 +567,10 @@ function buildMutationHook(
   const lines: string[] = []
   const { funcName, hookName, pathParams, hasBody, hasQueryParams } = op
 
-  // Determine variables type and mutationFn
-  // The client function argument order is: ...pathParams, body?, params?
-  // We must match exactly what the generated client function expects.
-  let variablesType: string
-  let mutationFnBody: string
-
   // Compute the index of the params argument in the client function signature
   const paramsArgIndex = pathParams.length + (hasBody ? 1 : 0)
 
-  if (pathParams.length === 0 && !hasBody && !hasQueryParams) {
-    variablesType = 'void'
-    mutationFnBody = `() => ${funcName}()`
-  } else if (pathParams.length === 0 && !hasBody && hasQueryParams) {
-    // params-only mutation: fn(params)
-    variablesType = `Parameters<typeof ${funcName}>[0]`
-    mutationFnBody = `(vars) => ${funcName}(vars)`
-  } else if (pathParams.length === 0 && hasBody && !hasQueryParams) {
-    // body-only mutation: fn(body)
-    variablesType = `Parameters<typeof ${funcName}>[0]`
-    mutationFnBody = `(vars) => ${funcName}(vars)`
-  } else if (pathParams.length === 0 && hasBody && hasQueryParams) {
-    // body + params: fn(body, params)
-    variablesType = `{ body: Parameters<typeof ${funcName}>[0]; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`
-    mutationFnBody = `({ body, params }) => ${funcName}(body, params)`
-  } else if (pathParams.length === 1 && !hasBody && !hasQueryParams) {
-    variablesType = 'string'
-    mutationFnBody = `(${pathParams[0]}) => ${funcName}(${pathParams[0]})`
-  } else if (pathParams.length === 1 && !hasBody && hasQueryParams) {
-    // 1 path param + params only
-    const param = pathParams[0]!
-    variablesType = `{ ${param}: string; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`
-    mutationFnBody = `({ ${param}, params }) => ${funcName}(${param}, params)`
-  } else if (pathParams.length === 1 && hasBody && !hasQueryParams) {
-    const param = pathParams[0]!
-    variablesType = `{ ${param}: string; body: Parameters<typeof ${funcName}>[1] }`
-    mutationFnBody = `({ ${param}, body }) => ${funcName}(${param}, body)`
-  } else if (pathParams.length === 1 && hasBody && hasQueryParams) {
-    // 1 path param + body + params
-    const param = pathParams[0]!
-    variablesType = `{ ${param}: string; body: Parameters<typeof ${funcName}>[1]; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`
-    mutationFnBody = `({ ${param}, body, params }) => ${funcName}(${param}, body, params)`
-  } else if (pathParams.length > 1 && !hasBody && !hasQueryParams) {
-    const fields = pathParams.map((p) => `${p}: string`).join('; ')
-    variablesType = `{ ${fields} }`
-    const destructured = pathParams.join(', ')
-    mutationFnBody = `({ ${destructured} }) => ${funcName}(${destructured})`
-  } else if (pathParams.length > 1 && !hasBody && hasQueryParams) {
-    // multiple path params + params only
-    const fields = pathParams.map((p) => `${p}: string`).join('; ')
-    variablesType = `{ ${fields}; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`
-    const destructured = [...pathParams, 'params'].join(', ')
-    mutationFnBody = `({ ${destructured} }) => ${funcName}(${[...pathParams, 'params'].join(', ')})`
-  } else if (pathParams.length > 1 && hasBody && !hasQueryParams) {
-    // multiple path params + body
-    const fields = pathParams.map((p) => `${p}: string`).join('; ')
-    variablesType = `{ ${fields}; body: Parameters<typeof ${funcName}>[${pathParams.length}] }`
-    const destructured = [...pathParams, 'body'].join(', ')
-    mutationFnBody = `({ ${destructured} }) => ${funcName}(${[...pathParams, 'body'].join(', ')})`
-  } else {
-    // multiple path params + body + params
-    const fields = pathParams.map((p) => `${p}: string`).join('; ')
-    variablesType = `{ ${fields}; body: Parameters<typeof ${funcName}>[${pathParams.length}]; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`
-    const destructured = [...pathParams, 'body', 'params'].join(', ')
-    mutationFnBody = `({ ${destructured} }) => ${funcName}(${[...pathParams, 'body', 'params'].join(', ')})`
-  }
+  const { variablesType, mutationFnBody } = buildMutationVars(op, paramsArgIndex)
 
   // @deprecated JSDoc on deprecated operations
   if (op.deprecated) {
@@ -600,26 +637,26 @@ function buildMutationHook(
 
 // ── Main generator ─────────────────────────────────────────────────────────────
 
-// pre-existing size; decomposition tracked in #244
-// fallow-ignore-next-line complexity
-export function generateHooks(
-  spec: OpenAPIV3_1.Document,
-  options: HookGenOptions
-): { filename: string; content: string } {
-  const { staleTime, gcTime, suspense = false, autoInvalidate = false } = options
+/**
+ * Walks all paths in the spec and produces a flat list of OperationMeta records.
+ *
+ * Name deduplication mirrors the client generator so that funcName values stay in
+ * sync with client exports (e.g. getConfig -> getConfig_2, fetch -> fetch_2).
+ */
+function collectOperations(spec: OpenAPIV3_1.Document): OperationMeta[] {
   const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
 
-  // Build the writable-variant map once so getBodyInfo can redirect request-body
-  // schemas that have readOnly/writeOnly props to their XWritable variant.
+  // Build the writable-variant map so getBodyInfo can redirect request-body schemas
+  // that have readOnly/writeOnly props to their XWritable variant.
   const writableVariantMap = buildWritableVariantMap(spec)
 
-  // Collect all operations
-  const operations: OperationMeta[] = []
   // Pre-seed with client-internal names so that operation names derived from the spec
   // receive the same numeric suffix that the client generator assigns. This keeps hook
   // imports in sync with client exports (e.g. getConfig -> getConfig_2, fetch -> fetch_2).
   const usedFuncNames = new Set<string>(CLIENT_INTERNAL_NAMES)
   const usedHookNames = new Set<string>()
+
+  const operations: OperationMeta[] = []
 
   if (paths !== undefined) {
     for (const [path, pathItem] of Object.entries(paths)) {
@@ -668,6 +705,18 @@ export function generateHooks(
       }
     }
   }
+
+  return operations
+}
+
+export function generateHooks(
+  spec: OpenAPIV3_1.Document,
+  options: HookGenOptions
+): { filename: string; content: string } {
+  const { staleTime, gcTime, suspense = false, autoInvalidate = false } = options
+
+  // Collect all operations (metadata extraction separated from string emission)
+  const operations = collectOperations(spec)
 
   // Separate GET vs mutation operations
   const getOps = operations.filter((op) => op.method === 'get')
