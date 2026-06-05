@@ -34,6 +34,7 @@ jobs:
       - run: pnpm --filter openapi-zod-ts run test:coverage
       - run: pnpm --filter @codewithagents/openapi-react-query run test:coverage
       - run: pnpm --filter @codewithagents/openapi-server run test:coverage
+      - run: pnpm --filter @codewithagents/openapi-msw run test:coverage
 
       - name: Upload coverage to Codecov (api-errors)
         uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
@@ -68,6 +69,15 @@ jobs:
           use_oidc: true
           files: ./packages/openapi-server/coverage/lcov.info
           flags: openapi-server
+          disable_search: true
+          fail_ci_if_error: false
+
+      - name: Upload coverage to Codecov (openapi-msw)
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
+        with:
+          use_oidc: true
+          files: ./packages/openapi-msw/coverage/lcov.info
+          flags: openapi-msw
           disable_search: true
           fail_ci_if_error: false
 

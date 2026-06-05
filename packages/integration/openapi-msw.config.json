@@ -1,0 +1,7 @@
+{
+  "input_openapi": "spec/api.json",
+  "output": "generated",
+  "seed": 42,
+  "max_array_items": 3,
+  "depth_cap": 30
+}
