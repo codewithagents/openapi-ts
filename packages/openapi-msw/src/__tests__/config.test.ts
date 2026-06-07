@@ -1,8 +1,9 @@
+// fallow-ignore-file code-duplication
 import { mkdtemp, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { describe, it, expect, afterEach } from 'vitest'
-import { loadConfig } from '../config.js'
+import { loadConfig, loadConfigs } from '../config.js'
 
 let tmpDir: string | undefined
 
@@ -103,5 +104,66 @@ describe('loadConfig: invalid field values', () => {
       depth_cap: 3.7,
     })
     await expect(loadConfig(cwd, configPath)).rejects.toThrow('"depth_cap" must be an integer')
+  })
+})
+
+describe('loadConfigs: projects array support', () => {
+  it('returns a one-element array for a single-spec config', async () => {
+    const { cwd, configPath } = await writeConfig({
+      input_openapi: 'spec.json',
+      output: 'generated',
+    })
+    const configs = await loadConfigs(cwd, configPath)
+    expect(configs).toHaveLength(1)
+    expect(configs[0]!.input_openapi).toBe('spec.json')
+    expect(configs[0]!.output).toBe('generated')
+  })
+
+  it('returns N configs for a projects array with N entries', async () => {
+    const { cwd, configPath } = await writeConfig({
+      projects: [
+        { input_openapi: 'services/users.json', output: 'mocks/users', seed: 1 },
+        { input_openapi: 'services/orders.json', output: 'mocks/orders', seed: 2 },
+      ],
+    })
+    const configs = await loadConfigs(cwd, configPath)
+    expect(configs).toHaveLength(2)
+    expect(configs[0]!.input_openapi).toBe('services/users.json')
+    expect(configs[0]!.seed).toBe(1)
+    expect(configs[1]!.input_openapi).toBe('services/orders.json')
+    expect(configs[1]!.seed).toBe(2)
+  })
+
+  it('throws when both top-level input_openapi and projects are present', async () => {
+    const { cwd, configPath } = await writeConfig({
+      input_openapi: 'spec.json',
+      output: 'generated',
+      projects: [{ input_openapi: 'services/users.json', output: 'mocks/users' }],
+    })
+    await expect(loadConfigs(cwd, configPath)).rejects.toThrow(
+      'Config cannot have both top-level "input_openapi"/"output" and a "projects" array'
+    )
+  })
+
+  it('throws when projects is not an array', async () => {
+    const { cwd, configPath } = await writeConfig({ projects: 'not-an-array' })
+    await expect(loadConfigs(cwd, configPath)).rejects.toThrow('"projects" must be an array')
+  })
+
+  it('throws when projects is empty', async () => {
+    const { cwd, configPath } = await writeConfig({ projects: [] })
+    await expect(loadConfigs(cwd, configPath)).rejects.toThrow(
+      '"projects" array must contain at least one config entry'
+    )
+  })
+
+  it('throws with project index when a project entry is invalid', async () => {
+    const { cwd, configPath } = await writeConfig({
+      projects: [
+        { input_openapi: 'services/users.json', output: 'mocks/users' },
+        { input_openapi: 'services/orders.json', output: 'mocks/orders', seed: 1.5 },
+      ],
+    })
+    await expect(loadConfigs(cwd, configPath)).rejects.toThrow('projects[1]')
   })
 })

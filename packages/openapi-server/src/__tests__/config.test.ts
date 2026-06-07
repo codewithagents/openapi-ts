@@ -1,8 +1,9 @@
+// fallow-ignore-file code-duplication
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { loadConfig, validateConfigPath, validateOutputPath, validateInputPath } from '../config.js'
+import { loadConfig, loadConfigs, validateConfigPath, validateOutputPath, validateInputPath } from '../config.js'
 
 describe('loadConfig', () => {
   let tmpDir: string
@@ -268,5 +269,74 @@ describe('config security validation', () => {
     it('accepts common CI workspace input path', () => {
       expect(() => validateInputPath('/workspace/project/spec/openapi.json')).not.toThrow()
     })
+  })
+})
+
+describe('loadConfigs: projects array support', () => {
+  let tmpDir: string
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'openapi-server-multi-config-'))
+  })
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  function writeConfig(content: unknown) {
+    writeFileSync(join(tmpDir, 'openapi-server.config.json'), JSON.stringify(content))
+  }
+
+  it('returns a one-element array for a single-spec config', async () => {
+    writeConfig({ input_openapi: 'openapi.json', output: 'src/generated' })
+    const configs = await loadConfigs(tmpDir)
+    expect(configs).toHaveLength(1)
+    expect(configs[0]!.input_openapi).toBe('openapi.json')
+    expect(configs[0]!.output).toBe('src/generated')
+  })
+
+  it('returns N configs for a projects array with N entries', async () => {
+    writeConfig({
+      projects: [
+        { input_openapi: 'services/users.json', output: 'src/users', framework: 'hono' },
+        { input_openapi: 'services/orders.json', output: 'src/orders', framework: 'express' },
+      ],
+    })
+    const configs = await loadConfigs(tmpDir)
+    expect(configs).toHaveLength(2)
+    expect(configs[0]!.framework).toBe('hono')
+    expect(configs[1]!.framework).toBe('express')
+  })
+
+  it('throws when both top-level input_openapi and projects are present', async () => {
+    writeConfig({
+      input_openapi: 'openapi.json',
+      output: 'src/generated',
+      projects: [{ input_openapi: 'services/users.json', output: 'src/users' }],
+    })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow(
+      'Config cannot have both top-level "input_openapi"/"output" and a "projects" array'
+    )
+  })
+
+  it('throws when projects is not an array', async () => {
+    writeConfig({ projects: 'not-an-array' })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow('"projects" must be an array')
+  })
+
+  it('throws when projects is empty', async () => {
+    writeConfig({ projects: [] })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow(
+      '"projects" array must contain at least one config entry'
+    )
+  })
+
+  it('throws with project index when a project entry has invalid framework', async () => {
+    writeConfig({
+      projects: [
+        { input_openapi: 'services/users.json', output: 'src/users', framework: 'koa' },
+      ],
+    })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow('projects[0]')
   })
 })
