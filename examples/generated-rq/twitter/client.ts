@@ -150,6 +150,7 @@ async function _request(
   let _init: RequestInit = {
     method,
     headers: {
+      Accept: 'application/json',
       ...(opts.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...headers,
       ...(resolvedToken ? { Authorization: `Bearer ${resolvedToken}` } : {}),
