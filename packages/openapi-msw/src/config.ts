@@ -1,5 +1,6 @@
 import {
   loadConfigFile,
+  loadConfigsFile,
   validateConfigPath,
   validateInputPath,
   validateOutputPath,
@@ -38,19 +39,39 @@ function validateMswFields(raw: Record<string, unknown>): void {
   expectIntegerAtLeast(raw, 'depth_cap', 1)
 }
 
+function parseMswConfig(
+  raw: Record<string, unknown>,
+  base: import('openapi-zod-ts/config-core').BaseConfig
+): MswConfig {
+  validateMswFields(raw)
+  return {
+    ...base,
+    seed: raw['seed'] as number | undefined,
+    max_array_items: raw['max_array_items'] as number | undefined,
+    depth_cap: raw['depth_cap'] as number | undefined,
+  }
+}
+
 export async function loadConfig(cwd: string, configPath?: string): Promise<MswConfig> {
   return loadConfigFile<MswConfig>({
     cwd,
     configPath,
     defaultFileName: 'openapi-msw.config.json',
-    parse: (raw, base) => {
-      validateMswFields(raw)
-      return {
-        ...base,
-        seed: raw['seed'] as number | undefined,
-        max_array_items: raw['max_array_items'] as number | undefined,
-        depth_cap: raw['depth_cap'] as number | undefined,
-      }
-    },
+    parse: parseMswConfig,
+  })
+}
+
+/**
+ * Load a config file and return all configs as a normalized array.
+ *
+ * Single-spec config: returns a one-element array.
+ * Multi-spec config with "projects" key: returns N-element array.
+ */
+export async function loadConfigs(cwd: string, configPath?: string): Promise<MswConfig[]> {
+  return loadConfigsFile<MswConfig>({
+    cwd,
+    configPath,
+    defaultFileName: 'openapi-msw.config.json',
+    parse: parseMswConfig,
   })
 }

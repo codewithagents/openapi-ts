@@ -1,8 +1,9 @@
+// fallow-ignore-file code-duplication
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { loadConfig, validateConfigPath, validateOutputPath, validateInputPath } from '../config.js'
+import { loadConfig, loadConfigs, validateConfigPath, validateOutputPath, validateInputPath } from '../config.js'
 
 describe('loadConfig', () => {
   let tmpDir: string
@@ -285,5 +286,77 @@ describe('config security validation', () => {
     it('accepts common CI workspace input path', () => {
       expect(() => validateInputPath('/workspace/project/spec/openapi.json')).not.toThrow()
     })
+  })
+})
+
+describe('loadConfigs: projects array support', () => {
+  let tmpDir: string
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'openapi-rq-multi-config-'))
+  })
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  function writeConfig(content: unknown) {
+    writeFileSync(join(tmpDir, 'openapi-react-query.config.json'), JSON.stringify(content))
+  }
+
+  it('returns a one-element array for a single-spec config', async () => {
+    writeConfig({ input_openapi: 'openapi.json', output: 'src/hooks' })
+    const configs = await loadConfigs(tmpDir)
+    expect(configs).toHaveLength(1)
+    expect(configs[0]!.input_openapi).toBe('openapi.json')
+    expect(configs[0]!.output).toBe('src/hooks')
+  })
+
+  it('returns N configs for a projects array with N entries', async () => {
+    writeConfig({
+      projects: [
+        { input_openapi: 'services/users.json', output: 'src/users-hooks' },
+        { input_openapi: 'services/orders.json', output: 'src/orders-hooks', stale_time: 5000 },
+      ],
+    })
+    const configs = await loadConfigs(tmpDir)
+    expect(configs).toHaveLength(2)
+    expect(configs[0]!.input_openapi).toBe('services/users.json')
+    expect(configs[0]!.stale_time).toBeUndefined()
+    expect(configs[1]!.input_openapi).toBe('services/orders.json')
+    expect(configs[1]!.stale_time).toBe(5000)
+  })
+
+  it('throws when both top-level input_openapi and projects are present', async () => {
+    writeConfig({
+      input_openapi: 'openapi.json',
+      output: 'src/hooks',
+      projects: [{ input_openapi: 'services/users.json', output: 'src/users-hooks' }],
+    })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow(
+      'Config cannot have both top-level "input_openapi"/"output" and a "projects" array'
+    )
+  })
+
+  it('throws when projects is not an array', async () => {
+    writeConfig({ projects: 'not-an-array' })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow('"projects" must be an array')
+  })
+
+  it('throws when projects is empty', async () => {
+    writeConfig({ projects: [] })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow(
+      '"projects" array must contain at least one config entry'
+    )
+  })
+
+  it('throws with project index when a project entry is invalid', async () => {
+    writeConfig({
+      projects: [
+        { input_openapi: 'services/users.json', output: 'src/users-hooks' },
+        { input_openapi: 'services/orders.json', output: 'src/orders-hooks', stale_time: 'fast' },
+      ],
+    })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow('projects[1]')
   })
 })

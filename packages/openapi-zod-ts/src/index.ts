@@ -1,5 +1,5 @@
 export type { Config } from './config.js'
-export { loadConfig, defineConfig } from './config.js'
+export { loadConfig, loadConfigs, defineConfig, defineProjects } from './config.js'
 export { parseSpec } from './parser.js'
 export type { GeneratedFile } from './plugins/types.js'
 export { generateTypes } from './plugins/types.js'

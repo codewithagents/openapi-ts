@@ -1,8 +1,8 @@
-// fallow-ignore-file code-duplication
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { parseSpec } from 'openapi-zod-ts'
-import { loadConfig } from './config.js'
+import { runProjects } from 'openapi-zod-ts/config-core'
+import { loadConfigs, type MswConfig } from './config.js'
 import { generateHandlers } from './plugins/handlers.js'
 
 async function formatTs(content: string, filePath: string): Promise<string> {
@@ -11,10 +11,12 @@ async function formatTs(content: string, filePath: string): Promise<string> {
   return format(content, { ...config, parser: 'typescript' })
 }
 
-export async function generate(cwd: string, configPath?: string): Promise<void> {
-  const config = await loadConfig(cwd, configPath)
+async function generateOne(cwd: string, config: MswConfig, label?: string): Promise<void> {
   const inputPath = resolve(cwd, config.input_openapi)
   const outputDir = resolve(cwd, config.output)
+  const prefix = label !== undefined ? `[${label}] ` : ''
+
+  console.log(`${prefix}Parsing spec: ${inputPath}`)
   const spec = await parseSpec(inputPath)
 
   const file = generateHandlers(spec, {
@@ -26,5 +28,10 @@ export async function generate(cwd: string, configPath?: string): Promise<void> 
   await mkdir(outputDir, { recursive: true })
   const filePath = join(outputDir, file.filename)
   await writeFile(filePath, await formatTs(file.content, filePath), 'utf-8')
-  console.log(`✓ ${file.filename}`)
+  console.log(`${prefix}✓ ${file.filename}`)
+}
+
+export async function generate(cwd: string, configPath?: string): Promise<void> {
+  const configs = await loadConfigs(cwd, configPath)
+  await runProjects(configs, (config, label) => generateOne(cwd, config, label))
 }

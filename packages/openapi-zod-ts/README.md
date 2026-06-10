@@ -308,6 +308,52 @@ The `defineConfig` helper is a typed identity function. It adds no runtime behav
 
 ---
 
+## Multi-spec projects
+
+One config file can drive generation for multiple OpenAPI specs using the `projects` key. Each entry is a full config object and is generated sequentially.
+
+```js
+// openapi-zod-ts.config.mjs
+import { defineProjects } from 'openapi-zod-ts'
+
+export default defineProjects([
+  {
+    input_openapi: './services/users/openapi.json',
+    output: './src/users',
+    baseUrl: 'https://users.example.com',
+  },
+  {
+    input_openapi: './services/orders/openapi.json',
+    output: './src/orders',
+    baseUrl: 'https://orders.example.com',
+  },
+])
+```
+
+Run with:
+
+```bash
+npx openapi-zod-ts --config ./openapi-zod-ts.config.mjs
+```
+
+Output shows progress per project:
+
+```
+[1/2] generating services/users/openapi.json...
+[1/2] Writing output to: src/users
+...
+[2/2] generating services/orders/openapi.json...
+[2/2] Writing output to: src/orders
+...
+All 2 projects generated successfully.
+```
+
+The `projects` key is mutually exclusive with top-level `input_openapi`/`output`. Having both in the same config is a validation error.
+
+If you only need a single spec, continue using the flat `defineConfig` form. The `loadConfigs` function is also exported and returns a normalized `Config[]` for programmatic use: a single-spec config returns a one-element array, a projects config returns N elements.
+
+---
+
 ## Error handling
 
 See [error handling](https://openapi.codewithagents.de#error-handling) in the docs for narrowing `ApiError.body` and the global `onError` hook.

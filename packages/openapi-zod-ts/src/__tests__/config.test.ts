@@ -1,13 +1,17 @@
+// fallow-ignore-file code-duplication
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { runProjects } from '../config-core.js'
 import {
   loadConfig,
+  loadConfigs,
   validateConfigPath,
   validateOutputPath,
   validateInputPath,
   defineConfig,
+  defineProjects,
 } from '../config.js'
 
 describe('loadConfig', () => {
@@ -350,5 +354,206 @@ describe('loadConfig JS files', () => {
     const configPath = join(tmpDir, 'openapi-zod-ts.config.ts')
     writeFileSync(configPath, `export default { input_openapi: 'spec.json', output: 'out' }\n`)
     await expect(loadConfig(tmpDir, configPath)).rejects.toThrow('Config file must be a .json')
+  })
+})
+
+describe('loadConfigs: projects array support', () => {
+  let tmpDir: string
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'openapi-zod-ts-multi-config-'))
+  })
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  function writeConfig(content: unknown) {
+    writeFileSync(join(tmpDir, 'openapi-zod-ts.config.json'), JSON.stringify(content))
+  }
+
+  it('returns a one-element array for a single-spec config', async () => {
+    writeConfig({ input_openapi: 'openapi.json', output: 'src/api' })
+    const configs = await loadConfigs(tmpDir)
+    expect(configs).toHaveLength(1)
+    expect(configs[0]!.input_openapi).toBe('openapi.json')
+    expect(configs[0]!.output).toBe('src/api')
+  })
+
+  it('returns N configs for a projects array with N entries', async () => {
+    writeConfig({
+      projects: [
+        { input_openapi: 'services/users.json', output: 'src/users' },
+        { input_openapi: 'services/orders.json', output: 'src/orders' },
+      ],
+    })
+    const configs = await loadConfigs(tmpDir)
+    expect(configs).toHaveLength(2)
+    expect(configs[0]!.input_openapi).toBe('services/users.json')
+    expect(configs[0]!.output).toBe('src/users')
+    expect(configs[1]!.input_openapi).toBe('services/orders.json')
+    expect(configs[1]!.output).toBe('src/orders')
+  })
+
+  it('parses optional fields in each project entry', async () => {
+    writeConfig({
+      projects: [
+        {
+          input_openapi: 'services/users.json',
+          output: 'src/users',
+          baseUrl: 'https://users.example.com',
+          server_client: true,
+        },
+        { input_openapi: 'services/orders.json', output: 'src/orders' },
+      ],
+    })
+    const configs = await loadConfigs(tmpDir)
+    expect(configs[0]!.baseUrl).toBe('https://users.example.com')
+    expect(configs[0]!.server_client).toBe(true)
+    expect(configs[1]!.baseUrl).toBeUndefined()
+  })
+
+  it('throws when both top-level input_openapi and projects are present', async () => {
+    writeConfig({
+      input_openapi: 'openapi.json',
+      output: 'src/api',
+      projects: [{ input_openapi: 'services/users.json', output: 'src/users' }],
+    })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow(
+      'Config cannot have both top-level "input_openapi"/"output" and a "projects" array'
+    )
+  })
+
+  it('throws when projects is not an array', async () => {
+    writeConfig({ projects: 'not-an-array' })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow('"projects" must be an array')
+  })
+
+  it('throws when projects array is empty', async () => {
+    writeConfig({ projects: [] })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow(
+      '"projects" array must contain at least one config entry'
+    )
+  })
+
+  it('throws when a project entry is missing input_openapi', async () => {
+    writeConfig({
+      projects: [
+        { input_openapi: 'services/users.json', output: 'src/users' },
+        { output: 'src/orders' },
+      ],
+    })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow('projects[1]')
+  })
+
+  it('throws when a project entry is missing output', async () => {
+    writeConfig({
+      projects: [{ input_openapi: 'services/users.json' }],
+    })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow('projects[0]')
+  })
+
+  it('throws when a project entry has an invalid optional field', async () => {
+    writeConfig({
+      projects: [
+        {
+          input_openapi: 'services/users.json',
+          output: 'src/users',
+          server_client: 'yes',
+        },
+      ],
+    })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow('projects[0]')
+  })
+
+  it('works with a .mjs file exporting a projects array via defineProjects', async () => {
+    const configPath = join(tmpDir, 'openapi-zod-ts.config.mjs')
+    writeFileSync(
+      configPath,
+      [
+        'export default {',
+        '  projects: [',
+        "    { input_openapi: 'services/alpha.json', output: 'src/alpha' },",
+        "    { input_openapi: 'services/beta.json', output: 'src/beta' },",
+        '  ],',
+        '}',
+      ].join('\n')
+    )
+    const configs = await loadConfigs(tmpDir, configPath)
+    expect(configs).toHaveLength(2)
+    expect(configs[0]!.input_openapi).toBe('services/alpha.json')
+    expect(configs[1]!.input_openapi).toBe('services/beta.json')
+  })
+})
+
+describe('defineProjects', () => {
+  it('wraps configs in a projects key object', () => {
+    const entries = [
+      { input_openapi: './users.json', output: './src/users' },
+      { input_openapi: './orders.json', output: './src/orders' },
+    ]
+    const result = defineProjects(entries)
+    expect(result).toEqual({ projects: entries })
+  })
+
+  it('returns an object with projects referencing the same array', () => {
+    const entries = [{ input_openapi: './spec.json', output: './out' }]
+    const result = defineProjects(entries)
+    expect(result.projects).toBe(entries)
+  })
+})
+
+describe('runProjects', () => {
+  it('calls generateOne without a label for a single-config array', async () => {
+    const calls: Array<{ input: string; label: string | undefined }> = []
+    const configs = [{ input_openapi: 'spec.json', output: 'out' }]
+    await runProjects(configs, async (config, label) => {
+      calls.push({ input: config.input_openapi, label })
+    })
+    expect(calls).toHaveLength(1)
+    expect(calls[0]!.label).toBeUndefined()
+    expect(calls[0]!.input).toBe('spec.json')
+  })
+
+  it('calls generateOne with "[i/N]" labels for multi-config array in order', async () => {
+    const calls: Array<{ input: string; label: string | undefined }> = []
+    const configs = [
+      { input_openapi: 'users.json', output: 'src/users' },
+      { input_openapi: 'orders.json', output: 'src/orders' },
+      { input_openapi: 'products.json', output: 'src/products' },
+    ]
+    await runProjects(configs, async (config, label) => {
+      calls.push({ input: config.input_openapi, label })
+    })
+    expect(calls).toHaveLength(3)
+    expect(calls[0]!.label).toBe('1/3')
+    expect(calls[1]!.label).toBe('2/3')
+    expect(calls[2]!.label).toBe('3/3')
+    expect(calls.map((c) => c.input)).toEqual(['users.json', 'orders.json', 'products.json'])
+  })
+
+  it('fails fast with a labelled error when a project throws', async () => {
+    const configs = [
+      { input_openapi: 'users.json', output: 'src/users' },
+      { input_openapi: 'orders.json', output: 'src/orders' },
+      { input_openapi: 'products.json', output: 'src/products' },
+    ]
+    const completed: string[] = []
+    await expect(
+      runProjects(configs, async (config, label) => {
+        if (config.input_openapi === 'orders.json') {
+          throw new Error('parse error')
+        }
+        completed.push(config.input_openapi)
+        void label
+      })
+    ).rejects.toThrow('[2/3] Project failed (orders.json): parse error')
+    expect(completed).toEqual(['users.json'])
+  })
+
+  it('throws when configs array is empty', async () => {
+    await expect(runProjects([], async () => {})).rejects.toThrow(
+      'runProjects requires at least one config entry'
+    )
   })
 })

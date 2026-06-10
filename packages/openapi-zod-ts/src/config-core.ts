@@ -108,48 +108,55 @@ export interface LoadConfigOptions<T> {
   parse: (raw: Record<string, unknown>, base: BaseConfig, cwd: string) => T
 }
 
-// fallow-ignore-next-line complexity
-export async function loadConfigFile<T>(opts: LoadConfigOptions<T>): Promise<T> {
-  const resolvedConfigPath = opts.configPath ?? join(opts.cwd, opts.defaultFileName)
-
-  if (opts.configPath !== undefined) {
-    validateConfigPath(opts.configPath)
+/** Load and validate a JS/MJS/CJS config file, returning its default export as a raw record. */
+async function loadJsConfig(resolvedConfigPath: string): Promise<Record<string, unknown>> {
+  let mod: unknown
+  try {
+    mod = await import(pathToFileURL(resolvedConfigPath).href)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`Failed to load JS config file: ${resolvedConfigPath}\n${message}`)
   }
+  const exported = (mod as Record<string, unknown>)['default'] ?? mod
+  if (typeof exported !== 'object' || exported === null) {
+    throw new Error('Config must be a JSON object')
+  }
+  return exported as Record<string, unknown>
+}
 
-  let raw: Record<string, unknown>
+/** Load and validate a JSON config file, returning the parsed object as a raw record. */
+async function loadJsonConfig(resolvedConfigPath: string): Promise<Record<string, unknown>> {
+  let fileContents: string
+  try {
+    fileContents = await readFile(resolvedConfigPath, 'utf-8')
+  } catch {
+    throw new Error(`Config file not found: ${resolvedConfigPath}`)
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(fileContents)
+  } catch {
+    throw new Error(`Config file is not valid JSON: ${resolvedConfigPath}`)
+  }
+  if (typeof parsed !== 'object' || parsed === null) {
+    throw new Error('Config must be a JSON object')
+  }
+  return parsed as Record<string, unknown>
+}
 
+/**
+ * Load and parse the raw config object from disk.
+ * Shared between loadConfigFile and loadConfigsFile.
+ */
+async function loadRawConfig(resolvedConfigPath: string): Promise<Record<string, unknown>> {
   if (isJsConfigPath(resolvedConfigPath)) {
-    let mod: unknown
-    try {
-      mod = await import(pathToFileURL(resolvedConfigPath).href)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      throw new Error(`Failed to load JS config file: ${resolvedConfigPath}\n${message}`)
-    }
-    const exported = (mod as Record<string, unknown>)['default'] ?? mod
-    if (typeof exported !== 'object' || exported === null) {
-      throw new Error('Config must be a JSON object')
-    }
-    raw = exported as Record<string, unknown>
-  } else {
-    let fileContents: string
-    try {
-      fileContents = await readFile(resolvedConfigPath, 'utf-8')
-    } catch {
-      throw new Error(`Config file not found: ${resolvedConfigPath}`)
-    }
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(fileContents)
-    } catch {
-      throw new Error(`Config file is not valid JSON: ${resolvedConfigPath}`)
-    }
-    if (typeof parsed !== 'object' || parsed === null) {
-      throw new Error('Config must be a JSON object')
-    }
-    raw = parsed as Record<string, unknown>
+    return loadJsConfig(resolvedConfigPath)
   }
+  return loadJsonConfig(resolvedConfigPath)
+}
 
+/** Parse and validate base fields (input_openapi, output) from a raw config record. */
+function parseBaseConfig(raw: Record<string, unknown>, cwd: string): BaseConfig {
   if (typeof raw['input_openapi'] !== 'string' || !raw['input_openapi']) {
     throw new Error('Config missing required field: "input_openapi" (path to OpenAPI 3.1 spec)')
   }
@@ -160,9 +167,135 @@ export async function loadConfigFile<T>(opts: LoadConfigOptions<T>): Promise<T> 
   const input_openapi = raw['input_openapi'] as string
   const output = raw['output'] as string
 
-  validateInputPath(resolve(opts.cwd, input_openapi))
-  validateOutputPath(resolve(opts.cwd, output))
+  validateInputPath(resolve(cwd, input_openapi))
+  validateOutputPath(resolve(cwd, output))
 
-  const base: BaseConfig = { input_openapi, output }
+  return { input_openapi, output }
+}
+
+/** Resolve the config path, optionally validate it, and load the raw object. */
+async function prepareRaw(opts: { configPath?: string; cwd: string; defaultFileName: string }): Promise<{ raw: Record<string, unknown> }> {
+  const resolvedConfigPath = opts.configPath ?? join(opts.cwd, opts.defaultFileName)
+  if (opts.configPath !== undefined) {
+    validateConfigPath(opts.configPath)
+  }
+  return { raw: await loadRawConfig(resolvedConfigPath) }
+}
+
+// fallow-ignore-next-line complexity
+export async function loadConfigFile<T>(opts: LoadConfigOptions<T>): Promise<T> {
+  const { raw } = await prepareRaw(opts)
+  const base = parseBaseConfig(raw, opts.cwd)
   return opts.parse(raw, base, opts.cwd)
+}
+
+/** Parse a single project entry from a projects array, wrapping errors with the entry index. */
+function parseProjectEntry<T>(
+  entry: unknown,
+  index: number,
+  opts: LoadConfigOptions<T>
+): T {
+  if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+    throw new Error(`projects[${index}]: entry must be a config object`)
+  }
+  const projectRaw = entry as Record<string, unknown>
+  let base: BaseConfig
+  try {
+    base = parseBaseConfig(projectRaw, opts.cwd)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`projects[${index}]: ${message}`)
+  }
+  try {
+    return opts.parse(projectRaw, base, opts.cwd)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`projects[${index}]: ${message}`)
+  }
+}
+
+/**
+ * Load a config file that may contain either a single-spec config or a
+ * "projects" array of configs. Returns a normalized array of parsed configs.
+ *
+ * When the config root contains a "projects" key, each entry is parsed
+ * independently. Having both "projects" and top-level single-spec keys
+ * (input_openapi, output) in the same config is a validation error.
+ *
+ * Single-spec configs (no "projects" key) are returned as a one-element array,
+ * making call sites uniform.
+ */
+export async function loadConfigsFile<T>(opts: LoadConfigOptions<T>): Promise<T[]> {
+  const { raw } = await prepareRaw(opts)
+
+  if ('projects' in raw) {
+    return parseProjectsArray(raw, opts)
+  }
+
+  // Single-spec mode: parse as before, return as one-element array.
+  const base = parseBaseConfig(raw, opts.cwd)
+  return [opts.parse(raw, base, opts.cwd)]
+}
+
+function parseProjectsArray<T>(
+  raw: Record<string, unknown>,
+  opts: LoadConfigOptions<T>
+): T[] {
+  const hasTopLevelInput = 'input_openapi' in raw && raw['input_openapi'] !== undefined
+  const hasTopLevelOutput = 'output' in raw && raw['output'] !== undefined
+  if (hasTopLevelInput || hasTopLevelOutput) {
+    throw new Error(
+      'Config cannot have both top-level "input_openapi"/"output" and a "projects" array. ' +
+        'Use one form or the other.'
+    )
+  }
+
+  const projects = raw['projects']
+  if (!Array.isArray(projects)) {
+    throw new Error('"projects" must be an array of config objects')
+  }
+  if (projects.length === 0) {
+    throw new Error('"projects" array must contain at least one config entry')
+  }
+
+  return projects.map((entry: unknown, index: number) =>
+    parseProjectEntry(entry, index, opts)
+  )
+}
+
+/**
+ * Run a per-project generation function over an array of configs sequentially.
+ *
+ * Single config: calls generateOne without a label (backward-compatible logging).
+ * Multiple configs: calls generateOne with a "[i/N]" progress label for each,
+ * logging per-project progress and failing fast with a clear error on any failure.
+ *
+ * This is the shared iteration kernel used by all generator packages to avoid
+ * duplicating the sequential-loop, logging, and fail-fast error-wrapping logic.
+ */
+export async function runProjects<T extends BaseConfig>(
+  configs: T[],
+  generateOne: (config: T, label?: string) => Promise<void>
+): Promise<void> {
+  if (configs.length === 0) {
+    throw new Error('runProjects requires at least one config entry')
+  }
+
+  if (configs.length === 1) {
+    await generateOne(configs[0]!)
+    return
+  }
+
+  for (let i = 0; i < configs.length; i++) {
+    const label = `${i + 1}/${configs.length}`
+    console.log(`\n[${label}] generating ${configs[i]!.input_openapi}...`)
+    try {
+      await generateOne(configs[i]!, label)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      throw new Error(`[${label}] Project failed (${configs[i]!.input_openapi}): ${message}`)
+    }
+  }
+
+  console.log(`\nAll ${configs.length} projects generated successfully.`)
 }
