@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.7.0...openapi-server-v1.8.0) (2026-06-10)
+
+
+### Features
+
+* **config:** multi-spec projects array drives N generations from one file ([#238](https://github.com/codewithagents/openapi-zod-ts/issues/238)) ([#288](https://github.com/codewithagents/openapi-zod-ts/issues/288)) ([aab136b](https://github.com/codewithagents/openapi-zod-ts/commit/aab136b6e20972dd51528f55b7ec5aecfc57b34f))
+
 ## [1.7.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.6.0...openapi-server-v1.7.0) (2026-06-03)
 
 

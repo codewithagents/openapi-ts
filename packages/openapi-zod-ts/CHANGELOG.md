@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v1.0.1...openapi-zod-ts-v1.1.0) (2026-06-10)
+
+
+### Features
+
+* **config:** multi-spec projects array drives N generations from one file ([#238](https://github.com/codewithagents/openapi-zod-ts/issues/238)) ([#288](https://github.com/codewithagents/openapi-zod-ts/issues/288)) ([aab136b](https://github.com/codewithagents/openapi-zod-ts/commit/aab136b6e20972dd51528f55b7ec5aecfc57b34f))
+
+
+### Bug Fixes
+
+* **client:** add Accept: application/json header to all generated fetch requests ([#290](https://github.com/codewithagents/openapi-zod-ts/issues/290)) ([6e8b895](https://github.com/codewithagents/openapi-zod-ts/commit/6e8b8958167fc16cd97e0ae8e7c3fccb3ef4ca81))
+
 ## [1.0.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v1.0.0...openapi-zod-ts-v1.0.1) (2026-06-03)
 
 
