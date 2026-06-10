@@ -18,16 +18,18 @@ export interface ParsedErrors {
 /**
  * The format/shape that was recognized when parsing an error body.
  *
- * - `'rfc7807-map'`    - RFC 7807 / RFC 9457 `errors` map: `{ errors: { field: [...] } }`
- * - `'spring-array'`   - Spring Boot array: `{ errors: [{ field, defaultMessage }] }`
- * - `'violations'`     - RFC 9457 / Spring `violations` array: `{ violations: [{ field, message }] }`
- * - `'invalid-params'` - RFC 9457 `invalid-params` array: `{ "invalid-params": [{ name, reason }] }`
- * - `'json-api'`       - JSON:API errors array: `{ errors: [{ source: { pointer }, detail }] }`
- * - `'laravel-drf'`    - Laravel / DRF top-level field map: `{ field: ["msg1", ...] }`
- * - `'flat-object'`    - Simple flat object: `{ field, message }`
- * - `'flat-array'`     - Array of flat objects: `[{ field, message }]`
- * - `'rfc9457-detail'` - RFC 9457 top-level `detail` string (last-resort fallback)
- * - `'custom'`         - Matched a caller-provided custom parser
+ * - `'rfc7807-map'`          - RFC 7807 / RFC 9457 `errors` map: `{ errors: { field: [...] } }`
+ * - `'spring-array'`         - Spring Boot array: `{ errors: [{ field, defaultMessage }] }`
+ * - `'violations'`           - RFC 9457 / Spring `violations` array: `{ violations: [{ field, message }] }`
+ * - `'invalid-params'`       - RFC 9457 `invalid-params` array: `{ "invalid-params": [{ name, reason }] }`
+ * - `'json-api'`             - JSON:API errors array: `{ errors: [{ source: { pointer }, detail }] }`
+ * - `'graphql-extensions'`   - GraphQL errors array: `{ errors: [{ message, extensions?: { field?, path? } }] }`
+ * - `'zod-flatten'`          - Zod flatten shape: `{ fieldErrors: { field: [...] }, formErrors: [...] }`
+ * - `'laravel-drf'`          - Laravel / DRF top-level field map: `{ field: ["msg1", ...] }`
+ * - `'flat-object'`          - Simple flat object: `{ field, message }`
+ * - `'flat-array'`           - Array of flat objects: `[{ field, message }]`
+ * - `'rfc9457-detail'`       - RFC 9457 top-level `detail` string (last-resort fallback)
+ * - `'custom'`               - Matched a caller-provided custom parser
  */
 export type ErrorFormat =
   | 'rfc7807-map'
@@ -35,6 +37,8 @@ export type ErrorFormat =
   | 'violations'
   | 'invalid-params'
   | 'json-api'
+  | 'graphql-extensions'
+  | 'zod-flatten'
   | 'laravel-drf'
   | 'flat-object'
   | 'flat-array'

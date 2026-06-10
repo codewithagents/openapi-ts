@@ -224,3 +224,94 @@ export function mapApiErrors(
     setError(field, { type: 'server', message })
   }
 }
+
+/**
+ * Vanilla (framework-agnostic) adapter.
+ *
+ * Extracts field errors from an unknown API error response and returns a plain
+ * `Record<string, string>` mapping field names to their first error message.
+ * Useful for any custom form library or imperative error handling.
+ *
+ * Only fieldErrors are included. For form-level (global) errors use `extractErrors`.
+ *
+ * @example
+ * ```ts
+ * const record = mapApiErrorsToRecord(error)
+ * // { email: "must not be blank", name: "required" }
+ * ```
+ */
+export function mapApiErrorsToRecord(
+  error: unknown,
+  options?: MapApiErrorsOptions
+): Record<string, string> {
+  const fieldErrors = extractFieldErrors(error, options)
+  const record: Record<string, string> = {}
+  for (const { field, message } of fieldErrors) {
+    if (!(field in record)) {
+      record[field] = message
+    }
+  }
+  return record
+}
+
+/**
+ * Formik adapter.
+ *
+ * Extracts field errors from an unknown API error response and calls Formik's
+ * `setErrors` with a `Record<string, string>` of field -> first error message.
+ *
+ * No Formik import is required. The `setErrors` parameter is typed by its
+ * shape only (structural typing).
+ *
+ * @example
+ * ```ts
+ * try {
+ *   await submitForm(values)
+ * } catch (error) {
+ *   mapApiErrorsFormik(error, setErrors)
+ * }
+ * ```
+ */
+export function mapApiErrorsFormik(
+  error: unknown,
+  setErrors: (errors: Record<string, string>) => void,
+  options?: MapApiErrorsOptions
+): void {
+  setErrors(mapApiErrorsToRecord(error, options))
+}
+
+/**
+ * TanStack Form v1 adapter.
+ *
+ * Extracts field errors from an unknown API error response and calls
+ * `form.setFieldMeta` for each field to inject server-side errors into the
+ * form state. The updater function merges errors and errorMap onto the
+ * existing field meta.
+ *
+ * No TanStack Form import is required. The `form` parameter is typed by its
+ * shape only (structural typing), so this adapter works without adding
+ * `@tanstack/form-core` as a dependency.
+ *
+ * @example
+ * ```ts
+ * try {
+ *   await form.handleSubmit()
+ * } catch (error) {
+ *   mapApiErrorsTanstack(error, form)
+ * }
+ * ```
+ */
+export function mapApiErrorsTanstack(
+  error: unknown,
+  form: { setFieldMeta: (field: string, updater: (meta: any) => any) => void },
+  options?: MapApiErrorsOptions
+): void {
+  const record = mapApiErrorsToRecord(error, options)
+  for (const [field, message] of Object.entries(record)) {
+    form.setFieldMeta(field, (meta: any) => ({
+      ...meta,
+      errors: [message],
+      errorMap: { onChange: message },
+    }))
+  }
+}

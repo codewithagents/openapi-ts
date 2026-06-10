@@ -12,6 +12,9 @@ const LARAVEL_RESERVED_KEYS = new Set([
   'title',
   'status',
   'type',
+  // Zod flatten shape keys — prevent laravel-drf from consuming zod-flatten bodies.
+  'fieldErrors',
+  'formErrors',
 ])
 
 function hasReservedLaravelKey(entries: [string, unknown][]): boolean {
