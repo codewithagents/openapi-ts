@@ -1037,6 +1037,11 @@ function emitContentTypeHeader(lines: string[], hasFormUrlencoded: boolean): voi
   }
 }
 
+/** Emits the Accept: application/json header as the first entry in the headers block. */
+function emitAcceptHeader(lines: string[]): void {
+  lines.push(`      'Accept': 'application/json',`)
+}
+
 /** Emits the body field in the fetch options for JSON or form-urlencoded body. */
 function emitBodyField(lines: string[], hasFormUrlencoded: boolean): void {
   if (hasFormUrlencoded) {
@@ -1101,6 +1106,7 @@ function emitRequestFunction(
   lines.push(`    method,`)
   if (features.hasCookieAuth) lines.push(`    credentials,`)
   lines.push(`    headers: {`)
+  emitAcceptHeader(lines)
   emitContentTypeHeader(lines, features.hasFormUrlencoded)
   lines.push(`      ...headers,`)
   emitAuthHeaderSpreads(lines, hasToken, hasBasic, auth.apiKeyHeaderNames)
@@ -1142,6 +1148,7 @@ function emitRequestFormFunction(
   lines.push(`    method,`)
   if (features.hasCookieAuth) lines.push(`    credentials,`)
   lines.push(`    headers: {`)
+  emitAcceptHeader(lines)
   lines.push(`      ...headers,`)
   emitAuthHeaderSpreads(lines, hasToken, hasBasic, auth.apiKeyHeaderNames)
   if (features.hasHeaderParams) lines.push(`      ...opts.extraHeaders,`)
