@@ -685,3 +685,215 @@ describe('backward compatibility after adding new shapes', () => {
     expect(extractFieldErrors(input)).toEqual(expected)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Zod flatten shape
+// ---------------------------------------------------------------------------
+
+describe('zod-flatten shape', () => {
+  it('maps fieldErrors keys to field errors', () => {
+    const result = extractErrors({
+      fieldErrors: { email: ['must not be blank'], name: ['required'] },
+      formErrors: [],
+    })
+    expect(result.format).toBe('zod-flatten')
+    expect(result.fieldErrors).toContainEqual({ field: 'email', message: 'must not be blank' })
+    expect(result.fieldErrors).toContainEqual({ field: 'name', message: 'required' })
+    expect(result.formErrors).toEqual([])
+  })
+
+  it('maps formErrors to formErrors channel', () => {
+    const result = extractErrors({
+      fieldErrors: {},
+      formErrors: ['Global error', 'Another global'],
+    })
+    expect(result.format).toBe('zod-flatten')
+    expect(result.fieldErrors).toEqual([])
+    expect(result.formErrors).toEqual(['Global error', 'Another global'])
+  })
+
+  it('handles fieldErrors only (no formErrors key)', () => {
+    const result = extractErrors({ fieldErrors: { email: ['invalid'] } })
+    expect(result.format).toBe('zod-flatten')
+    expect(result.fieldErrors).toEqual([{ field: 'email', message: 'invalid' }])
+    expect(result.formErrors).toEqual([])
+  })
+
+  it('handles formErrors only (no fieldErrors key)', () => {
+    const result = extractErrors({ formErrors: ['Something went wrong'] })
+    expect(result.format).toBe('zod-flatten')
+    expect(result.fieldErrors).toEqual([])
+    expect(result.formErrors).toEqual(['Something went wrong'])
+  })
+
+  it('handles both fieldErrors and formErrors mixed', () => {
+    const result = extractErrors({
+      fieldErrors: { email: ['bad email'], name: ['required'] },
+      formErrors: ['Submission failed'],
+    })
+    expect(result.format).toBe('zod-flatten')
+    expect(result.fieldErrors).toHaveLength(2)
+    expect(result.formErrors).toEqual(['Submission failed'])
+  })
+
+  it('expands multiple messages per field into separate FieldErrors', () => {
+    const result = extractErrors({
+      fieldErrors: { email: ['must not be blank', 'invalid format'] },
+      formErrors: [],
+    })
+    expect(result.fieldErrors).toEqual([
+      { field: 'email', message: 'must not be blank' },
+      { field: 'email', message: 'invalid format' },
+    ])
+  })
+
+  it('applies transformField to field names', () => {
+    const result = extractErrors(
+      { fieldErrors: { emailAddress: ['invalid'] }, formErrors: [] },
+      { transformField: camelToPath }
+    )
+    expect(result.fieldErrors).toEqual([{ field: 'email.address', message: 'invalid' }])
+  })
+
+  it('returns format zod-flatten for empty fieldErrors and formErrors', () => {
+    const result = extractErrors({ fieldErrors: {}, formErrors: [] })
+    expect(result.format).toBe('zod-flatten')
+    expect(result.fieldErrors).toEqual([])
+    expect(result.formErrors).toEqual([])
+  })
+
+  it('returns null format when neither fieldErrors nor formErrors key is present', () => {
+    expect(extractErrors({ foo: 'bar' }).format).toBeNull()
+  })
+
+  it('does not match when fieldErrors is not a plain object (array instead)', () => {
+    // fieldErrors: [] is wrong type — should not match zod-flatten
+    expect(extractErrors({ fieldErrors: ['bad'], formErrors: [] }).format).not.toBe('zod-flatten')
+  })
+
+  it('does not match when formErrors is not a string array', () => {
+    // formErrors: "string" is wrong type
+    expect(extractErrors({ fieldErrors: {}, formErrors: 'oops' }).format).not.toBe('zod-flatten')
+  })
+
+  it('skips fieldErrors entries whose value is not a string array', () => {
+    const result = extractErrors({
+      fieldErrors: { email: ['valid'], count: 42 as unknown as string[] },
+      formErrors: [],
+    })
+    expect(result.fieldErrors).toEqual([{ field: 'email', message: 'valid' }])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// GraphQL extensions shape
+// ---------------------------------------------------------------------------
+
+describe('graphql-extensions shape', () => {
+  it('maps extensions.field to fieldErrors', () => {
+    const result = extractErrors({
+      errors: [{ message: 'Invalid email', extensions: { field: 'email' } }],
+    })
+    expect(result.format).toBe('graphql-extensions')
+    expect(result.fieldErrors).toEqual([{ field: 'email', message: 'Invalid email' }])
+    expect(result.formErrors).toEqual([])
+  })
+
+  it('maps extensions.path array to fieldErrors using dot-joined path', () => {
+    const result = extractErrors({
+      errors: [{ message: 'Required', extensions: { path: ['address', 'city'] } }],
+    })
+    expect(result.format).toBe('graphql-extensions')
+    expect(result.fieldErrors).toEqual([{ field: 'address.city', message: 'Required' }])
+  })
+
+  it('prefers extensions.field over extensions.path when both are present', () => {
+    const result = extractErrors({
+      errors: [
+        {
+          message: 'Invalid',
+          extensions: { field: 'email', path: ['user', 'email'] },
+        },
+      ],
+    })
+    expect(result.fieldErrors).toEqual([{ field: 'email', message: 'Invalid' }])
+  })
+
+  it('routes items without extensions to formErrors', () => {
+    const result = extractErrors({
+      errors: [{ message: 'Unauthenticated' }],
+    })
+    expect(result.format).toBe('graphql-extensions')
+    expect(result.fieldErrors).toEqual([])
+    expect(result.formErrors).toEqual(['Unauthenticated'])
+  })
+
+  it('routes items with empty extensions to formErrors', () => {
+    const result = extractErrors({
+      errors: [{ message: 'Forbidden', extensions: {} }],
+    })
+    expect(result.format).toBe('graphql-extensions')
+    expect(result.formErrors).toEqual(['Forbidden'])
+  })
+
+  it('handles mixed field and form-level errors', () => {
+    const result = extractErrors({
+      errors: [
+        { message: 'Invalid email', extensions: { field: 'email' } },
+        { message: 'Not authorized' },
+      ],
+    })
+    expect(result.format).toBe('graphql-extensions')
+    expect(result.fieldErrors).toEqual([{ field: 'email', message: 'Invalid email' }])
+    expect(result.formErrors).toEqual(['Not authorized'])
+  })
+
+  it('applies transformField to field names', () => {
+    const result = extractErrors(
+      { errors: [{ message: 'invalid', extensions: { field: 'emailAddress' } }] },
+      { transformField: camelToPath }
+    )
+    expect(result.fieldErrors).toEqual([{ field: 'email.address', message: 'invalid' }])
+  })
+
+  it('does NOT match JSON:API shape (source.pointer present)', () => {
+    const result = extractErrors({
+      errors: [{ source: { pointer: '/data/attributes/email' }, detail: 'bad' }],
+    })
+    expect(result.format).toBe('json-api')
+    expect(result.format).not.toBe('graphql-extensions')
+  })
+
+  it('does NOT match Spring Boot array shape (defaultMessage present)', () => {
+    const result = extractErrors({
+      errors: [{ field: 'email', defaultMessage: 'must not be blank' }],
+    })
+    expect(result.format).toBe('spring-array')
+    expect(result.format).not.toBe('graphql-extensions')
+  })
+
+  it('returns null format when body.errors is not an array', () => {
+    expect(extractErrors({ errors: 'not an array' }).format).toBeNull()
+  })
+
+  it('skips non-object items in errors array', () => {
+    const result = extractErrors({
+      errors: [null, { message: 'bad', extensions: { field: 'email' } }],
+    })
+    expect(result.fieldErrors).toEqual([{ field: 'email', message: 'bad' }])
+  })
+
+  it('skips items without a message', () => {
+    const result = extractErrors({
+      errors: [{ extensions: { field: 'email' } }, { message: 'valid', extensions: { field: 'name' } }],
+    })
+    expect(result.fieldErrors).toEqual([{ field: 'name', message: 'valid' }])
+  })
+
+  it('extractErrors reports format as graphql-extensions', () => {
+    const result = extractErrors({
+      errors: [{ message: 'bad', extensions: { field: 'email' } }],
+    })
+    expect(result.format).toBe('graphql-extensions')
+  })
+})

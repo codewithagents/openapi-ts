@@ -5,8 +5,10 @@ import { tryParseInvalidParams } from './invalid-params.js'
 import { tryParseJsonApi } from './json-api.js'
 import { tryParseRfc7807 } from './rfc7807.js'
 import { tryParseSpringArray } from './spring.js'
+import { tryParseGraphqlExtensions } from './graphql-extensions.js'
 import { tryParseLaravelDrf } from './laravel-drf.js'
 import { tryParseFlatObject, tryParseFlatArray } from './flat.js'
+import { tryParseZodFlatten } from './zod-flatten.js'
 
 /** Internal match result: parsed errors + the format that matched. */
 export interface MatchResult {
@@ -60,6 +62,10 @@ function matchObjectBody(
       return r && { parsed: { fieldErrors: r, formErrors: [] }, format: 'rfc7807-map' as const }
     },
     () => {
+      const r = tryParseGraphqlExtensions(body)
+      return r && wrapMatch(r, 'graphql-extensions', transformField)
+    },
+    () => {
       const r = tryParseSpringArray(body, fallbackField, transformField)
       return r && { parsed: { fieldErrors: r, formErrors: [] }, format: 'spring-array' as const }
     },
@@ -70,6 +76,10 @@ function matchObjectBody(
     () => {
       const r = tryParseFlatObject(body, fallbackField, transformField)
       return r && { parsed: { fieldErrors: r, formErrors: [] }, format: 'flat-object' as const }
+    },
+    () => {
+      const r = tryParseZodFlatten(body)
+      return r && wrapMatch(r, 'zod-flatten', transformField)
     },
     () => {
       const detail = body['detail']
