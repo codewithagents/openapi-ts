@@ -73,7 +73,23 @@ function inlineSchemaToTs(
     if (items !== undefined) return `${inlineSchemaToTs(items, spec, visited)}[]`
     return 'unknown[]'
   }
-  if (s.type === 'object') return 'Record<string, unknown>'
+  if (s.type === 'object') {
+    // When additionalProperties is a schema object (not true/false/absent), recurse to get
+    // the typed value: Record<string, T> instead of the generic Record<string, unknown>.
+    if (
+      s.additionalProperties !== undefined &&
+      s.additionalProperties !== true &&
+      s.additionalProperties !== false
+    ) {
+      const valueType = inlineSchemaToTs(
+        s.additionalProperties as SchemaObject | ReferenceObject,
+        spec,
+        visited
+      )
+      return `Record<string, ${valueType}>`
+    }
+    return 'Record<string, unknown>'
+  }
   if (s.type !== undefined) return primitiveToTs(s.type as string)
   return 'unknown'
 }

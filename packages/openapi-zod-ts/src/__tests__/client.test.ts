@@ -643,6 +643,120 @@ describe('coverage: deprecated + throws together (lines 321-329, 387-394)', () =
   })
 })
 
+describe('inline additionalProperties response typing (#294)', () => {
+  it('operation response with additionalProperties schema object -> Record<string, T>', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/metrics': {
+          get: {
+            operationId: 'getMetrics',
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      additionalProperties: { type: 'integer', format: 'int32' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec as OpenAPIV3_1.Document).content
+    expect(out).toContain('Promise<Record<string, number>>')
+    expect(out).not.toContain('Record<string, unknown>')
+  })
+
+  it('operation response with additionalProperties: true -> Record<string, unknown>', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/data': {
+          get: {
+            operationId: 'getData',
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      additionalProperties: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec as OpenAPIV3_1.Document).content
+    expect(out).toContain('Promise<Record<string, unknown>>')
+  })
+
+  it('operation response with object and no additionalProperties -> Record<string, unknown>', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/plain': {
+          get: {
+            operationId: 'getPlain',
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec as OpenAPIV3_1.Document).content
+    expect(out).toContain('Promise<Record<string, unknown>>')
+  })
+
+  it('operation response with additionalProperties string schema -> Record<string, string>', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/labels': {
+          get: {
+            operationId: 'getLabels',
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      additionalProperties: { type: 'string' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec as OpenAPIV3_1.Document).content
+    expect(out).toContain('Promise<Record<string, string>>')
+  })
+})
+
 describe('coverage: inlineSchemaToTs edge cases (lines 28, 31-33, 37)', () => {
   it('response with nullable array type → string | null (line 28: Array.isArray(s.type) branch)', () => {
     // inlineSchemaToTs handles type: ['string', 'null'] → 'string | null'
