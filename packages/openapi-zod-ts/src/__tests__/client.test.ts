@@ -251,6 +251,73 @@ describe('inline response schemas', () => {
   })
 })
 
+describe('error_body_type (#293): typed schema-less error bodies', () => {
+  const minimalSpec: OpenAPIV3_1.Document = {
+    openapi: '3.1.0',
+    info: { title: 'T', version: '1' },
+    paths: {
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          responses: {
+            '200': { content: { 'application/json': { schema: { type: 'string' } } } },
+          },
+        },
+      },
+    },
+  }
+
+  it('without errorBodyType: error body cast uses no type annotation', () => {
+    const out = generateClient(minimalSpec).content
+    expect(out).toContain('await res.json().catch(() => null)')
+    expect(out).not.toContain(' as ')
+  })
+
+  it('errorBodyType laravel: LaravelValidationError type is emitted after ApiError', () => {
+    const out = generateClient(minimalSpec, { errorBodyType: 'laravel' }).content
+    expect(out).toContain('export type LaravelValidationError = {')
+    expect(out).toContain('message: string')
+    expect(out).toContain('errors: Record<string, string[]>')
+  })
+
+  it('errorBodyType laravel: error body is cast to LaravelValidationError', () => {
+    const out = generateClient(minimalSpec, { errorBodyType: 'laravel' }).content
+    expect(out).toContain('await res.json().catch(() => null) as LaravelValidationError')
+  })
+
+  it('errorBodyType laravel: no import is emitted for LaravelValidationError', () => {
+    const out = generateClient(minimalSpec, { errorBodyType: 'laravel' }).content
+    expect(out).not.toMatch(/import type \{.*LaravelValidationError/)
+  })
+
+  it('errorBodyType custom + importPath: import type is emitted at top', () => {
+    const out = generateClient(minimalSpec, {
+      errorBodyType: 'ApiErrorBody',
+      errorBodyTypeImport: './types/errors',
+    }).content
+    expect(out).toContain("import type { ApiErrorBody } from './types/errors'")
+  })
+
+  it('errorBodyType custom + importPath: error body is cast to custom type', () => {
+    const out = generateClient(minimalSpec, {
+      errorBodyType: 'ApiErrorBody',
+      errorBodyTypeImport: './types/errors',
+    }).content
+    expect(out).toContain('await res.json().catch(() => null) as ApiErrorBody')
+  })
+
+  it('errorBodyType custom without importPath: cast emitted, no import', () => {
+    const out = generateClient(minimalSpec, { errorBodyType: 'GlobalErrorType' }).content
+    expect(out).toContain('await res.json().catch(() => null) as GlobalErrorType')
+    expect(out).not.toMatch(/import type \{.*GlobalErrorType/)
+  })
+
+  it('errorBodyType custom: LaravelValidationError type NOT emitted', () => {
+    const out = generateClient(minimalSpec, { errorBodyType: 'ApiErrorBody' }).content
+    expect(out).not.toContain('LaravelValidationError')
+  })
+})
+
 describe('generateClient with empty paths', () => {
   it('handles spec with no paths gracefully', async () => {
     const spec = await parseSpec(join(__dirname, '../__fixtures__/specs/task-manager.json'))
@@ -640,6 +707,120 @@ describe('coverage: deprecated + throws together (lines 321-329, 387-394)', () =
   it('non-deprecated operation with $ref error still gets @throws without @deprecated', () => {
     // createTask is not deprecated but has 422 ValidationError → only @throws, no @deprecated
     expect(content).not.toMatch(/createTask[\s\S]{0,200}@deprecated/)
+  })
+})
+
+describe('inline additionalProperties response typing (#294)', () => {
+  it('operation response with additionalProperties schema object -> Record<string, T>', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/metrics': {
+          get: {
+            operationId: 'getMetrics',
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      additionalProperties: { type: 'integer', format: 'int32' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec as OpenAPIV3_1.Document).content
+    expect(out).toContain('Promise<Record<string, number>>')
+    expect(out).not.toContain('Record<string, unknown>')
+  })
+
+  it('operation response with additionalProperties: true -> Record<string, unknown>', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/data': {
+          get: {
+            operationId: 'getData',
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      additionalProperties: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec as OpenAPIV3_1.Document).content
+    expect(out).toContain('Promise<Record<string, unknown>>')
+  })
+
+  it('operation response with object and no additionalProperties -> Record<string, unknown>', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/plain': {
+          get: {
+            operationId: 'getPlain',
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec as OpenAPIV3_1.Document).content
+    expect(out).toContain('Promise<Record<string, unknown>>')
+  })
+
+  it('operation response with additionalProperties string schema -> Record<string, string>', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/labels': {
+          get: {
+            operationId: 'getLabels',
+            responses: {
+              '200': {
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      additionalProperties: { type: 'string' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec as OpenAPIV3_1.Document).content
+    expect(out).toContain('Promise<Record<string, string>>')
   })
 })
 

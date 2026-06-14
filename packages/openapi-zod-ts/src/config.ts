@@ -19,6 +19,20 @@ export interface Config {
   baseUrl?: string
   /** When true, generates server.ts with a createServerClient() factory for Next.js RSC (default: false) */
   server_client?: boolean
+  /**
+   * When set, schema-less error bodies in the generated client are cast to this type.
+   * Use 'laravel' to emit the built-in LaravelValidationError type alongside ApiError.
+   * Any other non-empty string is used as a type name; pair with error_body_type_import
+   * to emit an import, or omit it to treat the type as ambient/global.
+   */
+  error_body_type?: string
+  /**
+   * Module path for the custom error body type. Only used when error_body_type is set to a
+   * value other than 'laravel'. When provided, the generator emits
+   * `import type { TypeName } from 'importPath'` at the top of the generated client.
+   * Ignored when error_body_type is absent or 'laravel'.
+   */
+  error_body_type_import?: string
 }
 
 /**
@@ -47,6 +61,22 @@ export function defineProjects(configs: Config[]): { projects: Config[] } {
   return { projects: configs }
 }
 
+/** Validate the error_body_type / error_body_type_import optional fields. */
+function validateErrorBodyConfig(raw: Record<string, unknown>): void {
+  if (
+    raw['error_body_type'] !== undefined &&
+    (typeof raw['error_body_type'] !== 'string' || !raw['error_body_type'])
+  ) {
+    throw new Error('"error_body_type" must be a non-empty string when present')
+  }
+  if (
+    raw['error_body_type_import'] !== undefined &&
+    (typeof raw['error_body_type_import'] !== 'string' || !raw['error_body_type_import'])
+  ) {
+    throw new Error('"error_body_type_import" must be a non-empty string when present')
+  }
+}
+
 function parseConfig(raw: Record<string, unknown>, base: import('./config-core.js').BaseConfig): Config {
   if (
     raw['input_schema'] !== undefined &&
@@ -57,11 +87,14 @@ function parseConfig(raw: Record<string, unknown>, base: import('./config-core.j
   if (raw['server_client'] !== undefined && typeof raw['server_client'] !== 'boolean') {
     throw new Error('"server_client" must be a boolean')
   }
+  validateErrorBodyConfig(raw)
   return {
     ...base,
     input_schema: raw['input_schema'] as string | undefined,
     baseUrl: typeof raw['baseUrl'] === 'string' ? raw['baseUrl'] : undefined,
     server_client: raw['server_client'] as boolean | undefined,
+    error_body_type: raw['error_body_type'] as string | undefined,
+    error_body_type_import: raw['error_body_type_import'] as string | undefined,
   }
 }
 

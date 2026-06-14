@@ -41,7 +41,7 @@ export interface AssignedRoleDetails {
   predefined_role: boolean
   description: string | null
   created_at: number | null
-  updated_at: bigint | null
+  updated_at: number /* int64, precision limited to 2^53-1 */ | null
   created_by: string | null
   created_by_user_obj: Record<string, unknown> | null
   metadata: Record<string, unknown> | null
@@ -682,7 +682,7 @@ export interface Batch {
 
 export interface BatchFileExpirationAfter {
   anchor: 'created_at'
-  seconds: bigint
+  seconds: number /* int64, precision limited to 2^53-1 */
 }
 
 export interface Certificate {
@@ -1288,7 +1288,7 @@ export interface CreateCompletionRequest {
   max_tokens?: number | null
   n?: number | null
   presence_penalty?: number | null
-  seed?: bigint | null
+  seed?: number /* int64, precision limited to 2^53-1 */ | null
   stop?: StopConfiguration
   stream?: boolean | null
   stream_options?: ChatCompletionStreamOptions
@@ -2302,7 +2302,7 @@ export interface EvalStoredCompletionsSource {
 
 export interface FileExpirationAfter {
   anchor: 'created_at'
-  seconds: bigint
+  seconds: number /* int64, precision limited to 2^53-1 */
 }
 
 export interface FilePath {
@@ -4498,7 +4498,7 @@ export interface RealtimeConversationItemWithReference {
 export interface RealtimeCreateClientSecretRequest {
   expires_after?: {
     anchor?: 'created_at'
-    seconds?: bigint
+    seconds?: number /* int64, precision limited to 2^53-1 */
   }
   session?: RealtimeSessionCreateRequestGA | RealtimeTranscriptionSessionCreateRequestGA
 }
@@ -5491,7 +5491,7 @@ export interface RealtimeTranslationClientEventSessionUpdate {
 export interface RealtimeTranslationClientSecretCreateRequest {
   expires_after?: {
     anchor?: 'created_at'
-    seconds?: bigint
+    seconds?: number /* int64, precision limited to 2^53-1 */
   }
   session: RealtimeTranslationSessionCreateRequest
 }
@@ -6944,7 +6944,7 @@ export interface UsageAudioSpeechesResult {
 
 export interface UsageAudioTranscriptionsResult {
   object: 'organization.usage.audio_transcriptions.result'
-  seconds: bigint
+  seconds: number /* int64, precision limited to 2^53-1 */
   num_model_requests: number
   project_id?: string | null
   user_id?: string | null
@@ -8641,7 +8641,7 @@ export interface WorkflowParam {
 
 export interface ExpiresAfterParam {
   anchor: 'created_at'
-  seconds: bigint
+  seconds: number /* int64, precision limited to 2^53-1 */
 }
 
 export interface RateLimitsParam {

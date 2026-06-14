@@ -91,6 +91,48 @@ describe('loadConfig', () => {
     await expect(loadConfig(tmpDir)).rejects.toThrow('"server_client" must be a boolean')
   })
 
+  it('loads error_body_type field', async () => {
+    writeConfig({ input_openapi: 'openapi.json', output: 'src/api', error_body_type: 'laravel' })
+    const config = await loadConfig(tmpDir)
+    expect(config.error_body_type).toBe('laravel')
+  })
+
+  it('loads error_body_type with error_body_type_import', async () => {
+    writeConfig({
+      input_openapi: 'openapi.json',
+      output: 'src/api',
+      error_body_type: 'ApiErrorBody',
+      error_body_type_import: './types/errors',
+    })
+    const config = await loadConfig(tmpDir)
+    expect(config.error_body_type).toBe('ApiErrorBody')
+    expect(config.error_body_type_import).toBe('./types/errors')
+  })
+
+  it('error_body_type and error_body_type_import are undefined when absent', async () => {
+    writeConfig({ input_openapi: 'openapi.json', output: 'src/api' })
+    const config = await loadConfig(tmpDir)
+    expect(config.error_body_type).toBeUndefined()
+    expect(config.error_body_type_import).toBeUndefined()
+  })
+
+  it('throws when error_body_type is an empty string', async () => {
+    writeConfig({ input_openapi: 'openapi.json', output: 'src/api', error_body_type: '' })
+    await expect(loadConfig(tmpDir)).rejects.toThrow('"error_body_type" must be a non-empty string')
+  })
+
+  it('throws when error_body_type_import is an empty string', async () => {
+    writeConfig({
+      input_openapi: 'openapi.json',
+      output: 'src/api',
+      error_body_type: 'MyError',
+      error_body_type_import: '',
+    })
+    await expect(loadConfig(tmpDir)).rejects.toThrow(
+      '"error_body_type_import" must be a non-empty string'
+    )
+  })
+
   it('ignores unknown config fields', async () => {
     writeConfig({ input_openapi: 'openapi.json', output: 'src/api', unknown_field: 'ignored' })
     const config = await loadConfig(tmpDir)

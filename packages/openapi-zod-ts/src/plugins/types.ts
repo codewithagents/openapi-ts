@@ -201,8 +201,10 @@ function schemaToTypeString(
 
 /**
  * Map an OpenAPI primitive type to a TypeScript type.
- * For integer with format int64, returns bigint instead of number
- * to preserve precision for 64-bit IDs.
+ * For integer with format int64, returns number with an inline comment noting precision
+ * is limited to 2^53-1 (JS Number.MAX_SAFE_INTEGER). BigInt is avoided because
+ * JSON.stringify throws on bigint values and JSON.parse never produces bigint, making
+ * bigint unworkable for standard API client serialization.
  */
 function primitiveToTs(type: string, format?: string): string {
   switch (type) {
@@ -211,8 +213,7 @@ function primitiveToTs(type: string, format?: string): string {
     case 'number':
       return 'number'
     case 'integer':
-      // int64 requires bigint for precision-safe 64-bit IDs (JS number cannot represent >2^53)
-      return format === 'int64' ? 'bigint' : 'number'
+      return format === 'int64' ? 'number /* int64, precision limited to 2^53-1 */' : 'number'
     case 'boolean':
       return 'boolean'
     case 'null':

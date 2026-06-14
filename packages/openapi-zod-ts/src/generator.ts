@@ -80,7 +80,16 @@ async function generateOne(
       cookieAuth ? { defaultCredentials: 'include', authSchemes } : { authSchemes }
     )
   )
-  generatedFiles.push(generateClient(spec, undefined, writableVariantMap))
+  generatedFiles.push(
+    generateClient(
+      spec,
+      {
+        errorBodyType: config.error_body_type,
+        errorBodyTypeImport: config.error_body_type_import,
+      },
+      writableVariantMap
+    )
+  )
   generatedFiles.push(generateIndexBarrel())
 
   console.log(`${prefix}Writing output to: ${outputDir}`)
@@ -162,7 +171,12 @@ async function generateZodIntegration(
     )
     const enhancedClient = generateClient(
       spec,
-      { schemaNames: exportedSchemas, schemaImportPath },
+      {
+        schemaNames: exportedSchemas,
+        schemaImportPath,
+        errorBodyType: config.error_body_type,
+        errorBodyTypeImport: config.error_body_type_import,
+      },
       writableVariantMap
     )
     const enhancedTypesPath = join(outputDir, enhancedTypes.filename)

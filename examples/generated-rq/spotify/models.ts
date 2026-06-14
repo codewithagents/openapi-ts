@@ -70,7 +70,7 @@ export interface CurrentlyPlayingContextObject {
   repeat_state?: string
   shuffle_state?: boolean
   context?: ContextObject
-  timestamp?: bigint
+  timestamp?: number /* int64, precision limited to 2^53-1 */
   progress_ms?: number
   is_playing?: boolean
   item?: TrackObject | EpisodeObject
@@ -128,7 +128,7 @@ export interface AudioAnalysisObject {
     platform?: string
     detailed_status?: string
     status_code?: number
-    timestamp?: bigint
+    timestamp?: number /* int64, precision limited to 2^53-1 */
     analysis_time?: number
     input_process?: string
   }
@@ -672,7 +672,7 @@ export interface ExplicitContentSettingsObject {
 
 export interface CurrentlyPlayingObject {
   context?: ContextObject
-  timestamp?: bigint
+  timestamp?: number /* int64, precision limited to 2^53-1 */
   progress_ms?: number
   is_playing?: boolean
   item?: TrackObject | EpisodeObject

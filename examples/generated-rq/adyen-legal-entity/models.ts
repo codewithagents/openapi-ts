@@ -46,7 +46,7 @@ export interface Address {
 
 export interface Amount {
   currency?: string
-  value?: bigint
+  value?: number /* int64, precision limited to 2^53-1 */
 }
 
 export interface Attachment {

@@ -186,7 +186,7 @@ export async function uploadFile(
 
 export async function getInventory(
   config?: Partial<ClientConfig>
-): Promise<Record<string, unknown>> {
+): Promise<Record<string, number>> {
   const res = await _request('GET', '/store/inventory', {}, config)
   return res.json()
 }
