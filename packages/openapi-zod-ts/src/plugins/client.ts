@@ -51,6 +51,31 @@ function resolveDeepRefToTs(
   return result
 }
 
+/**
+ * Resolve the TypeScript Record type for an inline object schema.
+ * When additionalProperties is a schema object, recurse to produce Record<string, T>.
+ * Otherwise fall back to Record<string, unknown>.
+ */
+function inlineObjectSchemaToTs(
+  s: SchemaObject,
+  spec?: OpenAPIV3_1.Document,
+  visited?: Set<string>
+): string {
+  if (
+    s.additionalProperties !== undefined &&
+    s.additionalProperties !== true &&
+    s.additionalProperties !== false
+  ) {
+    const valueType = inlineSchemaToTs(
+      s.additionalProperties as SchemaObject | ReferenceObject,
+      spec,
+      visited
+    )
+    return `Record<string, ${valueType}>`
+  }
+  return 'Record<string, unknown>'
+}
+
 function inlineSchemaToTs(
   schema: SchemaObject | ReferenceObject,
   spec?: OpenAPIV3_1.Document,
@@ -73,23 +98,7 @@ function inlineSchemaToTs(
     if (items !== undefined) return `${inlineSchemaToTs(items, spec, visited)}[]`
     return 'unknown[]'
   }
-  if (s.type === 'object') {
-    // When additionalProperties is a schema object (not true/false/absent), recurse to get
-    // the typed value: Record<string, T> instead of the generic Record<string, unknown>.
-    if (
-      s.additionalProperties !== undefined &&
-      s.additionalProperties !== true &&
-      s.additionalProperties !== false
-    ) {
-      const valueType = inlineSchemaToTs(
-        s.additionalProperties as SchemaObject | ReferenceObject,
-        spec,
-        visited
-      )
-      return `Record<string, ${valueType}>`
-    }
-    return 'Record<string, unknown>'
-  }
+  if (s.type === 'object') return inlineObjectSchemaToTs(s, spec, visited)
   if (s.type !== undefined) return primitiveToTs(s.type as string)
   return 'unknown'
 }

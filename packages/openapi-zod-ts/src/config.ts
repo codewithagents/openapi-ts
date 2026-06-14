@@ -61,16 +61,8 @@ export function defineProjects(configs: Config[]): { projects: Config[] } {
   return { projects: configs }
 }
 
-function parseConfig(raw: Record<string, unknown>, base: import('./config-core.js').BaseConfig): Config {
-  if (
-    raw['input_schema'] !== undefined &&
-    (typeof raw['input_schema'] !== 'string' || !raw['input_schema'])
-  ) {
-    throw new Error('"input_schema" must be a non-empty string path to your Zod schema file')
-  }
-  if (raw['server_client'] !== undefined && typeof raw['server_client'] !== 'boolean') {
-    throw new Error('"server_client" must be a boolean')
-  }
+/** Validate the error_body_type / error_body_type_import optional fields. */
+function validateErrorBodyConfig(raw: Record<string, unknown>): void {
   if (
     raw['error_body_type'] !== undefined &&
     (typeof raw['error_body_type'] !== 'string' || !raw['error_body_type'])
@@ -83,6 +75,19 @@ function parseConfig(raw: Record<string, unknown>, base: import('./config-core.j
   ) {
     throw new Error('"error_body_type_import" must be a non-empty string when present')
   }
+}
+
+function parseConfig(raw: Record<string, unknown>, base: import('./config-core.js').BaseConfig): Config {
+  if (
+    raw['input_schema'] !== undefined &&
+    (typeof raw['input_schema'] !== 'string' || !raw['input_schema'])
+  ) {
+    throw new Error('"input_schema" must be a non-empty string path to your Zod schema file')
+  }
+  if (raw['server_client'] !== undefined && typeof raw['server_client'] !== 'boolean') {
+    throw new Error('"server_client" must be a boolean')
+  }
+  validateErrorBodyConfig(raw)
   return {
     ...base,
     input_schema: raw['input_schema'] as string | undefined,
