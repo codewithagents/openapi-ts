@@ -251,6 +251,73 @@ describe('inline response schemas', () => {
   })
 })
 
+describe('error_body_type (#293): typed schema-less error bodies', () => {
+  const minimalSpec: OpenAPIV3_1.Document = {
+    openapi: '3.1.0',
+    info: { title: 'T', version: '1' },
+    paths: {
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          responses: {
+            '200': { content: { 'application/json': { schema: { type: 'string' } } } },
+          },
+        },
+      },
+    },
+  }
+
+  it('without errorBodyType: error body cast uses no type annotation', () => {
+    const out = generateClient(minimalSpec).content
+    expect(out).toContain('await res.json().catch(() => null)')
+    expect(out).not.toContain(' as ')
+  })
+
+  it('errorBodyType laravel: LaravelValidationError type is emitted after ApiError', () => {
+    const out = generateClient(minimalSpec, { errorBodyType: 'laravel' }).content
+    expect(out).toContain('export type LaravelValidationError = {')
+    expect(out).toContain('message: string')
+    expect(out).toContain('errors: Record<string, string[]>')
+  })
+
+  it('errorBodyType laravel: error body is cast to LaravelValidationError', () => {
+    const out = generateClient(minimalSpec, { errorBodyType: 'laravel' }).content
+    expect(out).toContain('await res.json().catch(() => null) as LaravelValidationError')
+  })
+
+  it('errorBodyType laravel: no import is emitted for LaravelValidationError', () => {
+    const out = generateClient(minimalSpec, { errorBodyType: 'laravel' }).content
+    expect(out).not.toMatch(/import type \{.*LaravelValidationError/)
+  })
+
+  it('errorBodyType custom + importPath: import type is emitted at top', () => {
+    const out = generateClient(minimalSpec, {
+      errorBodyType: 'ApiErrorBody',
+      errorBodyTypeImport: './types/errors',
+    }).content
+    expect(out).toContain("import type { ApiErrorBody } from './types/errors'")
+  })
+
+  it('errorBodyType custom + importPath: error body is cast to custom type', () => {
+    const out = generateClient(minimalSpec, {
+      errorBodyType: 'ApiErrorBody',
+      errorBodyTypeImport: './types/errors',
+    }).content
+    expect(out).toContain('await res.json().catch(() => null) as ApiErrorBody')
+  })
+
+  it('errorBodyType custom without importPath: cast emitted, no import', () => {
+    const out = generateClient(minimalSpec, { errorBodyType: 'GlobalErrorType' }).content
+    expect(out).toContain('await res.json().catch(() => null) as GlobalErrorType')
+    expect(out).not.toMatch(/import type \{.*GlobalErrorType/)
+  })
+
+  it('errorBodyType custom: LaravelValidationError type NOT emitted', () => {
+    const out = generateClient(minimalSpec, { errorBodyType: 'ApiErrorBody' }).content
+    expect(out).not.toContain('LaravelValidationError')
+  })
+})
+
 describe('generateClient with empty paths', () => {
   it('handles spec with no paths gracefully', async () => {
     const spec = await parseSpec(join(__dirname, '../__fixtures__/specs/task-manager.json'))

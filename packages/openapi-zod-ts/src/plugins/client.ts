@@ -839,6 +839,12 @@ interface HelperFeatures {
   hasMultipart: boolean
   /** Any endpoint uses application/x-www-form-urlencoded. Emits bodyEncoding branch in `_request`. */
   hasFormUrlencoded: boolean
+  /**
+   * When set, schema-less error bodies are cast to this type name in the generated error handler.
+   * Use 'laravel' for the built-in LaravelValidationError type or any other string for an
+   * ambient/imported type (see ClientOptions.errorBodyTypeImport for the import path).
+   */
+  errorBodyType?: string
 }
 
 /**
@@ -1006,10 +1012,22 @@ function emitAuthHeaderSpreads(
   }
 }
 
-/** Emits the shared error-check + return block at the end of a helper function. */
-function emitErrorCheckAndReturn(lines: string[]): void {
+/**
+ * Emits the shared error-check + return block at the end of a helper function.
+ * When errorBodyType is provided, the error body is cast to that type so callers
+ * get a typed body instead of unknown. The special value 'laravel' uses the built-in
+ * LaravelValidationError type emitted alongside ApiError; any other value is used as-is
+ * (caller is responsible for ensuring the type is in scope).
+ */
+function emitErrorCheckAndReturn(lines: string[], errorBodyType?: string): void {
   lines.push(`  if (!res.ok) {`)
-  lines.push(`    const err = new ApiError(res.status, await res.json().catch(() => null))`)
+  if (errorBodyType !== undefined) {
+    lines.push(
+      `    const err = new ApiError(res.status, await res.json().catch(() => null) as ${errorBodyType})`
+    )
+  } else {
+    lines.push(`    const err = new ApiError(res.status, await res.json().catch(() => null))`)
+  }
   lines.push(`    onError?.(err)`)
   lines.push(`    throw err`)
   lines.push(`  }`)
@@ -1132,7 +1150,7 @@ function emitRequestFunction(
   lines.push(`  }`)
   emitOnRequestBlock(lines)
   emitSignalAndFetch(lines)
-  emitErrorCheckAndReturn(lines)
+  emitErrorCheckAndReturn(lines, features.errorBodyType)
 }
 
 /** Emits the _requestForm function into lines (up to and including the closing brace). */
@@ -1173,7 +1191,7 @@ function emitRequestFormFunction(
   lines.push(`  }`)
   emitOnRequestBlock(lines)
   emitSignalAndFetch(lines)
-  emitErrorCheckAndReturn(lines)
+  emitErrorCheckAndReturn(lines, features.errorBodyType)
 }
 
 /**
@@ -1453,6 +1471,20 @@ function generateFunctionCode(
 export interface ClientOptions {
   schemaNames?: Set<string>
   schemaImportPath?: string
+  /**
+   * When set, schema-less error bodies are cast to this type in the generated client.
+   * Use 'laravel' to emit the built-in LaravelValidationError type
+   * ({ message: string; errors: Record<string, string[]> }) alongside ApiError.
+   * Any other string is used as-is; pair it with errorBodyTypeImport to emit an import,
+   * or leave errorBodyTypeImport unset to treat it as an ambient/global type.
+   */
+  errorBodyType?: string
+  /**
+   * When errorBodyType is set to a custom type name (not 'laravel'), provide the module
+   * path here and the generator will emit `import type { TypeName } from 'importPath'`
+   * at the top of the generated client. Ignored when errorBodyType is 'laravel' or absent.
+   */
+  errorBodyTypeImport?: string
 }
 
 /** Built-in TypeScript types that must NOT be imported from ./models */
@@ -1653,6 +1685,18 @@ export function generateClient(
     lines.push(`import { ${sortedSchemas.join(', ')} } from '${options.schemaImportPath}'`)
   }
 
+  // When a custom error body type with an import path is configured, emit the import.
+  // The 'laravel' value uses a built-in type emitted inline and needs no import.
+  if (
+    options?.errorBodyType !== undefined &&
+    options.errorBodyType !== 'laravel' &&
+    options.errorBodyTypeImport !== undefined
+  ) {
+    lines.push(
+      `import type { ${options.errorBodyType} } from '${options.errorBodyTypeImport}'`
+    )
+  }
+
   lines.push('')
 
   // ApiError class — generic so callers can type-narrow caught errors.
@@ -1669,16 +1713,31 @@ export function generateClient(
   lines.push(`  }`)
   lines.push(`}`)
 
+  // When error_body_type is 'laravel', emit the built-in LaravelValidationError type
+  // immediately after ApiError so it is available for the typed error body cast.
+  if (options?.errorBodyType === 'laravel') {
+    lines.push(``)
+    lines.push(`export type LaravelValidationError = {`)
+    lines.push(`  message: string`)
+    lines.push(`  errors: Record<string, string[]>`)
+    lines.push(`}`)
+  }
+
   // Shared private request helpers — emitted once, called by every endpoint function.
   // Code inside the helpers is feature-conditional: only emit auth/credentials/extraHeaders
   // when the spec actually declares those features.
   if (hasAnyEndpoints) {
+    // Resolve the actual TS type name for the error body cast.
+    // 'laravel' is a config shorthand for the built-in LaravelValidationError type.
+    const resolvedErrorBodyType =
+      options?.errorBodyType === 'laravel' ? 'LaravelValidationError' : options?.errorBodyType
     const helperFeatures: HelperFeatures = {
       authSchemes: detectAuthSchemes(spec),
       hasCookieAuth: hasCookieAuth(spec),
       hasHeaderParams: hasHeaderParamEndpoints,
       hasMultipart: hasMultipartEndpoints,
       hasFormUrlencoded: hasFormUrlencodedEndpoints,
+      errorBodyType: resolvedErrorBodyType,
     }
     lines.push('')
     lines.push(generateRequestHelpers(helperFeatures))
