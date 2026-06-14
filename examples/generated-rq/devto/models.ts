@@ -36,11 +36,11 @@ export interface ArticleIndex {
 
 export interface VideoArticle {
   type_of?: string
-  id?: bigint
+  id?: number /* int64, precision limited to 2^53-1 */
   path?: string
   cloudinary_video_url?: string
   title?: string
-  user_id?: bigint
+  user_id?: number /* int64, precision limited to 2^53-1 */
   video_duration_in_minutes?: string
   video_source_url?: string
   user?: {
@@ -78,13 +78,13 @@ export interface Organization {
 }
 
 export interface FollowedTag {
-  id: bigint
+  id: number /* int64, precision limited to 2^53-1 */
   name: string
   points: number
 }
 
 export interface Tag {
-  id?: bigint
+  id?: number /* int64, precision limited to 2^53-1 */
   name?: string
   bg_color_hex?: string | null
   text_color_hex?: string | null
@@ -138,7 +138,7 @@ export interface SharedOrganization {
 
 export interface User {
   type_of?: string
-  id?: bigint
+  id?: number /* int64, precision limited to 2^53-1 */
   username?: string
   name?: string
   summary?: string | null
@@ -152,7 +152,7 @@ export interface User {
 
 export interface ExtendedUser {
   type_of?: string
-  id?: bigint
+  id?: number /* int64, precision limited to 2^53-1 */
   username?: string
   name?: string
   summary?: string | null
@@ -168,7 +168,7 @@ export interface ExtendedUser {
 
 export interface MyUser {
   type_of?: string
-  id?: bigint
+  id?: number /* int64, precision limited to 2^53-1 */
   username?: string
   name?: string
   summary?: string | null
@@ -261,7 +261,7 @@ export interface SegmentUserIds {
 }
 
 export interface AgentSessionIndex {
-  id: bigint
+  id: number /* int64, precision limited to 2^53-1 */
   slug: string
   title: string
   tool_name: string
@@ -273,7 +273,7 @@ export interface AgentSessionIndex {
 }
 
 export interface AgentSessionShow {
-  id: bigint
+  id: number /* int64, precision limited to 2^53-1 */
   slug: string
   title: string
   tool_name: string
@@ -290,7 +290,7 @@ export interface AgentSessionShow {
 
 export interface PollOption {
   type_of: 'poll_option'
-  id: bigint
+  id: number /* int64, precision limited to 2^53-1 */
   markdown: string | null
   processed_html: string | null
   position: number
@@ -300,7 +300,7 @@ export interface PollOption {
 
 export interface Poll {
   type_of: 'poll'
-  id: bigint
+  id: number /* int64, precision limited to 2^53-1 */
   prompt_markdown: string | null
   prompt_html: string | null
   poll_type_of: 'single_choice' | 'multiple_choice' | 'scale' | 'text_input'
@@ -317,7 +317,7 @@ export interface Poll {
 
 export interface Survey {
   type_of: 'survey'
-  id: bigint
+  id: number /* int64, precision limited to 2^53-1 */
   title: string
   slug: string
   survey_type_of: 'community_pulse' | 'industry' | 'fun'
@@ -334,10 +334,10 @@ export type SurveyWithPolls = Survey & {
 
 export interface PollVote {
   type_of: 'poll_vote'
-  id: bigint
-  poll_id: bigint
-  poll_option_id: bigint
-  user_id: bigint
+  id: number /* int64, precision limited to 2^53-1 */
+  poll_id: number /* int64, precision limited to 2^53-1 */
+  poll_option_id: number /* int64, precision limited to 2^53-1 */
+  user_id: number /* int64, precision limited to 2^53-1 */
   user_email: string
   session_start: number
   created_at: string /* date-time */
@@ -345,9 +345,9 @@ export interface PollVote {
 
 export interface PollTextResponse {
   type_of: 'poll_text_response'
-  id: bigint
-  poll_id: bigint
-  user_id: bigint
+  id: number /* int64, precision limited to 2^53-1 */
+  poll_id: number /* int64, precision limited to 2^53-1 */
+  user_id: number /* int64, precision limited to 2^53-1 */
   user_email: string
   text_content: string
   session_start: number

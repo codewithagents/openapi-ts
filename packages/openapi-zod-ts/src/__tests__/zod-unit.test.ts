@@ -606,14 +606,15 @@ describe('coverage: multi-type array with null member (zod.ts line 118 TRUE bran
   })
 })
 
-describe('int64 format -> bigint', () => {
-  it('integer with format int64 -> z.bigint()', () => {
+describe('int64 format -> z.number()', () => {
+  it('integer with format int64 -> z.number()', () => {
     const out = genSingle('Id', { type: 'integer', format: 'int64' })
     // Check the schema declaration line specifically to avoid matching header comments
-    expect(out).toContain('IdSchema = z.bigint()')
+    expect(out).toContain('IdSchema = z.number()')
+    expect(out).not.toContain('z.bigint()')
   })
 
-  it('integer with format int32 -> z.number() (only int64 gets bigint)', () => {
+  it('integer with format int32 -> z.number()', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('Id', { type: 'integer', format: 'int32' } as any)
     expect(out).toContain('IdSchema = z.number()')
@@ -626,19 +627,21 @@ describe('int64 format -> bigint', () => {
     expect(out).not.toContain('z.bigint()')
   })
 
-  it('int64 as object property', () => {
+  it('int64 as object property -> z.number()', () => {
     const out = genSingle('Obj', {
       type: 'object',
       required: ['id'],
       properties: { id: { type: 'integer', format: 'int64' } },
     })
-    expect(out).toContain('id: z.bigint()')
+    expect(out).toContain('id: z.number()')
+    expect(out).not.toContain('z.bigint()')
   })
 
-  it('nullable int64 array type: [integer, null] with int64 format', () => {
+  it('nullable int64 array type: [integer, null] with int64 format -> z.number().nullable()', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('Id', { type: ['integer', 'null'], format: 'int64' } as any)
-    expect(out).toContain('z.bigint().nullable()')
+    expect(out).toContain('z.number().nullable()')
+    expect(out).not.toContain('z.bigint()')
   })
 })
 

@@ -81,8 +81,9 @@ function serializeLiteral(value: unknown): string {
 
 /**
  * Return the Zod v4 base expression for a primitive type.
- * For integer with format int64, returns z.bigint() instead of z.number()
- * to preserve precision for 64-bit IDs.
+ * For integer with format int64, returns z.number() instead of z.bigint() because
+ * JSON.stringify throws on bigint values and JSON.parse never produces bigint. Precision
+ * is limited to 2^53-1 (JS Number.MAX_SAFE_INTEGER) for int64 fields.
  */
 function primitiveToZod(type: string, format?: string): string {
   switch (type) {
@@ -91,8 +92,7 @@ function primitiveToZod(type: string, format?: string): string {
     case 'number':
       return 'z.number()'
     case 'integer':
-      // int64 requires bigint for precision-safe 64-bit IDs (JS number cannot represent >2^53)
-      return format === 'int64' ? 'z.bigint()' : 'z.number()'
+      return format === 'int64' ? 'z.number()' : 'z.number()'
     case 'boolean':
       return 'z.boolean()'
     case 'null':
@@ -325,8 +325,8 @@ function objectSchemaToZod(schema: SchemaObject): string {
 
 /**
  * Handle scalar primitive types: string, integer, number, boolean, null.
- * Applies format-based specialisation (stringSchemaExpr, int64 bigint) and
- * numeric/string constraints before returning the Zod expression.
+ * Applies format-based specialisation (stringSchemaExpr, numeric constraints) and
+ * string/numeric constraints before returning the Zod expression.
  */
 function primitiveTypeToZod(schema: SchemaObject): string {
   const type = schema.type as string
@@ -335,9 +335,7 @@ function primitiveTypeToZod(schema: SchemaObject): string {
     base = stringSchemaExpr(schema)
   } else if (type === 'integer') {
     base = primitiveToZod('integer', schema.format as string | undefined)
-    if (base !== 'z.bigint()') {
-      base = applyNumberConstraints(base, schema)
-    }
+    base = applyNumberConstraints(base, schema)
   } else if (type === 'number') {
     base = primitiveToZod('number')
     base = applyNumberConstraints(base, schema)

@@ -522,11 +522,11 @@ describe('coverage: generateTypes schema-enhanced mode with no schemas (types.ts
   })
 })
 
-describe('int64 format -> bigint in types', () => {
-  it('integer with format int64 -> bigint TS type', () => {
+describe('int64 format -> number in types', () => {
+  it('integer with format int64 -> number TS type with precision comment', () => {
     const out = genSingle('Id', { type: 'integer', format: 'int64' })
-    expect(out).toContain('bigint')
-    expect(out).not.toContain('number')
+    expect(out).toContain('number /* int64, precision limited to 2^53-1 */')
+    expect(out).not.toContain('bigint')
   })
 
   it('integer with no format -> number', () => {
@@ -535,19 +535,21 @@ describe('int64 format -> bigint in types', () => {
     expect(out).not.toContain('bigint')
   })
 
-  it('int64 as object property', () => {
+  it('int64 as object property -> number with precision comment', () => {
     const out = genSingle('Obj', {
       type: 'object',
       required: ['id'],
       properties: { id: { type: 'integer', format: 'int64' } },
     })
-    expect(out).toContain('id: bigint')
+    expect(out).toContain('id: number /* int64, precision limited to 2^53-1 */')
+    expect(out).not.toContain('bigint')
   })
 
-  it('nullable int64 array type: [integer, null] with int64 format', () => {
+  it('nullable int64 array type: [integer, null] with int64 format -> number with precision comment | null', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('Id', { type: ['integer', 'null'], format: 'int64' } as any)
-    expect(out).toContain('bigint | null')
+    expect(out).toContain('number /* int64, precision limited to 2^53-1 */ | null')
+    expect(out).not.toContain('bigint')
   })
 })
 

@@ -365,7 +365,7 @@ export interface Agency {
 
 export interface Airline {
   agency?: Agency
-  boardingFee?: bigint
+  boardingFee?: number /* int64, precision limited to 2^53-1 */
   code?: string
   computerizedReservationSystem?: string
   customerReferenceNumber?: string
@@ -396,12 +396,12 @@ export interface AmazonPayDetails {
 
 export interface Amount {
   currency: string
-  value: bigint
+  value: number /* int64, precision limited to 2^53-1 */
 }
 
 export interface Amounts {
   currency: string
-  values: bigint[]
+  values: number /* int64, precision limited to 2^53-1 */[]
 }
 
 export interface AncvDetails {
@@ -1199,9 +1199,9 @@ export interface DokuDetails {
 export interface Donation {
   currency: string
   donationType: string
-  maxRoundupAmount?: bigint
+  maxRoundupAmount?: number /* int64, precision limited to 2^53-1 */
   type: string
-  values?: bigint[]
+  values?: number /* int64, precision limited to 2^53-1 */[]
 }
 
 export interface DonationCampaign {
@@ -1530,12 +1530,12 @@ export interface Item {
 export interface ItemDetailLine {
   commodityCode?: string
   description?: string
-  discountAmount?: bigint
+  discountAmount?: number /* int64, precision limited to 2^53-1 */
   productCode?: string
-  quantity?: bigint
-  totalAmount?: bigint
+  quantity?: number /* int64, precision limited to 2^53-1 */
+  totalAmount?: number /* int64, precision limited to 2^53-1 */
   unitOfMeasure?: string
-  unitPrice?: bigint
+  unitPrice?: number /* int64, precision limited to 2^53-1 */
 }
 
 export interface KlarnaDetails {
@@ -1572,7 +1572,7 @@ export interface Leg {
   classOfTravel?: string
   dateOfTravel?: string /* date-time */
   departureAirportCode?: string
-  departureTax?: bigint
+  departureTax?: number /* int64, precision limited to 2^53-1 */
   destinationAirportCode?: string
   fareBasisCode?: string
   flightNumber?: string
@@ -1582,17 +1582,17 @@ export interface Leg {
 export interface LevelTwoThree {
   customerReferenceNumber?: string
   destination?: Destination
-  dutyAmount?: bigint
-  freightAmount?: bigint
+  dutyAmount?: number /* int64, precision limited to 2^53-1 */
+  freightAmount?: number /* int64, precision limited to 2^53-1 */
   itemDetailLines?: ItemDetailLine[]
   orderDate?: string /* date */
   shipFromPostalCode?: string
-  totalTaxAmount?: bigint
+  totalTaxAmount?: number /* int64, precision limited to 2^53-1 */
 }
 
 export interface LineItem {
-  amountExcludingTax?: bigint
-  amountIncludingTax?: bigint
+  amountExcludingTax?: number /* int64, precision limited to 2^53-1 */
+  amountIncludingTax?: number /* int64, precision limited to 2^53-1 */
   brand?: string
   color?: string
   description?: string
@@ -1602,12 +1602,12 @@ export interface LineItem {
   manufacturer?: string
   marketplaceSellerId?: string
   productUrl?: string
-  quantity?: bigint
+  quantity?: number /* int64, precision limited to 2^53-1 */
   receiverEmail?: string
   size?: string
   sku?: string
-  taxAmount?: bigint
-  taxPercentage?: bigint
+  taxAmount?: number /* int64, precision limited to 2^53-1 */
+  taxPercentage?: number /* int64, precision limited to 2^53-1 */
   upc?: string
 }
 
@@ -2550,7 +2550,7 @@ export interface PixPayByBankDetails {
 
 export interface PixPayByBankRiskSignals {
   confidenceScore?: ConfidenceScore
-  elapsedTimeSinceBoot?: bigint
+  elapsedTimeSinceBoot?: number /* int64, precision limited to 2^53-1 */
   isRootedDevice?: boolean
   language?: string
   osVersion?: string
@@ -2876,7 +2876,7 @@ export interface Split {
 
 export interface SplitAmount {
   currency?: string
-  value: bigint
+  value: number /* int64, precision limited to 2^53-1 */
 }
 
 export interface StandalonePaymentCancelRequest {
@@ -3018,7 +3018,7 @@ export interface SubMerchantInfo {
 }
 
 export interface Surcharge {
-  value: bigint
+  value: number /* int64, precision limited to 2^53-1 */
 }
 
 export interface TaxTotal {
