@@ -247,7 +247,17 @@ function queryParamType(schema: SchemaObject | ReferenceObject | undefined): str
   // non-null primitive and drop the null member.
   if (Array.isArray(s.type)) {
     const nonNull = (s.type as string[]).filter((t) => t !== 'null')
-    if (nonNull.length === 1) return primitiveToTs(nonNull[0])
+    if (nonNull.length === 1) {
+      // type: ['array', 'null'] — nullable array: treat identically to type: 'array'
+      if (nonNull[0] === 'array') {
+        const items = (s as OpenAPIV3_1.ArraySchemaObject).items as SchemaObject | undefined
+        if (items !== undefined && (items.type === 'integer' || items.type === 'number')) {
+          return 'number[]'
+        }
+        return 'string[]'
+      }
+      return primitiveToTs(nonNull[0])
+    }
     return 'string'
   }
   if (s.type === 'array') {

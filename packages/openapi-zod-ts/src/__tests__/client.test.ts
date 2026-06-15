@@ -989,6 +989,67 @@ describe('coverage: queryParamType edge cases (lines 70, 81)', () => {
     const out = generateClient(spec as OpenAPIV3_1.Document).content
     expect(out).toContain('filter?: unknown')
   })
+
+  it('nullable array query param (type: ["array","null"]) with integer items → number[] type (#303)', () => {
+    // Regression: type: ['array', 'null'] previously fell through to primitiveToTs('array')
+    // which returned 'unknown'. The fix treats it identically to type: 'array'.
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/reports': {
+          get: {
+            operationId: 'listReports',
+            parameters: [
+              {
+                name: 'ids[]',
+                in: 'query',
+                schema: { type: ['array', 'null'], items: { type: 'integer' } } as any,
+              },
+            ],
+            responses: {
+              '200': { content: { 'application/json': { schema: { type: 'string' } } } },
+            },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec as OpenAPIV3_1.Document).content
+    // Type must be number[], not unknown (toPropertyKey wraps the bracket name in single quotes)
+    expect(out).toContain("'ids[]'?: number[]")
+    // Serialization must use append loop, not set
+    expect(out).toContain("searchParams.append('ids[]'")
+    expect(out).not.toContain("searchParams.set('ids[]'")
+  })
+
+  it('nullable array query param (type: ["array","null"]) with string items → string[] type (#303)', () => {
+    // Non-integer items: nullable array query param should be string[], not unknown.
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/search': {
+          get: {
+            operationId: 'searchItems',
+            parameters: [
+              {
+                name: 'tags',
+                in: 'query',
+                schema: { type: ['array', 'null'], items: { type: 'string' } } as any,
+              },
+            ],
+            responses: {
+              '200': { content: { 'application/json': { schema: { type: 'string' } } } },
+            },
+          },
+        },
+      },
+    }
+    const out = generateClient(spec as OpenAPIV3_1.Document).content
+    expect(out).toContain('tags?: string[]')
+    expect(out).toContain("searchParams.append('tags'")
+    expect(out).not.toContain("searchParams.set('tags'")
+  })
 })
 
 describe('coverage: deriveOperationName via no-operationId spec (lines 101-123, 540)', () => {
