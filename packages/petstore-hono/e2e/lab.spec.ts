@@ -684,20 +684,19 @@ test.fixme(
 // P8: /lab/accepted — 202-only response; generator defaults to 200
 // ---------------------------------------------------------------------------
 
-test.fixme(
-  'lab/accepted: POST with only 202 declared → server returns 202 (Phase 2: generator returns 200)',
+test(
+  'lab/accepted: POST with only 202 declared → server returns 202 (#9)',
   async ({ request }) => {
-    // PROMISED: spec declares only 202 Accepted. A conformant server returns 202.
-    // ACTUAL: getResponseStatus() in router.ts checks responses['201'], responses['204'],
-    // responses['200'] — all absent — then falls through to default { status: 200 }.
-    // The router calls c.json(await service.labAccepted(body)) with hardcoded 200.
-    // Root cause: packages/openapi-server/src/plugins/router.ts getResponseStatus() does not
-    // handle 202 (or any non-200/201/204 success code); falls through to default 200.
+    // Bug #9 fixed: getResponseStatus() now detects a single non-200/201/204 2xx and
+    // honors it. getReturnInfo() also reads 202 content for the service return type.
     const res = await request.post(`${LAB_BASE}/accepted`, {
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
       data: { baseField: 'b', extraField: 7 },
     })
     expect(res.status()).toBe(202)
+    const body = await res.json() as Record<string, unknown>
+    expect(body.baseField).toBe('b')
+    expect(body.extraField).toBe(7)
   },
 )
 

@@ -213,9 +213,8 @@ export const petService: PetstoreService = {
   },
 
   async labAccepted(body) {
-    // 202-only declared response. Generator defaults to 200 and Promise<void> return.
-    // The router calls c.json(undefined) so the response is JSON null at status 200.
-    void body
+    // Bug #9 fixed: spec declares only 202. Generator now emits c.json(result, 202).
+    return body
   },
 
   async labDualStatus() {
