@@ -207,9 +207,18 @@ export const petService: PetstoreService = {
   },
 
   async labGallery(body) {
-    // multipart/form-data: the generator calls c.req.json() which throws for multipart.
-    // This handler is not reached; Hono returns 500.
-    return body
+    // Bug #8 fixed: generator now emits parseBody({ all: true }) for multipart/form-data.
+    // body is Record<string, string | File | (string | File)[]> from Hono parseBody.
+    // Count how many files were uploaded under the 'photos' key.
+    const parsed = body as Record<string, string | File | (string | File)[]>
+    const photos = parsed['photos']
+    let count = 0
+    if (Array.isArray(photos)) {
+      count = photos.filter((p) => p instanceof File).length
+    } else if (photos instanceof File) {
+      count = 1
+    }
+    return { count }
   },
 
   async labAccepted(body) {

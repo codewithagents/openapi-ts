@@ -658,13 +658,12 @@ test(
 // P7: /lab/gallery — multipart/form-data not decoded
 // ---------------------------------------------------------------------------
 
-test.fixme(
-  'lab/gallery: multipart photo upload returns count of uploaded files (Phase 2: generator calls c.req.json() → 500)',
+test(
+  'lab/gallery: multipart photo upload returns count of uploaded files',
   async ({ request }) => {
-    // PROMISED: POST multipart/form-data with photos[] → 200 { count: 1 }.
-    // ACTUAL: router emits const body = await c.req.json() which throws for multipart body.
-    // Hono returns 500. Same root cause as /lab/form-body.
-    // Root cause: getBodyInfo() ignores multipart/form-data content type → c.req.json() called.
+    // Bug #8 fixed: getBodyInfo() now recognises multipart/form-data.
+    // Router emits parseBody({ all: true }) so file fields arrive as File objects.
+    // Service counts the photos and returns { count }.
     const res = await request.post(`${LAB_BASE}/gallery`, {
       multipart: {
         photos: {
