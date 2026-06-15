@@ -17,11 +17,11 @@ A complete, runnable full-stack application that shows the entire `@codewithagen
 | React Query hooks | `hooks.ts` | ✅ `@codewithagents/openapi-react-query` |
 | Server interface (framework-agnostic) | `service.ts` | ✅ `@codewithagents/openapi-server` |
 | Router + Zod validation (Hono — demo choice) | `router.ts` | ✅ `@codewithagents/openapi-server` |
-| Zod schemas | `schemas.ts` | ⚠️ Bootstrapped once, then **yours to own** |
+| Zod schemas | `src/schemas.ts` | ⚠️ Bootstrapped once, then **yours to own** |
 | Business logic | `src/server/petService.ts` | ❌ You write this |
 | React UI | `src/client/App.tsx` | ❌ You write this |
 
-**The key insight:** everything in `generated/` is disposable. Change `spec/api.json`, run `pnpm generate`, and the types, client, hooks, and router update automatically. Your business logic in `src/` is untouched because it implements a stable TypeScript interface.
+**The key insight:** everything in `generated/` is disposable and not committed to git. Change `spec/api.json`, run `pnpm generate`, and the types, client, hooks, and router update automatically. Your business logic in `src/` is untouched because it implements a stable TypeScript interface.
 
 ---
 
@@ -60,7 +60,7 @@ Open `http://localhost:5173` and you'll see a pet management UI. Add a pet, dele
 
 ## The Zod validation story
 
-This is the part that ties everything together. Open `generated/schemas.ts`:
+This is the part that ties everything together. Open `src/schemas.ts`:
 
 ```ts
 // Bootstrapped by openapi-zod-ts — this file is yours. Never overwritten.
@@ -78,7 +78,7 @@ export const CreatePetRequestSchema = z.object({
 })
 ```
 
-The `.min(1, ...)` rules are custom — they weren't in the spec. This is business logic you own.
+The `.min(1, ...)` rules are custom, they weren't in the spec. This is business logic you own.
 
 Now look at the generated `router.ts`:
 
@@ -93,7 +93,7 @@ app.post('/pets', async (c) => {
 })
 ```
 
-The router was regenerated (second pass) because `openapi-server.config.json` points at `input_schema: "generated/schemas.ts"`. The generator found `CreatePetRequestSchema`, wired it into the route, and now invalid requests return a structured `422` before they ever reach your service implementation.
+The router was regenerated (second pass) because `openapi-server.config.json` points at `input_schema: "src/schemas.ts"`. The generator found `CreatePetRequestSchema`, wired it into the route, and now invalid requests return a structured `422` before they ever reach your service implementation.
 
 **The full round-trip:**
 ```
@@ -119,7 +119,7 @@ This runs all three generators in order:
 2. `openapi-server` → `service.ts`, `router.ts` (with Zod validation wired in)
 3. `openapi-react-query` → `hooks.ts`, `test-utils.ts`
 
-**`generated/schemas.ts` is never overwritten.** It's bootstrapped on the very first run (if it doesn't exist), then left entirely to you. Add validation rules, refinements, and business logic freely.
+**`src/schemas.ts` is never overwritten.** It's bootstrapped on the very first run (if it doesn't exist), then left entirely to you. Add validation rules, refinements, and business logic freely.
 
 ---
 
@@ -210,7 +210,7 @@ function ItemList() {
 spec/
   api.json                    OpenAPI 3.1 — single source of truth
 
-generated/                    Auto-generated — safe to delete and re-run
+generated/                    Auto-generated, gitignored — safe to delete and re-run
   models.ts                   TypeScript types (Pet, CreatePetRequest)
   client.ts                   Typed fetch functions (zero runtime deps)
   client-config.ts            configureClient() — base URL + auth setup
@@ -219,9 +219,9 @@ generated/                    Auto-generated — safe to delete and re-run
   router.ts                   createRouter(service) — Hono routes + Zod validation
   hooks.ts                    useListPets, useCreatePet, useDeletePet (React Query)
   test-utils.ts               MSW handlers for testing hooks
-  schemas.ts                  ⚠️ User-owned — bootstrapped once, never overwritten
 
 src/
+  schemas.ts                  ⚠️ User-owned — bootstrapped once, never overwritten
   server/
     petService.ts             Implements PetstoreService (in-memory Map)
     index.ts                  Hono app — mounts router, serves React build
@@ -245,7 +245,7 @@ openapi-react-query.config.json  Generator config (React Query hooks)
 {
   "input_openapi": "spec/api.json",
   "output": "generated/",
-  "input_schema": "generated/schemas.ts"
+  "input_schema": "src/schemas.ts"
 }
 ```
 
@@ -255,7 +255,7 @@ openapi-react-query.config.json  Generator config (React Query hooks)
   "input_openapi": "spec/api.json",
   "output": "generated/",
   "framework": "hono",
-  "input_schema": "generated/schemas.ts"
+  "input_schema": "src/schemas.ts"
 }
 ```
 
@@ -267,4 +267,4 @@ openapi-react-query.config.json  Generator config (React Query hooks)
 }
 ```
 
-All three share the same spec and output directory. The `input_schema` points both `openapi-zod-ts` and `openapi-server` at the same `schemas.ts`, so client-side and server-side validation use identical rules.
+All three share the same spec and output directory. The `input_schema` points both `openapi-zod-ts` and `openapi-server` at `src/schemas.ts`, so client-side and server-side validation use identical rules. The `generated/` directory is gitignored and recreated on every build.

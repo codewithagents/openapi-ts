@@ -2,5 +2,5 @@
   "input_openapi": "spec/api.json",
   "output": "generated/",
   "framework": "hono",
-  "input_schema": "generated/schemas.ts"
+  "input_schema": "src/schemas.ts"
 }

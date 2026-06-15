@@ -1,0 +1,7 @@
+# Generated output — regenerated on demand, never committed.
+# Run `pnpm generate` (or `pnpm build` / `pnpm test:e2e`) to recreate.
+generated/
+
+# Playwright artifacts
+test-results/
+playwright-report/
