@@ -2,5 +2,5 @@
   "input_openapi": "../petstore-hono/spec/api.json",
   "output": "generated/",
   "framework": "fastify",
-  "input_schema": "../petstore-hono/generated/schemas.ts"
+  "input_schema": "../petstore-hono/src/schemas.ts"
 }

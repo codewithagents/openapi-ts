@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "openapi-zod-ts && openapi-server",
-    "start": "tsx src/server/index.ts",
-    "test": "vitest run"
+    "generate": "node node_modules/openapi-zod-ts/dist/cli.cjs && node node_modules/@codewithagents/openapi-server/dist/cli.cjs",
+    "start": "pnpm generate && tsx src/server/index.ts",
+    "test": "pnpm generate && vitest run"
   },
   "dependencies": {
     "fastify": "^5.0.0",
