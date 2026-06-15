@@ -118,6 +118,51 @@ function pathParamZodExpr(
   return `z.string()${modifier}`
 }
 
+// ── queryParamZodExpr helpers (one per param kind) ───────────────────────────
+
+/** Delimited array param: value has been split into string[] by the extraction layer. */
+function queryParamDelimitedZodBase(_param: QueryParam): string {
+  return 'z.array(z.string())'
+}
+
+/**
+ * DeepObject param: assembled into Record<string, string>.
+ * Emits z.object({...}) with per-property coercion; all properties are .optional()
+ * because their presence is governed by the outer object's required flag.
+ */
+function queryParamDeepObjectZodBase(param: QueryParam): string {
+  const propFields = (param.deepObjectProperties ?? []).map((p) => {
+    const coerced = p.tsType === 'number' ? 'z.coerce.number()' : 'z.string()'
+    return `${p.key}: ${coerced}.optional()`
+  })
+  return `z.object({ ${propFields.join(', ')} })`
+}
+
+/** Number/integer param: z.number() with optional range modifiers. */
+function queryParamNumberZodBase(param: QueryParam): string {
+  let base = 'z.number()'
+  if (param.minimum !== undefined) base += `.min(${param.minimum})`
+  if (param.maximum !== undefined) base += `.max(${param.maximum})`
+  if (param.exclusiveMinimum !== undefined) base += `.gt(${param.exclusiveMinimum})`
+  if (param.exclusiveMaximum !== undefined) base += `.lt(${param.exclusiveMaximum})`
+  return base
+}
+
+/** String param: z.string() or z.enum([...]) with optional length/pattern modifiers. */
+function queryParamStringZodBase(param: QueryParam): string {
+  let base: string
+  if (param.enum !== undefined && param.enum.length > 0) {
+    const members = param.enum.map((v) => JSON.stringify(v)).join(', ')
+    base = `z.enum([${members}])`
+  } else {
+    base = 'z.string()'
+  }
+  if (param.minLength !== undefined) base += `.min(${param.minLength})`
+  if (param.maxLength !== undefined) base += `.max(${param.maxLength})`
+  if (param.pattern !== undefined) base += `.regex(/${param.pattern}/)`
+  return base
+}
+
 /**
  * Build a Zod expression for a query parameter based on its captured constraints.
  * Number/integer types use z.number() (after coercion by extraction code).
@@ -127,44 +172,17 @@ function pathParamZodExpr(
  * Appends .optional() for non-required params.
  */
 function queryParamZodExpr(param: QueryParam): string {
-  // Delimited array param: value has been split into string[]
-  if (param.delimiterStyle !== undefined) {
-    const base = 'z.array(z.string())'
-    return param.required ? base : `${base}.optional()`
-  }
-
-  // DeepObject param: assembled into Record<string, string>; emit z.object with coercion
-  if (param.isDeepObject === true && param.deepObjectProperties !== undefined) {
-    const propFields = param.deepObjectProperties.map((p) => {
-      const coerced = p.tsType === 'number' ? 'z.coerce.number()' : 'z.string()'
-      // Only required properties are known from the spec; treat all as optional here
-      // so Zod validates presence via .required() on the outer object if needed.
-      return `${p.key}: ${coerced}.optional()`
-    })
-    const base = `z.object({ ${propFields.join(', ')} })`
-    return param.required ? base : `${base}.optional()`
-  }
-
   let base: string
-  if (param.tsType === 'number') {
-    base = 'z.number()'
-    if (param.minimum !== undefined) base += `.min(${param.minimum})`
-    if (param.maximum !== undefined) base += `.max(${param.maximum})`
-    if (param.exclusiveMinimum !== undefined) base += `.gt(${param.exclusiveMinimum})`
-    if (param.exclusiveMaximum !== undefined) base += `.lt(${param.exclusiveMaximum})`
+  if (param.delimiterStyle !== undefined) {
+    base = queryParamDelimitedZodBase(param)
+  } else if (param.isDeepObject === true && param.deepObjectProperties !== undefined) {
+    base = queryParamDeepObjectZodBase(param)
+  } else if (param.tsType === 'number') {
+    base = queryParamNumberZodBase(param)
   } else if (param.tsType === 'boolean') {
     base = 'z.boolean()'
   } else {
-    // string — check for enum first, then format/pattern/length
-    if (param.enum !== undefined && param.enum.length > 0) {
-      const members = param.enum.map((v) => JSON.stringify(v)).join(', ')
-      base = `z.enum([${members}])`
-    } else {
-      base = 'z.string()'
-    }
-    if (param.minLength !== undefined) base += `.min(${param.minLength})`
-    if (param.maxLength !== undefined) base += `.max(${param.maxLength})`
-    if (param.pattern !== undefined) base += `.regex(/${param.pattern}/)`
+    base = queryParamStringZodBase(param)
   }
   return param.required ? base : `${base}.optional()`
 }
@@ -252,18 +270,19 @@ function getHeaderParams(operation: OperationObject, spec: OpenAPIV3_1.Document)
  * These constraints require a Zod validation block even if the param is optional or string.
  */
 function queryParamHasConstraints(q: QueryParam): boolean {
-  return (
-    q.enum !== undefined ||
-    q.minimum !== undefined ||
-    q.maximum !== undefined ||
-    q.exclusiveMinimum !== undefined ||
-    q.exclusiveMaximum !== undefined ||
-    q.minLength !== undefined ||
-    q.maxLength !== undefined ||
-    q.pattern !== undefined ||
-    q.delimiterStyle !== undefined ||
-    q.isDeepObject === true
-  )
+  // Fields that, when defined, indicate schema constraints are present.
+  const constraintFields: unknown[] = [
+    q.enum,
+    q.minimum,
+    q.maximum,
+    q.exclusiveMinimum,
+    q.exclusiveMaximum,
+    q.minLength,
+    q.maxLength,
+    q.pattern,
+    q.delimiterStyle,
+  ]
+  return constraintFields.some((f) => f !== undefined) || q.isDeepObject === true
 }
 
 /**
