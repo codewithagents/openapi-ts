@@ -717,6 +717,14 @@ function buildRouteHandler(op: RouteOperation, indent: string, schemaNames?: Set
       lines.push(`${indent}    return c.json({ error: 'Unsupported Media Type' }, 415)`)
       lines.push(`${indent}  }`)
       lines.push(`${indent}  const body: unknown = await c.req.parseBody()`)
+    } else if (op.bodyInfo.contentType === 'multipart/form-data') {
+      // Multipart: decode with parseBody({ all: true }) so repeated file fields arrive as arrays.
+      // File fields are web-standard File objects; text fields are strings.
+      // No manual Content-Type check needed: parseBody handles multipart natively in Hono.
+      lines.push(
+        `${indent}  // multipart/form-data: parseBody({ all: true }) collects repeated keys into arrays.`
+      )
+      lines.push(`${indent}  const body: unknown = await c.req.parseBody({ all: true })`)
     } else {
       // JSON body: check Content-Type then parse with JSON.parse (not c.req.json()).
       // c.req.text() + JSON.parse() is used instead of c.req.json() because Hono's
@@ -885,30 +893,41 @@ function buildExpressRouteHandler(
   // Body extraction, with optional Zod validation.
   // For both JSON and form-urlencoded bodies Express pre-populates req.body via middleware
   // (express.json() for JSON, express.urlencoded() for form). The router just reads req.body.
+  // For multipart/form-data: assumes multer (or equivalent) middleware is applied before this
+  // router, populating req.files and req.body with the parsed multipart fields.
   let bodyVarName = 'body'
   if (op.bodyInfo !== undefined) {
-    const schemaName =
-      op.bodyInfo.typeName !== undefined ? `${op.bodyInfo.typeName}Schema` : undefined
-    const useZod =
-      schemaName !== undefined && schemaNames !== undefined && schemaNames.has(schemaName)
-
-    if (useZod) {
-      lines.push(`${indent}  // Validate request body: returns 422 with Zod issues on failure`)
-      lines.push(`${indent}  const parseResult = ${schemaName}.safeParse(req.body)`)
-      lines.push(`${indent}  if (!parseResult.success) {`)
+    if (op.bodyInfo.contentType === 'multipart/form-data') {
+      // Multipart assumption: multer middleware populates req.files (file fields) and
+      // req.body (text fields) before this handler runs. Merge them for service consumption.
       lines.push(
-        `${indent}    return void res.status(422).json({ error: 'Invalid request body', issues: parseResult.error.issues })`
+        `${indent}  // multipart/form-data: assumes multer middleware has populated req.files + req.body.`
       )
-      lines.push(`${indent}  }`)
-      lines.push(`${indent}  const validatedBody = parseResult.data`)
-      bodyVarName = 'validatedBody'
+      lines.push(`${indent}  const body = { ...req.body, ...(req as any).files } as unknown`)
     } else {
-      // Synthesized names (inline schemas) have no model type — use plain cast to unknown.
-      const typeAnnotation =
-        op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized
-          ? ` as ${op.bodyInfo.typeName}`
-          : ''
-      lines.push(`${indent}  const body = req.body${typeAnnotation}`)
+      const schemaName =
+        op.bodyInfo.typeName !== undefined ? `${op.bodyInfo.typeName}Schema` : undefined
+      const useZod =
+        schemaName !== undefined && schemaNames !== undefined && schemaNames.has(schemaName)
+
+      if (useZod) {
+        lines.push(`${indent}  // Validate request body: returns 422 with Zod issues on failure`)
+        lines.push(`${indent}  const parseResult = ${schemaName}.safeParse(req.body)`)
+        lines.push(`${indent}  if (!parseResult.success) {`)
+        lines.push(
+          `${indent}    return void res.status(422).json({ error: 'Invalid request body', issues: parseResult.error.issues })`
+        )
+        lines.push(`${indent}  }`)
+        lines.push(`${indent}  const validatedBody = parseResult.data`)
+        bodyVarName = 'validatedBody'
+      } else {
+        // Synthesized names (inline schemas) have no model type — use plain cast to unknown.
+        const typeAnnotation =
+          op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized
+            ? ` as ${op.bodyInfo.typeName}`
+            : ''
+        lines.push(`${indent}  const body = req.body${typeAnnotation}`)
+      }
     }
   }
 
@@ -1106,22 +1125,33 @@ function buildFastifyRouteHandler(
 
   // Body handling, with optional Zod validation.
   // Fastify pre-parses req.body for both JSON and form-urlencoded bodies via plugins.
+  // For multipart/form-data: assumes @fastify/multipart (or equivalent) plugin is registered
+  // so that req.body contains the parsed fields and file parts.
   let bodyVarName = 'req.body'
   if (op.bodyInfo !== undefined) {
-    const schemaName =
-      op.bodyInfo.typeName !== undefined ? `${op.bodyInfo.typeName}Schema` : undefined
-    const useZod =
-      schemaName !== undefined && schemaNames !== undefined && schemaNames.has(schemaName)
-
-    if (useZod) {
-      lines.push(`${indent}  // Validate request body: returns 422 with Zod issues on failure`)
-      lines.push(`${indent}  const parseResult = ${schemaName}.safeParse(req.body)`)
-      lines.push(`${indent}  if (!parseResult.success) {`)
+    if (op.bodyInfo.contentType === 'multipart/form-data') {
+      // Multipart assumption: @fastify/multipart plugin has populated req.body before this
+      // handler runs. The body is forwarded to the service as-is.
       lines.push(
-        `${indent}    return reply.status(422).send({ error: 'Invalid request body', issues: parseResult.error.issues })`
+        `${indent}  // multipart/form-data: assumes @fastify/multipart plugin has populated req.body.`
       )
-      lines.push(`${indent}  }`)
-      bodyVarName = 'parseResult.data'
+      // bodyVarName stays 'req.body'
+    } else {
+      const schemaName =
+        op.bodyInfo.typeName !== undefined ? `${op.bodyInfo.typeName}Schema` : undefined
+      const useZod =
+        schemaName !== undefined && schemaNames !== undefined && schemaNames.has(schemaName)
+
+      if (useZod) {
+        lines.push(`${indent}  // Validate request body: returns 422 with Zod issues on failure`)
+        lines.push(`${indent}  const parseResult = ${schemaName}.safeParse(req.body)`)
+        lines.push(`${indent}  if (!parseResult.success) {`)
+        lines.push(
+          `${indent}    return reply.status(422).send({ error: 'Invalid request body', issues: parseResult.error.issues })`
+        )
+        lines.push(`${indent}  }`)
+        bodyVarName = 'parseResult.data'
+      }
     }
   }
 

@@ -195,9 +195,14 @@ function buildMethodSignature(op: OperationInfo): string {
     args.push(`${sanitizeOperationId(p)}: string`)
   }
 
-  // Body arg
+  // Body arg: synthesized names (inline schemas, not $ref) live only in schemas.ts
+  // for Zod safeParse — they have no corresponding model type in models.ts.
+  // Use 'unknown' for synthesized bodies so service.ts does not emit a dangling import.
   if (op.bodyInfo !== undefined) {
-    const typeName = op.bodyInfo.typeName ?? 'unknown'
+    const typeName =
+      op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized
+        ? op.bodyInfo.typeName
+        : 'unknown'
     args.push(`body: ${typeName}`)
   }
 
@@ -220,10 +225,12 @@ export function generateService(spec: OpenAPIV3_1.Document): GeneratedFile {
   const serviceName = deriveServiceName(spec)
   const operations = collectOperations(spec)
 
-  // Collect import types: body types and return types that are named identifiers
+  // Collect import types: body types and return types that are named identifiers.
+  // Synthesized body names (inline schemas, isSynthesized:true) are excluded: they have
+  // no entry in models.ts and emitting them as imports would cause a dangling TS error.
   const importTypes = new Set<string>()
   for (const op of operations) {
-    if (op.bodyInfo?.typeName !== undefined) {
+    if (op.bodyInfo?.typeName !== undefined && !op.bodyInfo.isSynthesized) {
       importTypes.add(op.bodyInfo.typeName)
     }
     if (op.returnInfo.typeName !== undefined) {

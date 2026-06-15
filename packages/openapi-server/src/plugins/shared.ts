@@ -290,7 +290,7 @@ export function getQueryParams(
 export interface BodyInfo {
   typeName: string | undefined
   /** The request body content type that was matched. Drives parser choice in the router. */
-  contentType: 'application/json' | 'application/x-www-form-urlencoded'
+  contentType: 'application/json' | 'application/x-www-form-urlencoded' | 'multipart/form-data'
   /**
    * True when typeName was synthesized from the operationId (inline schema, no $ref).
    * Synthesized names exist only for schema lookup (XxxSchema.safeParse) and are NOT
@@ -355,6 +355,29 @@ export function getBodyInfo(operation: OpenAPIV3_1.OperationObject): BodyInfo | 
       }
     }
     return { typeName: undefined, contentType: 'application/x-www-form-urlencoded', isSynthesized: false }
+  }
+
+  // Check multipart/form-data.
+  const multipartContent = content['multipart/form-data']
+  if (multipartContent !== undefined) {
+    const schema = multipartContent.schema
+    if (schema !== undefined && isRef(schema)) {
+      return {
+        typeName: refToName((schema as ReferenceObject).$ref),
+        contentType: 'multipart/form-data',
+        isSynthesized: false,
+      }
+    }
+    // Inline multipart schema: synthesize a stable name from the operationId.
+    const operationId = operation.operationId
+    if (operationId !== undefined && operationId.length > 0) {
+      return {
+        typeName: toTypeName(operationId),
+        contentType: 'multipart/form-data',
+        isSynthesized: true,
+      }
+    }
+    return { typeName: undefined, contentType: 'multipart/form-data', isSynthesized: false }
   }
 
   return { typeName: undefined, contentType: 'application/json', isSynthesized: false }

@@ -724,3 +724,110 @@ describe('bug #11 fix: text/plain and octet-stream return types in service inter
     expect(content).toContain("import type { Pet } from './models.js'")
   })
 })
+
+// ── Synthesized body types: no dangling model imports ─────────────────────────
+
+describe('service: synthesized body types use unknown — no dangling model imports', () => {
+  it('inline JSON body: body param is unknown, synthesized name not imported from models', () => {
+    const spec = makeSpec({
+      '/lab/inline-body': {
+        post: {
+          operationId: 'labInlineBody',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { type: 'object', properties: { title: { type: 'string' } } },
+              },
+            },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    // Synthesized name LabInlineBody must NOT appear as an import
+    expect(content).not.toContain('LabInlineBody')
+    // Body param must use unknown
+    expect(content).toContain('body: unknown')
+  })
+
+  it('form-urlencoded inline body: body param is unknown, synthesized name not imported', () => {
+    const spec = makeSpec({
+      '/lab/form-body': {
+        post: {
+          operationId: 'labFormBody',
+          requestBody: {
+            required: true,
+            content: {
+              'application/x-www-form-urlencoded': {
+                schema: {
+                  type: 'object',
+                  properties: { label: { type: 'string' }, quantity: { type: 'integer' } },
+                },
+              },
+            },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).not.toContain('LabFormBody')
+    expect(content).toContain('body: unknown')
+  })
+
+  it('multipart/form-data inline body: body param is unknown, synthesized name not imported', () => {
+    const spec = makeSpec({
+      '/lab/gallery': {
+        post: {
+          operationId: 'labGallery',
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  required: ['photos'],
+                  properties: {
+                    photos: { type: 'array', items: { type: 'string', format: 'binary' } },
+                  },
+                },
+              },
+            },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).not.toContain('LabGallery')
+    expect(content).toContain('body: unknown')
+    // No dangling import from models.ts
+    expect(content).not.toContain("import type { LabGallery }")
+  })
+
+  it('$ref body: named type IS imported from models and used in param', () => {
+    const spec = makeSpec({
+      '/pets': {
+        post: {
+          operationId: 'createPet',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CreatePetRequest' },
+              },
+            },
+          },
+          responses: { '200': { description: 'ok', content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } } } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('body: CreatePetRequest')
+    expect(content).toContain('CreatePetRequest')
+    // Named type is imported
+    expect(content).toContain("import type {")
+  })
+})

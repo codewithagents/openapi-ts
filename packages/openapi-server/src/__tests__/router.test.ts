@@ -1922,3 +1922,79 @@ describe('bug #11 fix: text/plain and application/octet-stream responses', () =>
     expect(content).not.toContain('c.text(')
   })
 })
+
+// ── Bug #8 fix: multipart/form-data request bodies decoded via parseBody({ all: true }) ──
+
+describe('bug #8 fix: multipart/form-data request body uses parseBody({ all: true })', () => {
+  const multipartSpec = makeSpec({
+    '/lab/gallery': {
+      post: {
+        operationId: 'labGallery',
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['photos'],
+                properties: {
+                  photos: {
+                    type: 'array',
+                    items: { type: 'string', format: 'binary' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'upload ack' } },
+      },
+    },
+  })
+
+  it('Hono: emits parseBody({ all: true }) for multipart body, not JSON.parse()', () => {
+    const { content } = generateRouter(multipartSpec)
+    expect(content).toContain('parseBody({ all: true })')
+    expect(content).not.toContain('JSON.parse(await c.req.text())')
+  })
+
+  it('Hono: does NOT check for application/json Content-Type for multipart body', () => {
+    const { content } = generateRouter(multipartSpec)
+    expect(content).not.toContain("startsWith('application/json')")
+  })
+
+  it('Hono: does NOT emit the Unsupported Media Type 415 guard for multipart body', () => {
+    const { content } = generateRouter(multipartSpec)
+    // The multipart path skips the content-type check entirely; no 415 guard
+    // should be emitted for this operation.
+    const gallerySection = content.slice(content.indexOf('/lab/gallery'))
+    expect(gallerySection.slice(0, gallerySection.indexOf('\n  })'))).not.toContain('415')
+  })
+
+  it('Hono: forwards multipart body to the service call', () => {
+    const { content } = generateRouter(multipartSpec)
+    expect(content).toContain('service.labGallery(body)')
+  })
+
+  it('Express: multipart body uses req.files + req.body merge (assumes multer middleware)', () => {
+    const { content } = generateExpressRouter(multipartSpec)
+    expect(content).toContain('req.files')
+    expect(content).toContain('req.body')
+    // Should not attempt JSON parsing
+    expect(content).not.toContain('JSON.parse')
+  })
+
+  it('Fastify: multipart body uses req.body (assumes @fastify/multipart plugin)', () => {
+    const { content } = generateFastifyRouter(multipartSpec)
+    // Should reference req.body for the service call
+    expect(content).toContain('req.body')
+    // Should not attempt JSON parsing
+    expect(content).not.toContain('JSON.parse')
+  })
+
+  it('all three frameworks generate without throwing', () => {
+    expect(() => generateRouter(multipartSpec)).not.toThrow()
+    expect(() => generateExpressRouter(multipartSpec)).not.toThrow()
+    expect(() => generateFastifyRouter(multipartSpec)).not.toThrow()
+  })
+})
