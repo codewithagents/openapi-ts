@@ -1499,3 +1499,168 @@ describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps 
     expect(content).toContain('throw err')
   })
 })
+
+// ── Bug #1: inline (non-$ref) JSON request body gets safeParse wired ─────────
+
+describe('bug #1 fix: inline JSON request body synthesizes schema name from operationId', () => {
+  const inlineSpec = makeSpec({
+    '/lab/inline-body': {
+      post: {
+        operationId: 'labInlineBody',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title', 'rank'],
+                properties: {
+                  title: { type: 'string', minLength: 2 },
+                  rank: { type: 'integer', minimum: 1, maximum: 5 },
+                },
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'echoed' } },
+      },
+    },
+  })
+
+  it('Hono: synthesizes LabInlineBodySchema name and wires safeParse when schema present', () => {
+    const { content } = generateRouter(inlineSpec, {
+      schemaNames: new Set(['LabInlineBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('LabInlineBodySchema.safeParse(body)')
+    expect(content).toContain('parseResult.success')
+    expect(content).toContain('422')
+    // Synthesized name must NOT appear in model type import (no models.ts entry)
+    expect(content).not.toContain("import type { LabInlineBody }")
+  })
+
+  it('Hono: body variable is typed as unknown (synthesized, not a model type)', () => {
+    const { content } = generateRouter(inlineSpec, {
+      schemaNames: new Set(['LabInlineBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    // Type declaration for the body parse variable must be unknown, not LabInlineBody
+    expect(content).toContain('let body: unknown')
+    expect(content).not.toContain('let body: LabInlineBody')
+  })
+
+  it('Hono: uses validatedBody in service call when inline schema is matched', () => {
+    const { content } = generateRouter(inlineSpec, {
+      schemaNames: new Set(['LabInlineBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('service.labInlineBody(validatedBody')
+  })
+
+  it('Hono: no safeParse emitted when LabInlineBodySchema not in schemaNames', () => {
+    const { content } = generateRouter(inlineSpec)
+    expect(content).not.toContain('safeParse')
+    expect(content).toContain('service.labInlineBody(body')
+  })
+
+  it('Express: synthesizes LabInlineBodySchema name and wires safeParse when schema present', () => {
+    const { content } = generateExpressRouter(inlineSpec, {
+      schemaNames: new Set(['LabInlineBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('LabInlineBodySchema.safeParse(req.body)')
+    expect(content).toContain('422')
+    expect(content).not.toContain("import type { LabInlineBody }")
+  })
+
+  it('Fastify: synthesizes LabInlineBodySchema name and wires safeParse when schema present', () => {
+    const { content } = generateFastifyRouter(inlineSpec, {
+      schemaNames: new Set(['LabInlineBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('LabInlineBodySchema.safeParse(req.body)')
+    expect(content).toContain('422')
+    // Synthesized name must not leak into Fastify generic type (uses unknown instead)
+    expect(content).not.toContain('Body: LabInlineBody')
+    expect(content).toContain('Body: unknown')
+  })
+})
+
+// ── Bug #7 fix: application/x-www-form-urlencoded body decoded via parseBody() ─
+
+describe('bug #7 fix: form-urlencoded request body uses parseBody() not JSON.parse()', () => {
+  const formSpec = makeSpec({
+    '/lab/form-body': {
+      post: {
+        operationId: 'labFormBody',
+        requestBody: {
+          required: true,
+          content: {
+            'application/x-www-form-urlencoded': {
+              schema: {
+                type: 'object',
+                required: ['label', 'quantity'],
+                properties: {
+                  label: { type: 'string' },
+                  quantity: { type: 'integer' },
+                },
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'echoed' } },
+      },
+    },
+  })
+
+  it('Hono: emits parseBody() for form-urlencoded body, not JSON.parse()', () => {
+    const { content } = generateRouter(formSpec)
+    expect(content).toContain('c.req.parseBody()')
+    expect(content).not.toContain('JSON.parse(await c.req.text())')
+  })
+
+  it('Hono: checks for application/x-www-form-urlencoded Content-Type', () => {
+    const { content } = generateRouter(formSpec)
+    expect(content).toContain('application/x-www-form-urlencoded')
+    expect(content).not.toContain("startsWith('application/json')")
+  })
+
+  it('Hono: synthesizes LabFormBodySchema name and wires safeParse when schema present', () => {
+    const { content } = generateRouter(formSpec, {
+      schemaNames: new Set(['LabFormBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('LabFormBodySchema.safeParse(body)')
+    expect(content).toContain('parseResult.success')
+    expect(content).toContain('422')
+    // Synthesized name must NOT appear in model type import
+    expect(content).not.toContain("import type { LabFormBody }")
+  })
+
+  it('Hono: uses validatedBody in service call when form schema is matched', () => {
+    const { content } = generateRouter(formSpec, {
+      schemaNames: new Set(['LabFormBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('service.labFormBody(validatedBody')
+  })
+
+  it('Express: form-urlencoded body uses req.body (pre-parsed by express.urlencoded middleware)', () => {
+    const { content } = generateExpressRouter(formSpec, {
+      schemaNames: new Set(['LabFormBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    // Express pre-parses form body into req.body — same code path as JSON
+    expect(content).toContain('LabFormBodySchema.safeParse(req.body)')
+    expect(content).toContain('422')
+  })
+
+  it('Fastify: form-urlencoded body uses req.body (pre-parsed by fastify plugin)', () => {
+    const { content } = generateFastifyRouter(formSpec, {
+      schemaNames: new Set(['LabFormBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('LabFormBodySchema.safeParse(req.body)')
+    expect(content).toContain('422')
+  })
+})

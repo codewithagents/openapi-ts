@@ -462,11 +462,16 @@ interface GeneratorSetup {
   needsZod: boolean
 }
 
-/** Collect sorted body type names from all operations. */
+/** Collect sorted body type names from all operations.
+ * Synthesized names (inline schema, no $ref) are excluded because they have no
+ * corresponding entry in models.ts and must not appear in the model import.
+ */
 function collectSortedBodyTypes(operations: RouteOperation[]): string[] {
   const bodyTypes = new Set<string>()
   for (const op of operations) {
-    if (op.bodyInfo?.typeName !== undefined) bodyTypes.add(op.bodyInfo.typeName)
+    if (op.bodyInfo?.typeName !== undefined && !op.bodyInfo.isSynthesized) {
+      bodyTypes.add(op.bodyInfo.typeName)
+    }
   }
   return Array.from(bodyTypes).sort()
 }
@@ -560,24 +565,39 @@ function buildRouteHandler(op: RouteOperation, indent: string, schemaNames?: Set
   // Body extraction
   let bodyVarName = 'body'
   if (op.bodyInfo !== undefined) {
-    const typeAnnotation = op.bodyInfo.typeName !== undefined ? `<${op.bodyInfo.typeName}>` : ''
-    const typeDecl = op.bodyInfo.typeName !== undefined ? op.bodyInfo.typeName : 'unknown'
-    // Check Content-Type before attempting to parse: reject non-JSON with 415
-    lines.push(`${indent}  const _ct = c.req.header('content-type') ?? ''`)
-    lines.push(`${indent}  if (!_ct.toLowerCase().startsWith('application/json')) {`)
-    lines.push(`${indent}    return c.json({ error: 'Unsupported Media Type' }, 415)`)
-    lines.push(`${indent}  }`)
-    // Parse JSON body: return 400 on malformed or empty JSON.
-    // c.req.text() + JSON.parse() is used instead of c.req.json() because Hono's
-    // c.req.json() silently returns null for an empty body instead of throwing,
-    // which would pass the try/catch and reach Zod as null, causing a 422 rather
-    // than the correct 400. JSON.parse('') always throws SyntaxError.
-    lines.push(`${indent}  let body: ${typeDecl}`)
-    lines.push(`${indent}  try {`)
-    lines.push(`${indent}    body = JSON.parse(await c.req.text()) as ${typeDecl}`)
-    lines.push(`${indent}  } catch {`)
-    lines.push(`${indent}    return c.json({ error: 'Invalid JSON body' }, 400)`)
-    lines.push(`${indent}  }`)
+    // Synthesized names (inline schemas) are schema-only; the TS type is unknown.
+    const typeDecl =
+      op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized
+        ? op.bodyInfo.typeName
+        : 'unknown'
+
+    if (op.bodyInfo.contentType === 'application/x-www-form-urlencoded') {
+      // Form-urlencoded: check Content-Type then decode with parseBody().
+      // Values arrive as strings; Zod coercion handles type conversion (e.g. z.coerce.number()).
+      lines.push(`${indent}  const _ct = c.req.header('content-type') ?? ''`)
+      lines.push(
+        `${indent}  if (!_ct.toLowerCase().startsWith('application/x-www-form-urlencoded')) {`
+      )
+      lines.push(`${indent}    return c.json({ error: 'Unsupported Media Type' }, 415)`)
+      lines.push(`${indent}  }`)
+      lines.push(`${indent}  const body: unknown = await c.req.parseBody()`)
+    } else {
+      // JSON body: check Content-Type then parse with JSON.parse (not c.req.json()).
+      // c.req.text() + JSON.parse() is used instead of c.req.json() because Hono's
+      // c.req.json() silently returns null for an empty body instead of throwing,
+      // which would pass the try/catch and reach Zod as null, causing a 422 rather
+      // than the correct 400. JSON.parse('') always throws SyntaxError.
+      lines.push(`${indent}  const _ct = c.req.header('content-type') ?? ''`)
+      lines.push(`${indent}  if (!_ct.toLowerCase().startsWith('application/json')) {`)
+      lines.push(`${indent}    return c.json({ error: 'Unsupported Media Type' }, 415)`)
+      lines.push(`${indent}  }`)
+      lines.push(`${indent}  let body: ${typeDecl}`)
+      lines.push(`${indent}  try {`)
+      lines.push(`${indent}    body = JSON.parse(await c.req.text()) as ${typeDecl}`)
+      lines.push(`${indent}  } catch {`)
+      lines.push(`${indent}    return c.json({ error: 'Invalid JSON body' }, 400)`)
+      lines.push(`${indent}  }`)
+    }
 
     // Zod validation when schema is available
     const schemaName =
@@ -694,7 +714,9 @@ function buildExpressRouteHandler(
     lines.push(`${indent}  }`)
   }
 
-  // Body extraction, with optional Zod validation
+  // Body extraction, with optional Zod validation.
+  // For both JSON and form-urlencoded bodies Express pre-populates req.body via middleware
+  // (express.json() for JSON, express.urlencoded() for form). The router just reads req.body.
   let bodyVarName = 'body'
   if (op.bodyInfo !== undefined) {
     const schemaName =
@@ -713,7 +735,11 @@ function buildExpressRouteHandler(
       lines.push(`${indent}  const validatedBody = parseResult.data`)
       bodyVarName = 'validatedBody'
     } else {
-      const typeAnnotation = op.bodyInfo.typeName !== undefined ? ` as ${op.bodyInfo.typeName}` : ''
+      // Synthesized names (inline schemas) have no model type — use plain cast to unknown.
+      const typeAnnotation =
+        op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized
+          ? ` as ${op.bodyInfo.typeName}`
+          : ''
       lines.push(`${indent}  const body = req.body${typeAnnotation}`)
     }
   }
@@ -777,7 +803,7 @@ function buildFastifyRouteHandler(
     genericParts.push(`Querystring: { ${queryFields} }`)
   }
 
-  if (op.bodyInfo !== undefined && op.bodyInfo.typeName !== undefined) {
+  if (op.bodyInfo !== undefined && op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized) {
     genericParts.push(`Body: ${op.bodyInfo.typeName}`)
   } else if (op.bodyInfo !== undefined) {
     genericParts.push('Body: unknown')
@@ -834,7 +860,8 @@ function buildFastifyRouteHandler(
     lines.push(`${indent}  }`)
   }
 
-  // Body handling, with optional Zod validation
+  // Body handling, with optional Zod validation.
+  // Fastify pre-parses req.body for both JSON and form-urlencoded bodies via plugins.
   let bodyVarName = 'req.body'
   if (op.bodyInfo !== undefined) {
     const schemaName =

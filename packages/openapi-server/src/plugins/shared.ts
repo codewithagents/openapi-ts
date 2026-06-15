@@ -237,26 +237,73 @@ export function getQueryParams(
 
 export interface BodyInfo {
   typeName: string | undefined
+  /** The request body content type that was matched. Drives parser choice in the router. */
+  contentType: 'application/json' | 'application/x-www-form-urlencoded'
+  /**
+   * True when typeName was synthesized from the operationId (inline schema, no $ref).
+   * Synthesized names exist only for schema lookup (XxxSchema.safeParse) and are NOT
+   * emitted as a TypeScript model type import — they have no entry in models.ts.
+   */
+  isSynthesized: boolean
 }
 
 export function getBodyInfo(operation: OpenAPIV3_1.OperationObject): BodyInfo | undefined {
   const requestBody = operation.requestBody as RequestBodyObject | ReferenceObject | undefined
   if (requestBody === undefined) return undefined
-  if (isRef(requestBody)) return { typeName: undefined }
+  if (isRef(requestBody)) {
+    return { typeName: undefined, contentType: 'application/json', isSynthesized: false }
+  }
 
   const rb = requestBody as RequestBodyObject
   const content = rb.content as
     | Record<string, { schema?: OpenAPIV3_1.SchemaObject | ReferenceObject }>
     | undefined
-  if (content === undefined) return { typeName: undefined }
-
-  const jsonContent = content['application/json']
-  if (jsonContent === undefined || jsonContent.schema === undefined) return { typeName: undefined }
-
-  const schema = jsonContent.schema
-  if (isRef(schema)) {
-    return { typeName: refToName((schema as ReferenceObject).$ref) }
+  if (content === undefined) {
+    return { typeName: undefined, contentType: 'application/json', isSynthesized: false }
   }
 
-  return { typeName: undefined }
+  // Check application/json first.
+  const jsonContent = content['application/json']
+  if (jsonContent !== undefined && jsonContent.schema !== undefined) {
+    const schema = jsonContent.schema
+    if (isRef(schema)) {
+      return {
+        typeName: refToName((schema as ReferenceObject).$ref),
+        contentType: 'application/json',
+        isSynthesized: false,
+      }
+    }
+    // Inline JSON schema: synthesize a stable name from the operationId so the router
+    // can wire safeParse against a user-defined schema in schemas.ts.
+    const operationId = operation.operationId
+    if (operationId !== undefined && operationId.length > 0) {
+      return { typeName: toTypeName(operationId), contentType: 'application/json', isSynthesized: true }
+    }
+    return { typeName: undefined, contentType: 'application/json', isSynthesized: false }
+  }
+
+  // Check application/x-www-form-urlencoded.
+  const formContent = content['application/x-www-form-urlencoded']
+  if (formContent !== undefined) {
+    const schema = formContent.schema
+    if (schema !== undefined && isRef(schema)) {
+      return {
+        typeName: refToName((schema as ReferenceObject).$ref),
+        contentType: 'application/x-www-form-urlencoded',
+        isSynthesized: false,
+      }
+    }
+    // Inline form schema: synthesize a stable name from the operationId.
+    const operationId = operation.operationId
+    if (operationId !== undefined && operationId.length > 0) {
+      return {
+        typeName: toTypeName(operationId),
+        contentType: 'application/x-www-form-urlencoded',
+        isSynthesized: true,
+      }
+    }
+    return { typeName: undefined, contentType: 'application/x-www-form-urlencoded', isSynthesized: false }
+  }
+
+  return { typeName: undefined, contentType: 'application/json', isSynthesized: false }
 }
