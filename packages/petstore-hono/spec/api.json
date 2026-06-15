@@ -63,6 +63,466 @@
         ],
         "responses": { "204": { "description": "Deleted" } }
       }
+    },
+    "/lab/numeric": {
+      "post": {
+        "operationId": "labNumeric",
+        "summary": "Echo a numeric-constraints object",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabNumeric" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabNumeric" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/string": {
+      "post": {
+        "operationId": "labString",
+        "summary": "Echo a string-constraints object",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabString" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabString" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/array": {
+      "post": {
+        "operationId": "labArray",
+        "summary": "Echo an array-constraints object",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabArray" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabArray" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/formats": {
+      "post": {
+        "operationId": "labFormats",
+        "summary": "Echo a string-formats object",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabFormats" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabFormats" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/enum-const": {
+      "post": {
+        "operationId": "labEnumConst",
+        "summary": "Echo an enum and const object",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabEnumConst" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabEnumConst" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/closed": {
+      "post": {
+        "operationId": "labClosed",
+        "summary": "Echo a closed object (additionalProperties false)",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabClosed" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabClosed" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/presence": {
+      "post": {
+        "operationId": "labPresence",
+        "summary": "Echo a required / nullable / optional / default object",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabPresence" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabPresence" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/map": {
+      "post": {
+        "operationId": "labMap",
+        "summary": "Echo a typed additionalProperties map object",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabMap" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabMap" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/empty-map": {
+      "get": {
+        "operationId": "labEmptyMap",
+        "summary": "Returns a LabMap with an empty counts map (response-side map serialization)",
+        "responses": {
+          "200": {
+            "description": "a LabMap with an empty counts map",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabMap" } } }
+          }
+        }
+      }
+    },
+    "/lab/union": {
+      "post": {
+        "operationId": "labUnion",
+        "summary": "Echo a scalar oneOf union object",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabUnion" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabUnion" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/anyof-union": {
+      "post": {
+        "operationId": "labAnyOfUnion",
+        "summary": "An anyOf scalar union (distinct from oneOf)",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabAnyOf" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabAnyOf" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/shape": {
+      "post": {
+        "operationId": "labShape",
+        "summary": "Echo a discriminated object union (named-component form)",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabShape" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabShape" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/inline-shape": {
+      "post": {
+        "operationId": "labInlineShape",
+        "summary": "Discriminated union, inline-union form with synthesized variant names",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabInlineShape" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabInlineShape" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/inherit-shape": {
+      "post": {
+        "operationId": "labInheritShape",
+        "summary": "Discriminated union, allOf-inheritance form",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabVehicleBase" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabVehicleBase" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/response-union": {
+      "post": {
+        "operationId": "labResponseUnion",
+        "summary": "A response that is a oneOf of shapes",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabUnionSelector" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "one of two shape objects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/LabCircle" },
+                    { "$ref": "#/components/schemas/LabSquare" }
+                  ]
+                }
+              }
+            }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/backed-enum": {
+      "post": {
+        "operationId": "labBackedEnum",
+        "summary": "Echo an object carrying a backed enum",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabBackedEnum" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabBackedEnum" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/tuple": {
+      "post": {
+        "operationId": "labTuple",
+        "summary": "A tuple via prefixItems, per-position validation",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabTuple" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabTuple" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/allof": {
+      "post": {
+        "operationId": "labAllOf",
+        "summary": "Echo an allOf merged-flat object",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabAllOf" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabAllOf" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/nested-variant": {
+      "post": {
+        "operationId": "labNestedVariant",
+        "summary": "Echo a collection whose items carry readOnly and writeOnly properties",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabNestedVariant" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabNestedVariant" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/inline-response": {
+      "get": {
+        "operationId": "labInlineResponse",
+        "summary": "Return an inline object response: readOnly present, writeOnly dropped",
+        "responses": {
+          "200": {
+            "description": "an inline object response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["label", "generated_at"],
+                  "properties": {
+                    "label": { "type": "string" },
+                    "generated_at": { "type": "string", "format": "date-time", "readOnly": true },
+                    "internal_token": { "type": "string", "writeOnly": true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lab/loose-union": {
+      "post": {
+        "operationId": "labLooseUnion",
+        "summary": "A oneOf of two object schemas with no discriminator: presence-only",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabLooseUnion" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed (presence-only, no variant-specific validation)",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabLooseUnion" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/query": {
+      "get": {
+        "operationId": "labQuery",
+        "summary": "Echo constrained query parameters",
+        "parameters": [
+          {
+            "name": "tier",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "enum": ["bronze", "silver", "gold"] }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^[A-Z]{3}$" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "echoed query parameters",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabQueryEcho" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/header": {
+      "get": {
+        "operationId": "labHeader",
+        "summary": "Echo a constrained header parameter",
+        "parameters": [
+          {
+            "name": "X-Lab-Token",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^tok-[0-9]{4}$" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "echoed header parameter",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabHeaderEcho" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/inline-body": {
+      "post": {
+        "operationId": "labInlineBody",
+        "summary": "Echo an INLINE object request body (not a ref)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "rank"],
+                "properties": {
+                  "title": { "type": "string", "minLength": 2 },
+                  "rank": { "type": "integer", "minimum": 1, "maximum": 5 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "title": { "type": "string" },
+                    "rank": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
     }
   },
   "components": {
@@ -82,6 +542,286 @@
         "properties": {
           "name": { "type": "string" },
           "species": { "type": "string" }
+        }
+      },
+      "LabNumeric": {
+        "type": "object",
+        "required": ["bounded", "exclusive", "multiple"],
+        "properties": {
+          "bounded": { "type": "integer", "minimum": 10, "maximum": 20 },
+          "exclusive": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
+          "multiple": { "type": "integer", "multipleOf": 5 }
+        }
+      },
+      "LabString": {
+        "type": "object",
+        "required": ["sized", "coded"],
+        "properties": {
+          "sized": { "type": "string", "minLength": 3, "maxLength": 8 },
+          "coded": { "type": "string", "pattern": "^[A-Z]{2}-[0-9]{4}$" }
+        }
+      },
+      "LabArray": {
+        "type": "object",
+        "required": ["bag", "distinct"],
+        "properties": {
+          "bag": { "type": "array", "minItems": 2, "maxItems": 4, "items": { "type": "string" } },
+          "distinct": { "type": "array", "uniqueItems": true, "items": { "type": "integer" } }
+        }
+      },
+      "LabFormats": {
+        "type": "object",
+        "required": ["day", "moment", "clock", "span", "mail", "identifier", "host"],
+        "properties": {
+          "day": { "type": "string", "format": "date" },
+          "moment": { "type": "string", "format": "date-time" },
+          "clock": { "type": "string", "format": "time" },
+          "span": { "type": "string", "format": "duration" },
+          "mail": { "type": "string", "format": "email" },
+          "identifier": { "type": "string", "format": "uuid" },
+          "host": { "type": "string", "format": "hostname" }
+        }
+      },
+      "LabEnumConst": {
+        "type": "object",
+        "required": ["color", "version"],
+        "properties": {
+          "color": { "type": "string", "enum": ["red", "green", "blue"] },
+          "version": { "type": "string", "const": "v2" }
+        }
+      },
+      "LabClosed": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["known"],
+        "properties": {
+          "known": { "type": "string" }
+        }
+      },
+      "LabPresence": {
+        "type": "object",
+        "required": ["mandatory"],
+        "properties": {
+          "mandatory": { "type": "string" },
+          "nullableField": { "type": "string", "nullable": true },
+          "optionalField": { "type": "string" },
+          "withDefault": { "type": "string", "default": "fallback" }
+        }
+      },
+      "LabMap": {
+        "type": "object",
+        "required": ["label"],
+        "properties": {
+          "label": { "type": "string" },
+          "counts": { "type": "object", "additionalProperties": { "type": "integer" } }
+        }
+      },
+      "LabUnion": {
+        "type": "object",
+        "required": ["value"],
+        "properties": {
+          "value": { "oneOf": [{ "type": "string" }, { "type": "integer" }] }
+        }
+      },
+      "LabAnyOf": {
+        "type": "object",
+        "required": ["value"],
+        "properties": {
+          "value": { "anyOf": [{ "type": "boolean" }, { "type": "integer" }] }
+        }
+      },
+      "LabCircle": {
+        "type": "object",
+        "required": ["kind", "radius"],
+        "properties": {
+          "kind": { "type": "string", "const": "circle" },
+          "radius": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      },
+      "LabSquare": {
+        "type": "object",
+        "required": ["kind", "side"],
+        "properties": {
+          "kind": { "type": "string", "const": "square" },
+          "side": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      },
+      "LabShape": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/LabCircle" },
+          { "$ref": "#/components/schemas/LabSquare" }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "circle": "#/components/schemas/LabCircle",
+            "square": "#/components/schemas/LabSquare"
+          }
+        }
+      },
+      "LabInlineShape": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["petType", "bark"],
+            "properties": {
+              "petType": { "type": "string", "const": "dog" },
+              "bark": { "type": "string" }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["petType", "meow"],
+            "properties": {
+              "petType": { "type": "string", "const": "cat" },
+              "meow": { "type": "string" }
+            }
+          }
+        ],
+        "discriminator": { "propertyName": "petType" }
+      },
+      "LabVehicleBase": {
+        "type": "object",
+        "required": ["vehicleType"],
+        "properties": {
+          "vehicleType": { "type": "string" }
+        },
+        "discriminator": {
+          "propertyName": "vehicleType",
+          "mapping": {
+            "car": "#/components/schemas/LabCar",
+            "boat": "#/components/schemas/LabBoat"
+          }
+        }
+      },
+      "LabCar": {
+        "allOf": [
+          { "$ref": "#/components/schemas/LabVehicleBase" },
+          {
+            "type": "object",
+            "required": ["wheels"],
+            "properties": {
+              "wheels": { "type": "integer", "minimum": 3 }
+            }
+          }
+        ]
+      },
+      "LabBoat": {
+        "allOf": [
+          { "$ref": "#/components/schemas/LabVehicleBase" },
+          {
+            "type": "object",
+            "required": ["draft"],
+            "properties": {
+              "draft": { "type": "number", "exclusiveMinimum": 0 }
+            }
+          }
+        ]
+      },
+      "LabBackedEnum": {
+        "type": "object",
+        "required": ["priority"],
+        "properties": {
+          "priority": { "$ref": "#/components/schemas/LabPriority" }
+        }
+      },
+      "LabPriority": {
+        "type": "string",
+        "enum": ["low", "medium", "high"]
+      },
+      "LabBase": {
+        "type": "object",
+        "required": ["baseField"],
+        "properties": {
+          "baseField": { "type": "string" }
+        }
+      },
+      "LabAllOf": {
+        "allOf": [
+          { "$ref": "#/components/schemas/LabBase" },
+          {
+            "type": "object",
+            "required": ["extraField"],
+            "properties": {
+              "extraField": { "type": "integer" }
+            }
+          }
+        ]
+      },
+      "LabVariantItem": {
+        "type": "object",
+        "required": ["name", "secret"],
+        "properties": {
+          "name": { "type": "string" },
+          "secret": { "type": "string", "writeOnly": true },
+          "serverId": { "type": "string", "readOnly": true }
+        }
+      },
+      "LabNestedVariant": {
+        "type": "object",
+        "required": ["title", "items"],
+        "properties": {
+          "title": { "type": "string" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/LabVariantItem" }
+          }
+        }
+      },
+      "LabTuple": {
+        "type": "object",
+        "required": ["pair"],
+        "properties": {
+          "pair": {
+            "type": "array",
+            "prefixItems": [
+              { "type": "string" },
+              { "type": "integer", "minimum": 0 }
+            ]
+          }
+        }
+      },
+      "LabUnionSelector": {
+        "type": "object",
+        "required": ["want"],
+        "properties": {
+          "want": { "type": "string", "enum": ["circle", "square"] }
+        }
+      },
+      "LabLooseUnion": {
+        "type": "object",
+        "required": ["payload"],
+        "properties": {
+          "payload": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["alpha"],
+                "properties": { "alpha": { "type": "string" } }
+              },
+              {
+                "type": "object",
+                "required": ["beta"],
+                "properties": { "beta": { "type": "integer" } }
+              }
+            ]
+          }
+        }
+      },
+      "LabQueryEcho": {
+        "type": "object",
+        "required": ["tier", "count", "code"],
+        "properties": {
+          "tier": { "type": "string" },
+          "count": { "type": "integer" },
+          "code": { "type": "string" }
+        }
+      },
+      "LabHeaderEcho": {
+        "type": "object",
+        "required": ["token"],
+        "properties": {
+          "token": { "type": "string" }
         }
       }
     }
