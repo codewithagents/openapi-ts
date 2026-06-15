@@ -1735,3 +1735,105 @@ describe('bug #7 fix: form-urlencoded request body uses parseBody() not JSON.par
     expect(content).toContain('422')
   })
 })
+
+// ── Bug #11 fix: non-JSON responses (text/plain + octet-stream) ───────────────
+
+describe('bug #11 fix: text/plain and application/octet-stream responses', () => {
+  const textSpec = makeSpec({
+    '/lab/plain-text': {
+      get: {
+        operationId: 'labPlainText',
+        responses: {
+          '200': {
+            description: 'plain text',
+            content: { 'text/plain': { schema: { type: 'string' } } },
+          },
+        },
+      },
+    },
+  })
+
+  const binarySpec = makeSpec({
+    '/lab/download': {
+      get: {
+        operationId: 'labDownload',
+        responses: {
+          '200': {
+            description: 'binary download',
+            content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+          },
+        },
+      },
+    },
+  })
+
+  // ── text/plain ──────────────────────────────────────────────────────────────
+
+  it('Hono: text/plain response emits c.text() not c.json()', () => {
+    const { content } = generateRouter(textSpec)
+    expect(content).toContain('c.text(')
+    expect(content).not.toContain('c.json(await service.labPlainText')
+  })
+
+  it('Hono: text/plain response does NOT call c.json()', () => {
+    const { content } = generateRouter(textSpec)
+    // No c.json call for the service result
+    expect(content).not.toContain('c.json(await service.labPlainText')
+  })
+
+  it('Express: text/plain response emits res.type("text/plain").send()', () => {
+    const { content } = generateExpressRouter(textSpec)
+    expect(content).toContain("res.type('text/plain')")
+    expect(content).not.toContain('res.json(')
+  })
+
+  it('Fastify: text/plain response emits reply.type("text/plain").send()', () => {
+    const { content } = generateFastifyRouter(textSpec)
+    expect(content).toContain("reply.type('text/plain')")
+    expect(content).not.toContain('return service.labPlainText')
+  })
+
+  // ── application/octet-stream ───────────────────────────────────────────────
+
+  it('Hono: octet-stream response emits new Response with application/octet-stream header', () => {
+    const { content } = generateRouter(binarySpec)
+    expect(content).toContain('application/octet-stream')
+    expect(content).not.toContain('c.json(await service.labDownload')
+  })
+
+  it('Express: octet-stream response emits setHeader + Buffer.from().send()', () => {
+    const { content } = generateExpressRouter(binarySpec)
+    expect(content).toContain("setHeader('Content-Type', 'application/octet-stream')")
+    expect(content).toContain('Buffer.from(')
+    expect(content).not.toContain('res.json(')
+  })
+
+  it('Fastify: octet-stream response emits reply.type("application/octet-stream").send()', () => {
+    const { content } = generateFastifyRouter(binarySpec)
+    expect(content).toContain("reply.type('application/octet-stream')")
+    expect(content).toContain('Buffer.from(')
+  })
+
+  // ── JSON path unaffected ───────────────────────────────────────────────────
+
+  it('Hono: JSON response still uses c.json()', () => {
+    const jsonSpec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: {
+                'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Pet' } } },
+              },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateRouter(jsonSpec)
+    expect(content).toContain('c.json(await service.listPets')
+    expect(content).not.toContain('c.text(')
+  })
+})

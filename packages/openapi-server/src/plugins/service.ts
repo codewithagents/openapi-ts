@@ -24,6 +24,12 @@ interface ReturnInfo {
   typeName: string | undefined
   isArray: boolean
   isVoid: boolean
+  /**
+   * For non-JSON success responses: the TypeScript primitive type to use as the
+   * return type. 'string' for text/plain; 'Uint8Array' for application/octet-stream.
+   * When set, typeName is undefined and the type is NOT imported from models.ts.
+   */
+  primitiveType?: string
 }
 
 function getReturnInfo(operation: OperationObject): ReturnInfo {
@@ -49,31 +55,41 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
     if (content === undefined) continue
 
     const jsonContent = content['application/json']
-    if (jsonContent === undefined || jsonContent.schema === undefined) continue
-
-    const schema = jsonContent.schema
-    if (isRef(schema)) {
-      return {
-        typeName: refToName((schema as ReferenceObject).$ref),
-        isArray: false,
-        isVoid: false,
-      }
-    }
-
-    const s = schema as OpenAPIV3_1.SchemaObject
-    if (s.type === 'array') {
-      const items = s.items as OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
-      if (items !== undefined && isRef(items)) {
+    if (jsonContent !== undefined && jsonContent.schema !== undefined) {
+      const schema = jsonContent.schema
+      if (isRef(schema)) {
         return {
-          typeName: refToName((items as ReferenceObject).$ref),
-          isArray: true,
+          typeName: refToName((schema as ReferenceObject).$ref),
+          isArray: false,
           isVoid: false,
         }
       }
-      return { typeName: undefined, isArray: true, isVoid: false }
+
+      const s = schema as OpenAPIV3_1.SchemaObject
+      if (s.type === 'array') {
+        const items = s.items as OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
+        if (items !== undefined && isRef(items)) {
+          return {
+            typeName: refToName((items as ReferenceObject).$ref),
+            isArray: true,
+            isVoid: false,
+          }
+        }
+        return { typeName: undefined, isArray: true, isVoid: false }
+      }
+
+      return { typeName: undefined, isArray: false, isVoid: false }
     }
 
-    return { typeName: undefined, isArray: false, isVoid: false }
+    // text/plain response: service returns a plain string.
+    if (content['text/plain'] !== undefined) {
+      return { typeName: undefined, isArray: false, isVoid: false, primitiveType: 'string' }
+    }
+
+    // application/octet-stream response: service returns raw bytes.
+    if (content['application/octet-stream'] !== undefined) {
+      return { typeName: undefined, isArray: false, isVoid: false, primitiveType: 'Uint8Array' }
+    }
   }
 
   // Check for 204 explicitly
@@ -86,6 +102,7 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
 
 function buildReturnType(info: ReturnInfo): string {
   if (info.isVoid) return 'Promise<void>'
+  if (info.primitiveType !== undefined) return `Promise<${info.primitiveType}>`
   if (info.typeName !== undefined) {
     return info.isArray ? `Promise<${info.typeName}[]>` : `Promise<${info.typeName}>`
   }

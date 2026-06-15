@@ -613,3 +613,82 @@ describe('coverage: resolveParamRef — component parameter that is itself a $re
     expect(content).toContain('listItems(')
   })
 })
+
+// ── Bug #11 fix: non-JSON response types in service interface ─────────────────
+
+describe('bug #11 fix: text/plain and octet-stream return types in service interface', () => {
+  it('text/plain response maps to Promise<string> return type', () => {
+    const spec = makeSpec({
+      '/lab/plain-text': {
+        get: {
+          operationId: 'labPlainText',
+          responses: {
+            '200': {
+              description: 'plain text',
+              content: { 'text/plain': { schema: { type: 'string' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('labPlainText(): Promise<string>')
+  })
+
+  it('application/octet-stream response maps to Promise<Uint8Array> return type', () => {
+    const spec = makeSpec({
+      '/lab/download': {
+        get: {
+          operationId: 'labDownload',
+          responses: {
+            '200': {
+              description: 'binary download',
+              content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('labDownload(): Promise<Uint8Array>')
+  })
+
+  it('text/plain return type is NOT imported from models.ts', () => {
+    const spec = makeSpec({
+      '/lab/plain-text': {
+        get: {
+          operationId: 'labPlainText',
+          responses: {
+            '200': {
+              description: 'plain text',
+              content: { 'text/plain': { schema: { type: 'string' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    // Primitive types must not appear as model imports
+    expect(content).not.toContain("import type { string }")
+    expect(content).not.toContain("import type {")
+  })
+
+  it('JSON response still maps to Promise<ModelType> and imports from models.ts', () => {
+    const spec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('listPets(): Promise<Pet>')
+    expect(content).toContain("import type { Pet } from './models.js'")
+  })
+})

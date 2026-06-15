@@ -395,6 +395,12 @@ function emitHeaderValidation(
 interface ResponseStatus {
   status: number
   isVoid: boolean
+  /**
+   * The content type declared by the success response.
+   * Drives the framework-specific response emit (c.json / c.text / c.body).
+   * Defaults to 'application/json' for JSON and void responses.
+   */
+  responseContentType: 'application/json' | 'text/plain' | 'application/octet-stream'
 }
 
 function response200IsVoid(resp: ResponseObject | ReferenceObject): boolean {
@@ -402,6 +408,23 @@ function response200IsVoid(resp: ResponseObject | ReferenceObject): boolean {
   const r = resp as ResponseObject
   const content = r.content as Record<string, unknown> | undefined
   return content === undefined || Object.keys(content).length === 0
+}
+
+/**
+ * Detect the success response content type from a ResponseObject.
+ * Returns 'text/plain' or 'application/octet-stream' for non-JSON responses,
+ * or 'application/json' as the default.
+ */
+function detectResponseContentType(
+  resp: ResponseObject | ReferenceObject
+): 'application/json' | 'text/plain' | 'application/octet-stream' {
+  if (isRef(resp)) return 'application/json'
+  const r = resp as ResponseObject
+  const content = r.content as Record<string, unknown> | undefined
+  if (content === undefined) return 'application/json'
+  if ('text/plain' in content) return 'text/plain'
+  if ('application/octet-stream' in content) return 'application/octet-stream'
+  return 'application/json'
 }
 
 function getResponseStatus(
@@ -413,15 +436,31 @@ function getResponseStatus(
     | undefined
 
   if (responses === undefined) {
-    return httpMethod === 'delete' ? { status: 204, isVoid: true } : { status: 200, isVoid: false }
+    return httpMethod === 'delete'
+      ? { status: 204, isVoid: true, responseContentType: 'application/json' }
+      : { status: 200, isVoid: false, responseContentType: 'application/json' }
   }
 
-  if (responses['201'] !== undefined) return { status: 201, isVoid: false }
-  if (responses['204'] !== undefined) return { status: 204, isVoid: true }
+  if (responses['201'] !== undefined) {
+    return {
+      status: 201,
+      isVoid: false,
+      responseContentType: detectResponseContentType(responses['201']),
+    }
+  }
+  if (responses['204'] !== undefined) {
+    return { status: 204, isVoid: true, responseContentType: 'application/json' }
+  }
 
   if (responses['200'] !== undefined) {
-    if (response200IsVoid(responses['200'])) return { status: 204, isVoid: true }
-    return { status: 200, isVoid: false }
+    if (response200IsVoid(responses['200'])) {
+      return { status: 204, isVoid: true, responseContentType: 'application/json' }
+    }
+    return {
+      status: 200,
+      isVoid: false,
+      responseContentType: detectResponseContentType(responses['200']),
+    }
   }
 
   // Single non-200/201/204 2xx declared: honor that exact status code.
@@ -440,11 +479,13 @@ function getResponseStatus(
             const content = r.content as Record<string, unknown> | undefined
             return content === undefined || Object.keys(content).length === 0
           })()
-    return { status: code, isVoid }
+    return { status: code, isVoid, responseContentType: detectResponseContentType(resp) }
   }
 
   // Default: delete -> 204, otherwise 200
-  return httpMethod === 'delete' ? { status: 204, isVoid: true } : { status: 200, isVoid: false }
+  return httpMethod === 'delete'
+    ? { status: 204, isVoid: true, responseContentType: 'application/json' }
+    : { status: 200, isVoid: false, responseContentType: 'application/json' }
 }
 
 interface RouteOperation {
@@ -707,6 +748,24 @@ function buildRouteHandler(op: RouteOperation, indent: string, schemaNames?: Set
   if (op.responseStatus.isVoid) {
     lines.push(`${indent}    await ${serviceCall}`)
     lines.push(`${indent}    return new Response(null, { status: ${op.responseStatus.status} })`)
+  } else if (op.responseStatus.responseContentType === 'text/plain') {
+    if (op.responseStatus.status === 200) {
+      lines.push(`${indent}    return c.text(await ${serviceCall})`)
+    } else {
+      lines.push(`${indent}    return c.text(await ${serviceCall}, ${op.responseStatus.status})`)
+    }
+  } else if (op.responseStatus.responseContentType === 'application/octet-stream') {
+    if (op.responseStatus.status === 200) {
+      lines.push(`${indent}    const _result = await ${serviceCall}`)
+      lines.push(
+        `${indent}    return new Response(_result, { headers: { 'content-type': 'application/octet-stream' } })`
+      )
+    } else {
+      lines.push(`${indent}    const _result = await ${serviceCall}`)
+      lines.push(
+        `${indent}    return new Response(_result, { status: ${op.responseStatus.status}, headers: { 'content-type': 'application/octet-stream' } })`
+      )
+    }
   } else if (op.responseStatus.status === 200) {
     lines.push(`${indent}    return c.json(await ${serviceCall})`)
   } else {
@@ -720,7 +779,6 @@ function buildRouteHandler(op: RouteOperation, indent: string, schemaNames?: Set
   lines.push(`${indent}    }`)
   lines.push(`${indent}    throw err`)
   lines.push(`${indent}  }`)
-
 
   lines.push(`${indent}})`)
   return lines.join('\n')
@@ -847,6 +905,24 @@ function buildExpressRouteHandler(
   if (op.responseStatus.isVoid) {
     lines.push(`${indent}    await ${serviceCall}`)
     lines.push(`${indent}    res.status(${op.responseStatus.status}).end()`)
+  } else if (op.responseStatus.responseContentType === 'text/plain') {
+    if (op.responseStatus.status === 200) {
+      lines.push(`${indent}    res.type('text/plain').send(await ${serviceCall})`)
+    } else {
+      lines.push(
+        `${indent}    res.status(${op.responseStatus.status}).type('text/plain').send(await ${serviceCall})`
+      )
+    }
+  } else if (op.responseStatus.responseContentType === 'application/octet-stream') {
+    if (op.responseStatus.status === 200) {
+      lines.push(
+        `${indent}    res.setHeader('Content-Type', 'application/octet-stream').send(Buffer.from(await ${serviceCall}))`
+      )
+    } else {
+      lines.push(
+        `${indent}    res.status(${op.responseStatus.status}).setHeader('Content-Type', 'application/octet-stream').send(Buffer.from(await ${serviceCall}))`
+      )
+    }
   } else if (op.responseStatus.status === 200) {
     lines.push(`${indent}    res.json(await ${serviceCall})`)
   } else {
@@ -1038,6 +1114,18 @@ function buildFastifyRouteHandler(
   if (op.responseStatus.isVoid) {
     lines.push(`${indent}    await ${serviceCall}`)
     lines.push(`${indent}    reply.status(${op.responseStatus.status}).send()`)
+  } else if (op.responseStatus.responseContentType === 'text/plain') {
+    if (op.responseStatus.status === 200) {
+      lines.push(`${indent}    return reply.type('text/plain').send(await ${serviceCall})`)
+    } else {
+      lines.push(`${indent}    return reply.status(${op.responseStatus.status}).type('text/plain').send(await ${serviceCall})`)
+    }
+  } else if (op.responseStatus.responseContentType === 'application/octet-stream') {
+    if (op.responseStatus.status === 200) {
+      lines.push(`${indent}    return reply.type('application/octet-stream').send(Buffer.from(await ${serviceCall}))`)
+    } else {
+      lines.push(`${indent}    return reply.status(${op.responseStatus.status}).type('application/octet-stream').send(Buffer.from(await ${serviceCall}))`)
+    }
   } else if (op.responseStatus.status === 200) {
     lines.push(`${indent}    return ${serviceCall}`)
   } else {
