@@ -172,17 +172,25 @@ export const petService: PetstoreService = {
   // -------------------------------------------------------------------------
 
   async labDelimitedQuery(params) {
-    // The generator extracts csv/ssv/psv as bare strings via c.req.query().
-    // The promised contract is arrays split by delimiter. We echo params as-is
-    // to reveal the bug: the values are raw delimited strings, not arrays.
+    // Generator now splits delimited array params before Zod validation:
+    // csv=a,b,c → params.csv = ['a', 'b', 'c']
+    // ssv=x%20y%20z → params.ssv = ['x', 'y', 'z']
+    // psv=p|q|r → params.psv = ['p', 'q', 'r']
     return params as unknown as LabDelimitedEcho
   },
 
   async labDeepFilter(params) {
-    // The generator uses c.req.query('filter') which cannot read deepObject params.
-    // filter[gte]=10 is query key 'filter[gte]', not 'filter'. params.filter is undefined.
-    // This handler will not be reached (the router 422s before calling it).
-    return params as unknown as LabDeepFilterEcho
+    // Generator assembles bracket-notation keys into params.filter:
+    // filter[gte]=10&filter[lte]=100&filter[color]=blue
+    //   → params.filter = { gte: '10', lte: '100', color: 'blue' }
+    // Zod validates with z.coerce.number() but passes the raw `params` to the service.
+    // Coerce numeric fields here and return the flat filter object (schema: LabDeepFilterEcho).
+    const f = (params as { filter: Record<string, string | undefined> }).filter
+    return {
+      gte: f['gte'] !== undefined ? Number(f['gte']) : undefined,
+      lte: f['lte'] !== undefined ? Number(f['lte']) : undefined,
+      color: f['color'],
+    } as LabDeepFilterEcho
   },
 
   async labPath(score) {

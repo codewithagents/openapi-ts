@@ -574,13 +574,11 @@ test(
 // P2: /lab/delimited-query — style/explode not deserialized
 // ---------------------------------------------------------------------------
 
-test.fixme(
-  'lab/delimited-query: csv/ssv/psv query arrays are split by delimiter (Phase 2: generator reads raw string, no splitting)',
+test(
+  'lab/delimited-query: csv/ssv/psv query arrays are split by delimiter',
   async ({ request }) => {
-    // PROMISED: csv=a,b,c&ssv=x%20y%20z&psv=p|q|r are deserialized to string arrays.
-    // ACTUAL: generator emits c.req.query('csv') → raw string 'a,b,c' (not split).
-    // Root cause: router.ts emits paramExtract for array params as c.req.query(name)
-    // (a string), not c.req.queries(name) or manual split. Style/explode are ignored.
+    // Generator now emits .split(','), .split(' '), .split('|') for style:form/spaceDelimited/
+    // pipeDelimited with explode:false. params.csv etc. arrive as string[] before Zod.
     const res = await labGet(request, 'delimited-query?csv=a,b,c&ssv=x%20y%20z&psv=p|q|r')
     expect(res.status).toBe(200)
     const body = res.body as Record<string, unknown>
@@ -600,16 +598,11 @@ test('lab/delimited-query: missing required array params → 422', async ({ requ
 // P3: /lab/deep-filter — deepObject not assembled
 // ---------------------------------------------------------------------------
 
-test.fixme(
-  'lab/deep-filter: filter[gte] and filter[lte] are assembled into a nested object (Phase 2: generator uses c.req.query("filter") which is undefined)',
+test(
+  'lab/deep-filter: filter[gte] and filter[lte] are assembled into a nested object',
   async ({ request }) => {
-    // PROMISED: filter[gte]=10&filter[lte]=100 is assembled into { gte: 10, lte: 100 }.
-    // ACTUAL: c.req.query('filter') looks for key literally named 'filter' (not 'filter[gte]').
-    // This returns undefined → z.string() validation fails → 422 instead of 200.
-    // Root cause: router.ts emits c.req.query('filter') for deepObject params. The query
-    // key 'filter' does not exist; only 'filter[gte]' and 'filter[lte]' exist. The required
-    // string check fires → 422. A conformant implementation would read c.req.queries() and
-    // assemble the nested object from the bracket-notation keys.
+    // Generator now emits c.req.queries() + bracket-key filtering to assemble deepObject
+    // params. filter[gte]=10 → filter = { gte: '10', ... }. Service coerces to numbers.
     const res = await labGet(request, 'deep-filter?filter[gte]=10&filter[lte]=100&filter[color]=blue')
     expect(res.status).toBe(200)
     const body = res.body as Record<string, unknown>
