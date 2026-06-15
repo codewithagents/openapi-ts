@@ -217,10 +217,14 @@ export const petService: PetstoreService = {
     return body
   },
 
-  async labDualStatus() {
-    // GET with 200+202 declared. Generator picks 200. There is no mechanism for the
-    // service to signal 202; the router always calls c.json(await service.labDualStatus()).
-    return { phase: 'done' }
+  async labDualStatus(params) {
+    // Bug #10 fixed: generator now emits envelope dispatch.
+    // Service returns { status, body } so the router calls c.json(_envelope.body, _envelope.status).
+    // prefer=async signals a long-running task (202 still running); otherwise task is done (200).
+    if (params?.prefer === 'async') {
+      return { status: 202 as const, body: { phase: 'running' } }
+    }
+    return { status: 200 as const, body: { phase: 'done' } }
   },
 
   async labPlainText(): Promise<string> {

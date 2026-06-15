@@ -11,14 +11,26 @@
         "operationId": "listPets",
         "summary": "List all pets",
         "parameters": [
-          { "name": "species", "in": "query", "required": false, "schema": { "type": "string" } }
+          {
+            "name": "species",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "List of pets",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Pet" } }
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Pet"
+                  }
+                }
               }
             }
           }
@@ -30,13 +42,23 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/CreatePetRequest" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePetRequest"
+              }
+            }
           }
         },
         "responses": {
           "201": {
             "description": "Created pet",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Pet" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pet"
+                }
+              }
+            }
           }
         }
       }
@@ -46,12 +68,25 @@
         "operationId": "getPet",
         "summary": "Get a pet by ID",
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "The pet",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Pet" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pet"
+                }
+              }
+            }
           }
         }
       },
@@ -59,11 +94,22 @@
         "operationId": "deletePet",
         "summary": "Delete a pet",
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
-          "204": { "description": "Deleted" },
-          "404": { "description": "Pet not found" }
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "description": "Pet not found"
+          }
         }
       }
     },
@@ -73,14 +119,28 @@
         "summary": "Echo a numeric-constraints object",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabNumeric" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabNumeric"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabNumeric" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabNumeric"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -90,14 +150,28 @@
         "summary": "Echo a string-constraints object",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabString" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabString"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabString" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabString"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -107,14 +181,28 @@
         "summary": "Echo an array-constraints object",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabArray" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabArray"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabArray" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabArray"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -124,14 +212,28 @@
         "summary": "Echo a string-formats object",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabFormats" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabFormats"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabFormats" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabFormats"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -141,14 +243,28 @@
         "summary": "Echo an enum and const object",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabEnumConst" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabEnumConst"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabEnumConst" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabEnumConst"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -158,14 +274,28 @@
         "summary": "Echo a closed object (additionalProperties false)",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabClosed" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabClosed"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabClosed" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabClosed"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -175,14 +305,28 @@
         "summary": "Echo a required / nullable / optional / default object",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabPresence" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabPresence"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabPresence" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabPresence"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -192,14 +336,28 @@
         "summary": "Echo a typed additionalProperties map object",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabMap" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabMap"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabMap" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabMap"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -210,7 +368,13 @@
         "responses": {
           "200": {
             "description": "a LabMap with an empty counts map",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabMap" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabMap"
+                }
+              }
+            }
           }
         }
       }
@@ -221,14 +385,28 @@
         "summary": "Echo a scalar oneOf union object",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabUnion" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabUnion"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabUnion" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabUnion"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -238,14 +416,28 @@
         "summary": "An anyOf scalar union (distinct from oneOf)",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabAnyOf" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabAnyOf"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabAnyOf" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabAnyOf"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -255,14 +447,28 @@
         "summary": "Echo a discriminated object union (named-component form)",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabShape" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabShape"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabShape" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabShape"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -272,14 +478,28 @@
         "summary": "Discriminated union, inline-union form with synthesized variant names",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabInlineShape" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabInlineShape"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabInlineShape" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabInlineShape"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -289,14 +509,28 @@
         "summary": "Discriminated union, allOf-inheritance form",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabVehicleBase" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabVehicleBase"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabVehicleBase" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabVehicleBase"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -306,7 +540,13 @@
         "summary": "A response that is a oneOf of shapes",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabUnionSelector" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabUnionSelector"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
@@ -315,14 +555,20 @@
               "application/json": {
                 "schema": {
                   "oneOf": [
-                    { "$ref": "#/components/schemas/LabCircle" },
-                    { "$ref": "#/components/schemas/LabSquare" }
+                    {
+                      "$ref": "#/components/schemas/LabCircle"
+                    },
+                    {
+                      "$ref": "#/components/schemas/LabSquare"
+                    }
                   ]
                 }
               }
             }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -332,14 +578,28 @@
         "summary": "Echo an object carrying a backed enum",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabBackedEnum" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabBackedEnum"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabBackedEnum" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabBackedEnum"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -349,14 +609,28 @@
         "summary": "A tuple via prefixItems, per-position validation",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabTuple" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabTuple"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabTuple" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabTuple"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -366,14 +640,28 @@
         "summary": "Echo an allOf merged-flat object",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabAllOf" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabAllOf"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabAllOf" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabAllOf"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -383,14 +671,28 @@
         "summary": "Echo a collection whose items carry readOnly and writeOnly properties",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabNestedVariant" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabNestedVariant"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabNestedVariant" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabNestedVariant"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -405,11 +707,23 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["label", "generated_at"],
+                  "required": [
+                    "label",
+                    "generated_at"
+                  ],
                   "properties": {
-                    "label": { "type": "string" },
-                    "generated_at": { "type": "string", "format": "date-time", "readOnly": true },
-                    "internal_token": { "type": "string", "writeOnly": true }
+                    "label": {
+                      "type": "string"
+                    },
+                    "generated_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "readOnly": true
+                    },
+                    "internal_token": {
+                      "type": "string",
+                      "writeOnly": true
+                    }
                   }
                 }
               }
@@ -424,14 +738,28 @@
         "summary": "A oneOf of two object schemas with no discriminator: presence-only",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabLooseUnion" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabLooseUnion"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed (presence-only, no variant-specific validation)",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabLooseUnion" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabLooseUnion"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -444,27 +772,49 @@
             "name": "tier",
             "in": "query",
             "required": true,
-            "schema": { "type": "string", "enum": ["bronze", "silver", "gold"] }
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bronze",
+                "silver",
+                "gold"
+              ]
+            }
           },
           {
             "name": "count",
             "in": "query",
             "required": true,
-            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
           },
           {
             "name": "code",
             "in": "query",
             "required": true,
-            "schema": { "type": "string", "pattern": "^[A-Z]{3}$" }
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "echoed query parameters",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabQueryEcho" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabQueryEcho"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -477,15 +827,26 @@
             "name": "X-Lab-Token",
             "in": "header",
             "required": true,
-            "schema": { "type": "string", "pattern": "^tok-[0-9]{4}$" }
+            "schema": {
+              "type": "string",
+              "pattern": "^tok-[0-9]{4}$"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "echoed header parameter",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabHeaderEcho" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabHeaderEcho"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -499,10 +860,20 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["title", "rank"],
+                "required": [
+                  "title",
+                  "rank"
+                ],
                 "properties": {
-                  "title": { "type": "string", "minLength": 2 },
-                  "rank": { "type": "integer", "minimum": 1, "maximum": 5 }
+                  "title": {
+                    "type": "string",
+                    "minLength": 2
+                  },
+                  "rank": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  }
                 }
               }
             }
@@ -516,14 +887,20 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "title": { "type": "string" },
-                    "rank": { "type": "integer" }
+                    "title": {
+                      "type": "string"
+                    },
+                    "rank": {
+                      "type": "integer"
+                    }
                   }
                 }
               }
             }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -538,7 +915,12 @@
             "required": true,
             "style": "form",
             "explode": false,
-            "schema": { "type": "array", "items": { "type": "string" } }
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           },
           {
             "name": "ssv",
@@ -546,7 +928,12 @@
             "required": true,
             "style": "spaceDelimited",
             "explode": false,
-            "schema": { "type": "array", "items": { "type": "string" } }
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           },
           {
             "name": "psv",
@@ -554,15 +941,28 @@
             "required": true,
             "style": "pipeDelimited",
             "explode": false,
-            "schema": { "type": "array", "items": { "type": "string" } }
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "echoed delimited params as arrays",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabDelimitedEcho" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabDelimitedEcho"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -579,11 +979,20 @@
             "explode": true,
             "schema": {
               "type": "object",
-              "required": ["gte", "lte"],
+              "required": [
+                "gte",
+                "lte"
+              ],
               "properties": {
-                "gte": { "type": "number" },
-                "lte": { "type": "number" },
-                "color": { "type": "string" }
+                "gte": {
+                  "type": "number"
+                },
+                "lte": {
+                  "type": "number"
+                },
+                "color": {
+                  "type": "string"
+                }
               }
             }
           }
@@ -591,9 +1000,17 @@
         "responses": {
           "200": {
             "description": "echoed filter object",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabDeepFilterEcho" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabDeepFilterEcho"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -606,15 +1023,27 @@
             "name": "score",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer", "minimum": 10, "maximum": 20 }
+            "schema": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 20
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "echoed score",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabPathEcho" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabPathEcho"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -628,10 +1057,17 @@
             "application/x-www-form-urlencoded": {
               "schema": {
                 "type": "object",
-                "required": ["label", "quantity"],
+                "required": [
+                  "label",
+                  "quantity"
+                ],
                 "properties": {
-                  "label": { "type": "string" },
-                  "quantity": { "type": "integer" }
+                  "label": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  }
                 }
               }
             }
@@ -645,14 +1081,20 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "label": { "type": "string" },
-                    "quantity": { "type": "integer" }
+                    "label": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "integer"
+                    }
                   }
                 }
               }
             }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     },
@@ -666,11 +1108,16 @@
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "required": ["photos"],
+                "required": [
+                  "photos"
+                ],
                 "properties": {
                   "photos": {
                     "type": "array",
-                    "items": { "type": "string", "format": "binary" }
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
                   }
                 }
               }
@@ -685,7 +1132,9 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "count": { "type": "integer" }
+                    "count": {
+                      "type": "integer"
+                    }
                   }
                 }
               }
@@ -700,12 +1149,24 @@
         "summary": "202-only success response (success-status seam: generator ignores 202)",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabAllOf" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabAllOf"
+              }
+            }
+          }
         },
         "responses": {
           "202": {
             "description": "accepted for async processing",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabAllOf" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabAllOf"
+                }
+              }
+            }
           }
         }
       }
@@ -713,17 +1174,44 @@
     "/lab/dual-status": {
       "get": {
         "operationId": "labDualStatus",
-        "summary": "Handler cannot override response status (200+202 declared; generator always emits 200)",
+        "summary": "Handler selects 200 vs 202 at runtime via status+body envelope (prefer=async -> 202, else 200)",
         "responses": {
           "200": {
             "description": "task complete",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabDualStatusEcho" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabDualStatusEcho"
+                }
+              }
+            }
           },
           "202": {
             "description": "task still running",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabDualStatusEcho" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabDualStatusEcho"
+                }
+              }
+            }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "prefer",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "immediate",
+                "async"
+              ]
+            },
+            "description": "Pass async to request a 202 (still running) response; omit or pass immediate for 200 (done)."
+          }
+        ]
       }
     },
     "/lab/plain-text": {
@@ -733,7 +1221,13 @@
         "responses": {
           "200": {
             "description": "plain text body",
-            "content": { "text/plain": { "schema": { "type": "string" } } }
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }
@@ -745,7 +1239,14 @@
         "responses": {
           "200": {
             "description": "binary file content",
-            "content": { "application/octet-stream": { "schema": { "type": "string", "format": "binary" } } }
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
           }
         }
       }
@@ -756,14 +1257,28 @@
         "summary": "Echo an int64 field; large values lose precision in JavaScript",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabInt64" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabInt64"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
             "description": "echoed int64",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabInt64" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabInt64"
+                }
+              }
+            }
           },
-          "422": { "description": "Validation exception" }
+          "422": {
+            "description": "Validation exception"
+          }
         }
       }
     }
@@ -772,127 +1287,296 @@
     "schemas": {
       "Pet": {
         "type": "object",
-        "required": ["id", "name", "species"],
+        "required": [
+          "id",
+          "name",
+          "species"
+        ],
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "species": { "type": "string" }
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "species": {
+            "type": "string"
+          }
         }
       },
       "CreatePetRequest": {
         "type": "object",
-        "required": ["name", "species"],
+        "required": [
+          "name",
+          "species"
+        ],
         "properties": {
-          "name": { "type": "string" },
-          "species": { "type": "string" }
+          "name": {
+            "type": "string"
+          },
+          "species": {
+            "type": "string"
+          }
         }
       },
       "LabNumeric": {
         "type": "object",
-        "required": ["bounded", "exclusive", "multiple"],
+        "required": [
+          "bounded",
+          "exclusive",
+          "multiple"
+        ],
         "properties": {
-          "bounded": { "type": "integer", "minimum": 10, "maximum": 20 },
-          "exclusive": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
-          "multiple": { "type": "integer", "multipleOf": 5 }
+          "bounded": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 20
+          },
+          "exclusive": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "exclusiveMaximum": 1
+          },
+          "multiple": {
+            "type": "integer",
+            "multipleOf": 5
+          }
         }
       },
       "LabString": {
         "type": "object",
-        "required": ["sized", "coded"],
+        "required": [
+          "sized",
+          "coded"
+        ],
         "properties": {
-          "sized": { "type": "string", "minLength": 3, "maxLength": 8 },
-          "coded": { "type": "string", "pattern": "^[A-Z]{2}-[0-9]{4}$" }
+          "sized": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 8
+          },
+          "coded": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}-[0-9]{4}$"
+          }
         }
       },
       "LabArray": {
         "type": "object",
-        "required": ["bag", "distinct"],
+        "required": [
+          "bag",
+          "distinct"
+        ],
         "properties": {
-          "bag": { "type": "array", "minItems": 2, "maxItems": 4, "items": { "type": "string" } },
-          "distinct": { "type": "array", "uniqueItems": true, "items": { "type": "integer" } }
+          "bag": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4,
+            "items": {
+              "type": "string"
+            }
+          },
+          "distinct": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "integer"
+            }
+          }
         }
       },
       "LabFormats": {
         "type": "object",
-        "required": ["day", "moment", "clock", "span", "mail", "identifier", "host"],
+        "required": [
+          "day",
+          "moment",
+          "clock",
+          "span",
+          "mail",
+          "identifier",
+          "host"
+        ],
         "properties": {
-          "day": { "type": "string", "format": "date" },
-          "moment": { "type": "string", "format": "date-time" },
-          "clock": { "type": "string", "format": "time" },
-          "span": { "type": "string", "format": "duration" },
-          "mail": { "type": "string", "format": "email" },
-          "identifier": { "type": "string", "format": "uuid" },
-          "host": { "type": "string", "format": "hostname" }
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "moment": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "clock": {
+            "type": "string",
+            "format": "time"
+          },
+          "span": {
+            "type": "string",
+            "format": "duration"
+          },
+          "mail": {
+            "type": "string",
+            "format": "email"
+          },
+          "identifier": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "host": {
+            "type": "string",
+            "format": "hostname"
+          }
         }
       },
       "LabEnumConst": {
         "type": "object",
-        "required": ["color", "version"],
+        "required": [
+          "color",
+          "version"
+        ],
         "properties": {
-          "color": { "type": "string", "enum": ["red", "green", "blue"] },
-          "version": { "type": "string", "const": "v2" }
+          "color": {
+            "type": "string",
+            "enum": [
+              "red",
+              "green",
+              "blue"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "const": "v2"
+          }
         }
       },
       "LabClosed": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["known"],
+        "required": [
+          "known"
+        ],
         "properties": {
-          "known": { "type": "string" }
+          "known": {
+            "type": "string"
+          }
         }
       },
       "LabPresence": {
         "type": "object",
-        "required": ["mandatory"],
+        "required": [
+          "mandatory"
+        ],
         "properties": {
-          "mandatory": { "type": "string" },
-          "nullableField": { "type": "string", "nullable": true },
-          "optionalField": { "type": "string" },
-          "withDefault": { "type": "string", "default": "fallback" }
+          "mandatory": {
+            "type": "string"
+          },
+          "nullableField": {
+            "type": "string",
+            "nullable": true
+          },
+          "optionalField": {
+            "type": "string"
+          },
+          "withDefault": {
+            "type": "string",
+            "default": "fallback"
+          }
         }
       },
       "LabMap": {
         "type": "object",
-        "required": ["label"],
+        "required": [
+          "label"
+        ],
         "properties": {
-          "label": { "type": "string" },
-          "counts": { "type": "object", "additionalProperties": { "type": "integer" } }
+          "label": {
+            "type": "string"
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          }
         }
       },
       "LabUnion": {
         "type": "object",
-        "required": ["value"],
+        "required": [
+          "value"
+        ],
         "properties": {
-          "value": { "oneOf": [{ "type": "string" }, { "type": "integer" }] }
+          "value": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          }
         }
       },
       "LabAnyOf": {
         "type": "object",
-        "required": ["value"],
+        "required": [
+          "value"
+        ],
         "properties": {
-          "value": { "anyOf": [{ "type": "boolean" }, { "type": "integer" }] }
+          "value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          }
         }
       },
       "LabCircle": {
         "type": "object",
-        "required": ["kind", "radius"],
+        "required": [
+          "kind",
+          "radius"
+        ],
         "properties": {
-          "kind": { "type": "string", "const": "circle" },
-          "radius": { "type": "number", "exclusiveMinimum": 0 }
+          "kind": {
+            "type": "string",
+            "const": "circle"
+          },
+          "radius": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
         }
       },
       "LabSquare": {
         "type": "object",
-        "required": ["kind", "side"],
+        "required": [
+          "kind",
+          "side"
+        ],
         "properties": {
-          "kind": { "type": "string", "const": "square" },
-          "side": { "type": "number", "exclusiveMinimum": 0 }
+          "kind": {
+            "type": "string",
+            "const": "square"
+          },
+          "side": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
         }
       },
       "LabShape": {
         "oneOf": [
-          { "$ref": "#/components/schemas/LabCircle" },
-          { "$ref": "#/components/schemas/LabSquare" }
+          {
+            "$ref": "#/components/schemas/LabCircle"
+          },
+          {
+            "$ref": "#/components/schemas/LabSquare"
+          }
         ],
         "discriminator": {
           "propertyName": "kind",
@@ -906,28 +1590,50 @@
         "oneOf": [
           {
             "type": "object",
-            "required": ["petType", "bark"],
+            "required": [
+              "petType",
+              "bark"
+            ],
             "properties": {
-              "petType": { "type": "string", "const": "dog" },
-              "bark": { "type": "string" }
+              "petType": {
+                "type": "string",
+                "const": "dog"
+              },
+              "bark": {
+                "type": "string"
+              }
             }
           },
           {
             "type": "object",
-            "required": ["petType", "meow"],
+            "required": [
+              "petType",
+              "meow"
+            ],
             "properties": {
-              "petType": { "type": "string", "const": "cat" },
-              "meow": { "type": "string" }
+              "petType": {
+                "type": "string",
+                "const": "cat"
+              },
+              "meow": {
+                "type": "string"
+              }
             }
           }
         ],
-        "discriminator": { "propertyName": "petType" }
+        "discriminator": {
+          "propertyName": "petType"
+        }
       },
       "LabVehicleBase": {
         "type": "object",
-        "required": ["vehicleType"],
+        "required": [
+          "vehicleType"
+        ],
         "properties": {
-          "vehicleType": { "type": "string" }
+          "vehicleType": {
+            "type": "string"
+          }
         },
         "discriminator": {
           "propertyName": "vehicleType",
@@ -939,113 +1645,192 @@
       },
       "LabCar": {
         "allOf": [
-          { "$ref": "#/components/schemas/LabVehicleBase" },
+          {
+            "$ref": "#/components/schemas/LabVehicleBase"
+          },
           {
             "type": "object",
-            "required": ["wheels"],
+            "required": [
+              "wheels"
+            ],
             "properties": {
-              "wheels": { "type": "integer", "minimum": 3 }
+              "wheels": {
+                "type": "integer",
+                "minimum": 3
+              }
             }
           }
         ]
       },
       "LabBoat": {
         "allOf": [
-          { "$ref": "#/components/schemas/LabVehicleBase" },
+          {
+            "$ref": "#/components/schemas/LabVehicleBase"
+          },
           {
             "type": "object",
-            "required": ["draft"],
+            "required": [
+              "draft"
+            ],
             "properties": {
-              "draft": { "type": "number", "exclusiveMinimum": 0 }
+              "draft": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
             }
           }
         ]
       },
       "LabBackedEnum": {
         "type": "object",
-        "required": ["priority"],
+        "required": [
+          "priority"
+        ],
         "properties": {
-          "priority": { "$ref": "#/components/schemas/LabPriority" }
+          "priority": {
+            "$ref": "#/components/schemas/LabPriority"
+          }
         }
       },
       "LabPriority": {
         "type": "string",
-        "enum": ["low", "medium", "high"]
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ]
       },
       "LabBase": {
         "type": "object",
-        "required": ["baseField"],
+        "required": [
+          "baseField"
+        ],
         "properties": {
-          "baseField": { "type": "string" }
+          "baseField": {
+            "type": "string"
+          }
         }
       },
       "LabAllOf": {
         "allOf": [
-          { "$ref": "#/components/schemas/LabBase" },
+          {
+            "$ref": "#/components/schemas/LabBase"
+          },
           {
             "type": "object",
-            "required": ["extraField"],
+            "required": [
+              "extraField"
+            ],
             "properties": {
-              "extraField": { "type": "integer" }
+              "extraField": {
+                "type": "integer"
+              }
             }
           }
         ]
       },
       "LabVariantItem": {
         "type": "object",
-        "required": ["name", "secret"],
+        "required": [
+          "name",
+          "secret"
+        ],
         "properties": {
-          "name": { "type": "string" },
-          "secret": { "type": "string", "writeOnly": true },
-          "serverId": { "type": "string", "readOnly": true }
+          "name": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "serverId": {
+            "type": "string",
+            "readOnly": true
+          }
         }
       },
       "LabNestedVariant": {
         "type": "object",
-        "required": ["title", "items"],
+        "required": [
+          "title",
+          "items"
+        ],
         "properties": {
-          "title": { "type": "string" },
+          "title": {
+            "type": "string"
+          },
           "items": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/LabVariantItem" }
+            "items": {
+              "$ref": "#/components/schemas/LabVariantItem"
+            }
           }
         }
       },
       "LabTuple": {
         "type": "object",
-        "required": ["pair"],
+        "required": [
+          "pair"
+        ],
         "properties": {
           "pair": {
             "type": "array",
             "prefixItems": [
-              { "type": "string" },
-              { "type": "integer", "minimum": 0 }
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer",
+                "minimum": 0
+              }
             ]
           }
         }
       },
       "LabUnionSelector": {
         "type": "object",
-        "required": ["want"],
+        "required": [
+          "want"
+        ],
         "properties": {
-          "want": { "type": "string", "enum": ["circle", "square"] }
+          "want": {
+            "type": "string",
+            "enum": [
+              "circle",
+              "square"
+            ]
+          }
         }
       },
       "LabLooseUnion": {
         "type": "object",
-        "required": ["payload"],
+        "required": [
+          "payload"
+        ],
         "properties": {
           "payload": {
             "oneOf": [
               {
                 "type": "object",
-                "required": ["alpha"],
-                "properties": { "alpha": { "type": "string" } }
+                "required": [
+                  "alpha"
+                ],
+                "properties": {
+                  "alpha": {
+                    "type": "string"
+                  }
+                }
               },
               {
                 "type": "object",
-                "required": ["beta"],
-                "properties": { "beta": { "type": "integer" } }
+                "required": [
+                  "beta"
+                ],
+                "properties": {
+                  "beta": {
+                    "type": "integer"
+                  }
+                }
               }
             ]
           }
@@ -1053,57 +1838,113 @@
       },
       "LabQueryEcho": {
         "type": "object",
-        "required": ["tier", "count", "code"],
+        "required": [
+          "tier",
+          "count",
+          "code"
+        ],
         "properties": {
-          "tier": { "type": "string" },
-          "count": { "type": "integer" },
-          "code": { "type": "string" }
+          "tier": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "code": {
+            "type": "string"
+          }
         }
       },
       "LabHeaderEcho": {
         "type": "object",
-        "required": ["token"],
+        "required": [
+          "token"
+        ],
         "properties": {
-          "token": { "type": "string" }
+          "token": {
+            "type": "string"
+          }
         }
       },
       "LabDelimitedEcho": {
         "type": "object",
-        "required": ["csv", "ssv", "psv"],
+        "required": [
+          "csv",
+          "ssv",
+          "psv"
+        ],
         "properties": {
-          "csv": { "type": "array", "items": { "type": "string" } },
-          "ssv": { "type": "array", "items": { "type": "string" } },
-          "psv": { "type": "array", "items": { "type": "string" } }
+          "csv": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ssv": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "psv": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       },
       "LabDeepFilterEcho": {
         "type": "object",
-        "required": ["gte", "lte"],
+        "required": [
+          "gte",
+          "lte"
+        ],
         "properties": {
-          "gte": { "type": "number" },
-          "lte": { "type": "number" },
-          "color": { "type": "string" }
+          "gte": {
+            "type": "number"
+          },
+          "lte": {
+            "type": "number"
+          },
+          "color": {
+            "type": "string"
+          }
         }
       },
       "LabPathEcho": {
         "type": "object",
-        "required": ["score"],
+        "required": [
+          "score"
+        ],
         "properties": {
-          "score": { "type": "integer" }
+          "score": {
+            "type": "integer"
+          }
         }
       },
       "LabDualStatusEcho": {
         "type": "object",
-        "required": ["phase"],
+        "required": [
+          "phase"
+        ],
         "properties": {
-          "phase": { "type": "string" }
+          "phase": {
+            "type": "string"
+          }
         }
       },
       "LabInt64": {
         "type": "object",
-        "required": ["ledger"],
+        "required": [
+          "ledger"
+        ],
         "properties": {
-          "ledger": { "type": "integer", "format": "int64", "minimum": 0 }
+          "ledger": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
         }
       }
     }

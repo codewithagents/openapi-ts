@@ -701,24 +701,26 @@ test(
 )
 
 // ---------------------------------------------------------------------------
-// P9: /lab/dual-status — handler cannot override response status
+// P9: /lab/dual-status — handler selects 200 vs 202 via envelope (bug #10 fixed)
 // ---------------------------------------------------------------------------
 
-test.fixme(
-  'lab/dual-status: service cannot select 202 when both 200 and 202 are declared (Phase 2: always 200)',
+test(
+  'lab/dual-status: service returns 200 (done) or 202 (running) via status+body envelope',
   async ({ request }) => {
-    // PROMISED: the service should be able to return 202 (still running) vs 200 (done).
-    // A conformant implementation would expose the status as a handler parameter.
-    // ACTUAL: generator always emits c.json(await service.labDualStatus()) which hardcodes
-    // status 200 regardless of the declared response variants. There is no API surface for
-    // the service to select a response status code.
-    // Root cause: the service interface method returns a value (not a status+value pair).
-    // The router always calls c.json(result) with default 200. Multi-status is not expressible.
-    const res = await labGet(request, 'dual-status')
-    // A conformant server would let the service signal 202 for a long-running task.
-    // We assert 202 here to document the promised contract; actual is 200.
-    expect(res.status).toBe(202)
-    expect((res.body as Record<string, unknown>).phase).toBe('done')
+    // Bug #10 fixed: generator now emits envelope dispatch for multi-status ops.
+    // Service returns { status: number; body: T } and the router calls
+    // c.json(_envelope.body, _envelope.status) so the handler can select the status at runtime.
+
+    // Case 1: prefer=async -> 202 still running
+    const res202 = await request.get(`${LAB_BASE}/dual-status?prefer=async`)
+    expect(res202.status()).toBe(202)
+    const body202 = await res202.json() as Record<string, unknown>
+    expect(body202.phase).toBe('running')
+
+    // Case 2: no prefer param -> 200 done
+    const res200 = await labGet(request, 'dual-status')
+    expect(res200.status).toBe(200)
+    expect((res200.body as Record<string, unknown>).phase).toBe('done')
   },
 )
 
