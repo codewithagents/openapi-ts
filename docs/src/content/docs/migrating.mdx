@@ -7,6 +7,11 @@ import { Steps, Tabs, TabItem, Aside, Card, CardGrid } from '@astrojs/starlight/
 
 This guide is for developers who already have a TypeScript project with an OpenAPI generator set up and want to switch to `openapi-zod-ts`. It covers the mental model shift, the step-by-step switch, and what to watch for.
 
+<Aside type="note" title="Already using openapi-zod-ts v1?">
+  If you are upgrading from v1 to v2 rather than switching from another tool, jump straight to the
+  [Upgrading from v1 to v2](#upgrading-from-v1-to-v2) section below.
+</Aside>
+
 ## The mental model shift
 
 Many OpenAPI generators follow a pattern where the generated code depends on a runtime client library that the generator itself publishes. Your code calls into that runtime, and the generated types describe its API. The generator ships a package to `dependencies`, not just `devDependencies`.
@@ -177,7 +182,7 @@ This toolchain works differently:
         "generate": "openapi-zod-ts"
       },
       "devDependencies": {
-        "openapi-zod-ts": "^1.0.0"
+        "openapi-zod-ts": "^2.0.0"
       }
     }
     ```
@@ -203,13 +208,53 @@ This toolchain works differently:
 
 **`schemas.ts` is yours after bootstrap.** The first run with `input_schema` writes the file. Every subsequent run skips it. If the spec changes and the schema drifts, the generator prints a warning, but does not update the file automatically.
 
-**OpenAPI 3.0 `nullable` not yet normalized.** OpenAPI 3.0.x works in practice, with one known gap: the `nullable: true` construct is currently treated as optional rather than normalized to the 3.1 `type: [..., "null"]` semantics. Full normalization is planned. If your spec relies heavily on `nullable: true`, OpenAPI 3.1 gets the most complete treatment today.
+**OpenAPI 3.0.x support is best-effort.** OpenAPI 3.1 is the primary target. For 3.0.x specs, `nullable: true` is normalized to the 3.1 null-union form (`type: [..., "null"]`) before generation runs, so nullable fields produce the correct `T | null` types. Other 3.0.x constructs may receive less complete treatment than their 3.1 equivalents.
 
 **ESM only.** The generated files use `.js` extensions in imports (NodeNext resolution). Your project must use `"type": "module"` or be configured for ESM.
 
 **Zod v4 required** when using `input_schema`. The bootstrapped `schemas.ts` uses Zod v4 APIs. Zod v3 is not supported.
 
 </Aside>
+
+## Upgrading from v1 to v2
+
+### Breaking change: `int64` fields are now `number`, not `bigint`
+
+In v1, fields with `format: int64` generated `bigint` in TypeScript and `z.bigint()` in Zod schemas. In v2 they generate `number` and `z.number()`.
+
+The rationale: `JSON.stringify` throws when a value contains a `bigint`, and `JSON.parse` never produces a `bigint`. This makes `bigint` unworkable for any fetch-based API client. Precision is therefore limited to `Number.MAX_SAFE_INTEGER` (2^53-1), and the generated TypeScript type carries an inline comment to make that explicit:
+
+```typescript
+// generated/models.ts
+export interface Order {
+  id: number /* int64, precision limited to 2^53-1 */
+}
+```
+
+**How to fix your `schemas.ts`:** The generator never overwrites `schemas.ts`, so any `z.bigint()` you wrote (or that v1 bootstrapped) for an int64 property will produce a TypeScript compile error against the regenerated `number` types. Find those fields and replace `z.bigint()` with `z.number()`, removing any `BigInt(...)` conversions at call sites.
+
+```typescript
+// Before (v1)
+export const OrderSchema = z.object({
+  id: z.bigint(),
+})
+
+// After (v2)
+export const OrderSchema = z.object({
+  id: z.number(),
+})
+```
+
+### Non-breaking improvements worth regenerating for
+
+Re-running the generator after upgrading picks up several typing improvements:
+
+- **Inline object responses typed correctly** (#298): response schemas without a `$ref` are now typed as their actual inline object shape instead of `Record<string, unknown>`.
+- **Integer path params typed `number`** (#300): path parameters with `type: integer` or `type: number` are now `number` in the generated function signature instead of `string`.
+- **Bracket-notation array query params typed correctly** (#299): parameters like `ids[]` are typed `number[]` or `string[]` depending on the item schema, instead of always `string`.
+- **`Accept: application/json` header on all requests**: every generated fetch call now sends `Accept: application/json` automatically.
+
+None of these change the runtime behavior of existing working calls, but regenerating will improve type safety and remove unnecessary casts.
 
 ## Next steps
 

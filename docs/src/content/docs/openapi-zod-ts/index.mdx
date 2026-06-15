@@ -78,7 +78,17 @@ try {
 
 ## Configuration
 
-The config file must be valid JSON and must have a `.json` extension. By default the generator looks for `openapi-zod-ts.config.json` in the current working directory.
+The config file may be a JSON file (`.json`) or a JS/ESM module (`.js`, `.mjs`, `.cjs`). By default the generator looks for `openapi-zod-ts.config.json` in the current working directory. JS config files can import the `defineConfig` helper from `openapi-zod-ts` for autocomplete and type safety:
+
+```js
+// openapi-zod-ts.config.mjs
+import { defineConfig } from 'openapi-zod-ts'
+
+export default defineConfig({
+  input_openapi: './openapi.json',
+  output: './src/api',
+})
+```
 
 ### Full configuration reference
 
@@ -102,6 +112,36 @@ The config file must be valid JSON and must have a `.json` extension. By default
 }
 ```
 
+### Multi-spec projects array
+
+When a single config file needs to drive generation for several OpenAPI specs, use a top-level `projects` array. Each entry is a full config object. The generator runs them sequentially.
+
+```json
+{
+  "projects": [
+    { "input_openapi": "./services/users.json", "output": "./src/users" },
+    { "input_openapi": "./services/orders.json", "output": "./src/orders" }
+  ]
+}
+```
+
+JS config files can use the `defineProjects` helper for the same result with type safety:
+
+```js
+// openapi-zod-ts.config.mjs
+import { defineProjects } from 'openapi-zod-ts'
+
+export default defineProjects([
+  { input_openapi: './services/users.json', output: './src/users' },
+  { input_openapi: './services/orders.json', output: './src/orders' },
+])
+```
+
+<Aside type="caution">
+  `projects` and top-level `input_openapi`/`output` are mutually exclusive. Mixing them in the
+  same config file is a validation error. Use one form or the other.
+</Aside>
+
 ## CLI reference
 
 ```bash
@@ -109,14 +149,17 @@ npx openapi-zod-ts                                       # uses openapi-zod-ts.c
 npx openapi-zod-ts --config ./config/openapi-zod-ts.config.json  # explicit path
 ```
 
-| Flag       | Argument         | Description                                                                                                                                                         |
-| ---------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--config` | `<path-to.json>` | Path to a config file. Must end in `.json`. Relative paths inside the config file resolve from the config file's directory, not from the shell's working directory. |
+| Flag       | Argument      | Description                                                                                                                                                                              |
+| ---------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--config` | `<path>`      | Path to a config file (`.json`, `.js`, `.mjs`, or `.cjs`). Relative paths inside the config file resolve from the config file's directory, not from the shell's working directory.      |
+| `--input`  | `<path>`      | Path to the OpenAPI spec file. Overrides `input_openapi` from the config file for this run.                                                                                              |
+| `--output` | `<dir>`       | Output directory. Overrides `output` from the config file for this run.                                                                                                                  |
+| `--watch`  | _(none)_      | Re-run generation whenever the spec file changes. Press Ctrl-C to exit.                                                                                                                  |
 
 <Aside type="note">
-  The `--config` value must end in `.json`. Any other extension is rejected with an error. When
-  `--config` is used, all relative paths inside the config file resolve from the config file's
-  directory, not from the shell's working directory.
+  The `--config` flag accepts `.json`, `.js`, `.mjs`, and `.cjs` files. Any other extension is
+  rejected with an error. When `--config` is used, all relative paths inside the config file
+  resolve from the config file's directory, not from the shell's working directory.
 </Aside>
 
 ## Generated files in depth
@@ -447,7 +490,7 @@ The package itself is published as ESM. It must be used from an ESM context (`"t
 
 ### "Config file not found"
 
-The generator looks for `openapi-zod-ts.config.json` in the current working directory. If you run the CLI from a subdirectory or use a different file name, pass `--config <path>` explicitly. The path argument must end in `.json`.
+The generator looks for `openapi-zod-ts.config.json` in the current working directory. If you run the CLI from a subdirectory or use a different file name, pass `--config <path>` explicitly. The path argument must end in `.json`, `.js`, `.mjs`, or `.cjs`.
 
 ### Output files are not regenerating
 

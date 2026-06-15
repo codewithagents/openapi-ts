@@ -26,3 +26,7 @@ flags:
     paths:
       - packages/openapi-server/src/
     carryforward: true
+  openapi-msw:
+    paths:
+      - packages/openapi-msw/src/
+    carryforward: true

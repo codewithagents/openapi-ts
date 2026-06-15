@@ -9,11 +9,11 @@ The mission of this toolchain is zero-footprint bridge between OpenAPI and Zod f
 
 ## Now: shipped
 
-### `@codewithagents/api-errors` (v0.2.0)
+### `@codewithagents/api-errors` (v1.2.0)
 
-Maps backend API error responses to form field errors. Framework-agnostic core with a React Hook Form adapter.
+Maps backend API error responses to form field errors. Framework-agnostic core with adapters for React Hook Form, Formik, TanStack Form, and vanilla JavaScript.
 
-Supported formats: RFC 7807 Problem Details, Spring Boot validation, flat field/message objects, and Axios response wrappers.
+Supported parsers: RFC 7807 / RFC 9457 Problem Details, Spring Boot validation errors, violations / invalid-params shapes, JSON:API error objects, Laravel and DRF error formats, flat field/message objects, GraphQL error extensions, Zod flatten output, and Axios response wrappers.
 
 ### `openapi-zod-ts` (shipped)
 
@@ -27,37 +27,39 @@ Core features shipped:
 - `index.ts`: barrel re-export of all three files
 - Optional Zod integration via `input_schema`: bootstraps `schemas.ts` on first run, then validates requests and responses on every call
 - Optional `server.ts` via `server_client: true`: `createServerClient()` factory for SSR
+- Multi-spec `projects` array in config: drive N separate generations from one config file
 
-## Next: near-term
-
-### `@codewithagents/openapi-react-query`
+### `@codewithagents/openapi-react-query` (v3.12.1)
 
 A separate package layered on top of `openapi-zod-ts`. Reads the same `openapi.json` and the output of the generator, then produces React Query v5 hooks.
 
 - `queryOptions` factories for GET endpoints
 - `useMutation` hooks for write operations
+- `useInfiniteQuery` hooks for paginated endpoints
 - Imports from `openapi-zod-ts`'s `client.ts` output
 - Peer dependency: `@tanstack/react-query`
 
-### Full OpenAPI 3.0 normalization
+### `@codewithagents/openapi-server` (v1.8.0)
 
-OpenAPI 3.0.x is currently supported on a best-effort basis. One known gap: `nullable: true` (a 3.0 construct) is not yet normalized to its 3.1 equivalent (`type: [..., "null"]` semantics). Full normalization of the 3.0 nullable pattern is planned for a future release so that 3.0 specs are handled with the same fidelity as 3.1.
-
-## Later: planned
-
-### `@codewithagents/openapi-server`
-
-Server-side counterpart to `openapi-zod-ts`. Reads the same `openapi.json` and generates typed Fastify route definitions using the same Zod schemas.
+Server-side counterpart to `openapi-zod-ts`. Reads the same `openapi.json` and generates a framework-agnostic service interface plus optional routers for Hono, Express, and Fastify.
 
 The full-stack story this enables:
 
 ```
 openapi.json + schemas.ts
     ├── openapi-zod-ts        → client validates responses with user's Zod schemas
-    └── openapi-zod-ts-server → server validates requests with the same Zod schemas
+    └── openapi-server        → server validates requests with the same Zod schemas
 ```
 
-Peer dependencies: `fastify` and `fastify-type-provider-zod`.
+Peer dependencies: `hono`, `express`, or `fastify` depending on the chosen framework.
+
+### `@codewithagents/openapi-msw` (v0.2.0)
+
+Generates MSW v2 HTTP handlers with seeded Faker mock data from an OpenAPI 3.1 spec. Produces a single `handlers.ts` file ready to drop into a Storybook or Vitest browser setup.
+
+- One `http.<method>(path, resolver)` handler per operation
+- Faker-seeded responses derived from response schemas
+- Peer dependencies: `msw` and `@faker-js/faker`
 
 <Aside type="note">
   This roadmap reflects the current state of the project. Priorities shift as feedback comes in.
