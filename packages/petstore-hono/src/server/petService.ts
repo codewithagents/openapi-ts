@@ -223,15 +223,16 @@ export const petService: PetstoreService = {
     return { phase: 'done' }
   },
 
-  async labPlainText() {
-    // text/plain response. Generator derives Promise<void> (no json response type).
-    // Router calls c.json(undefined) → JSON null, Content-Type: application/json.
-    // The promised contract: Content-Type: text/plain, raw string body.
+  async labPlainText(): Promise<string> {
+    // Bug #11 fixed: generator now emits c.text() for text/plain responses.
+    // Service returns a plain string; router emits it with Content-Type: text/plain.
+    return 'lab plain text body'
   },
 
-  async labDownload() {
-    // application/octet-stream response. Same as plain-text: generator uses c.json(undefined).
-    // Promised: binary download with correct Content-Type. Actual: JSON null.
+  async labDownload(): Promise<Uint8Array> {
+    // Bug #11 fixed: generator now emits new Response(_result, { 'content-type': 'application/octet-stream' }).
+    // Service returns raw bytes; router wraps them with the correct Content-Type header.
+    return new TextEncoder().encode('binary-content')
   },
 
   async labInt64(body) {

@@ -723,40 +723,35 @@ test.fixme(
 )
 
 // ---------------------------------------------------------------------------
-// P10: /lab/plain-text and /lab/download — non-JSON response not expressible
+// P10: /lab/plain-text and /lab/download — non-JSON responses (bug #11 fixed)
 // ---------------------------------------------------------------------------
 
-test.fixme(
-  'lab/plain-text: GET returns Content-Type: text/plain with raw string body (Phase 2: generator calls c.json())',
-  async ({ request }) => {
-    // PROMISED: spec declares text/plain response → Content-Type: text/plain, raw string body.
-    // ACTUAL: getBodyInfo returns void for non-JSON response content types. The generator
-    // derives Promise<void> as the return type and calls c.json(await service.labPlainText())
-    // which is c.json(undefined) → JSON null with Content-Type: application/json.
-    // Root cause: router.ts always emits c.json() regardless of the spec response content type.
-    const res = await request.get(`${LAB_BASE}/plain-text`, {
-      headers: { Accept: 'text/plain' },
-    })
-    expect(res.status()).toBe(200)
-    expect(res.headers()['content-type']).toMatch(/text\/plain/)
-    const text = await res.text()
-    expect(text).toBe('lab plain text body')
-  },
-)
+test('lab/plain-text: GET returns Content-Type: text/plain with raw string body', async ({
+  request,
+}) => {
+  // Bug #11 fixed: generator now detects text/plain response content type and emits
+  // c.text() instead of c.json(). Service returns Promise<string>.
+  const res = await request.get(`${LAB_BASE}/plain-text`, {
+    headers: { Accept: 'text/plain' },
+  })
+  expect(res.status()).toBe(200)
+  expect(res.headers()['content-type']).toMatch(/text\/plain/)
+  const text = await res.text()
+  expect(text).toBe('lab plain text body')
+})
 
-test.fixme(
-  'lab/download: GET returns Content-Type: application/octet-stream with binary body (Phase 2: generator calls c.json())',
-  async ({ request }) => {
-    // PROMISED: spec declares application/octet-stream → binary download response.
-    // ACTUAL: same as plain-text: generator emits c.json(undefined) → JSON null.
-    // Root cause: router.ts always emits c.json() regardless of response content type.
-    const res = await request.get(`${LAB_BASE}/download`, {
-      headers: { Accept: 'application/octet-stream' },
-    })
-    expect(res.status()).toBe(200)
-    expect(res.headers()['content-type']).toMatch(/octet-stream/)
-  },
-)
+test('lab/download: GET returns Content-Type: application/octet-stream with binary body', async ({
+  request,
+}) => {
+  // Bug #11 fixed: generator now detects application/octet-stream and emits
+  // new Response(_result, { 'content-type': 'application/octet-stream' }).
+  // Service returns Promise<Uint8Array>.
+  const res = await request.get(`${LAB_BASE}/download`, {
+    headers: { Accept: 'application/octet-stream' },
+  })
+  expect(res.status()).toBe(200)
+  expect(res.headers()['content-type']).toMatch(/octet-stream/)
+})
 
 // ---------------------------------------------------------------------------
 // P11: /lab/int64 — min leg active; max bound loses precision in JavaScript
@@ -775,22 +770,23 @@ test('lab/int64: valid int64 (small) round-trips and negative value is rejected'
 })
 
 test.fixme(
-  'lab/int64: int64 value > MAX_SAFE_INTEGER is accepted and echoed (Phase 2: JS precision loss + Zod implicit int range)',
+  'lab/int64: int64 value > MAX_SAFE_INTEGER is accepted and echoed (KNOWN LIMITATION: JS precision + Zod implicit int range)',
   async ({ request }) => {
-    // PROMISED: ledger=9007199254740993 (2^53 + 1) is a valid spec value (minimum:0, no maximum).
-    // A conformant server should accept it and echo it precisely.
+    // KNOWN, INTENTIONAL LIMITATION. Do NOT attempt to fix. File as an open issue when the branch is pushed.
     //
-    // ACTUAL observed (status 422): TWO compounding bugs.
-    //   (a) JavaScript number 9007199254740993 === 9007199254740992 (IEEE 754 can't represent 2^53+1).
-    //       Playwright sends 9007199254740992 in the JSON body (silent client-side precision loss).
-    //   (b) Zod v4 z.number().int() adds an implicit "integers must be within safe integer range"
-    //       constraint: maximum = 9007199254740991. The received value 9007199254740992 exceeds
-    //       this implicit bound → Zod rejects with 422 ("Too big: expected int to be <=9007199254740991").
-    //   Net result: large int64 values cannot be sent OR received without precision loss or Zod rejection.
+    // Two compounding root causes prevent representing int64 values > Number.MAX_SAFE_INTEGER (2^53 - 1):
+    //   (a) JavaScript/JSON cannot represent integers > 2^53 - 1. The constant 9007199254740993
+    //       equals 9007199254740992 at runtime (IEEE 754 silent precision loss). Playwright
+    //       therefore sends 9007199254740992 in the JSON body.
+    //   (b) Zod v4 z.number().int() implicitly constrains integers to [-MAX_SAFE, MAX_SAFE]
+    //       (i.e. maximum = 9007199254740991). The received value 9007199254740992 exceeds
+    //       this implicit bound, so Zod rejects with 422 ("Too big: expected int to be <=9007199254740991").
     //
-    // Root cause (server-side): z.number().int() in Zod v4 implicitly constrains to [-MAX_SAFE, MAX_SAFE].
-    // Root cause (client-side): JavaScript JSON cannot represent integers > 2^53 - 1.
-    const MAX_SAFE_PLUS_ONE = 9007199254740993 // === 9007199254740992 in JS
+    // Fixing this would require BigInt transport (JSON-string encoding for large int64 values)
+    // at both the schema layer (Zod z.bigint()) and the wire layer (custom JSON serializer).
+    // That is a significant breaking change to the generated types and is out of scope for this
+    // branch. Leave this as a permanent test.fixme and open a tracking issue when the branch is pushed.
+    const MAX_SAFE_PLUS_ONE = 9007199254740993 // === 9007199254740992 at runtime in JS
     const res = await labPost(request, 'int64', { ledger: MAX_SAFE_PLUS_ONE })
     // Promised: 200 with precise echo. Actual: 422 (Zod implicit int range + JS precision loss).
     expect(res.status).toBe(LAB_OK)
