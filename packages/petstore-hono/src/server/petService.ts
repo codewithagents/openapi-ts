@@ -162,7 +162,8 @@ export const petService: PetstoreService = {
   },
 
   async labInlineBody(body) {
-    // Inline body: no Zod validation wired by the generator (inline schema, not a ref).
+    // Inline body: generator now synthesizes LabInlineBodySchema from operationId and
+    // wires safeParse. Handler receives the already-validated body; echo it back.
     return body
   },
 
@@ -191,8 +192,9 @@ export const petService: PetstoreService = {
   },
 
   async labFormBody(body) {
-    // form-urlencoded body: the generator calls c.req.json() which will throw a
-    // SyntaxError on URL-encoded data. This handler is not reached; Hono returns 500.
+    // Form-urlencoded body: generator now uses parseBody() and wires LabFormBodySchema.safeParse.
+    // z.coerce.number() in the schema converts string form values to numbers.
+    // Handler receives the already-validated and coerced body; echo it back.
     return body
   },
 

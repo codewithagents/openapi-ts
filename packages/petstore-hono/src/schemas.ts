@@ -187,3 +187,18 @@ export const LabHeaderEchoSchema = z.object({
 export const LabInt64Schema = z.object({
   ledger: z.number().int().min(0),
 })
+
+// Inline JSON body (Bug #1): the generator synthesizes the name LabInlineBody
+// from operationId 'labInlineBody' and looks for LabInlineBodySchema here.
+export const LabInlineBodySchema = z.object({
+  title: z.string().min(2),
+  rank: z.number().int().min(1).max(5),
+})
+
+// Form-urlencoded body (Bug #7): the generator synthesizes the name LabFormBody
+// from operationId 'labFormBody' and looks for LabFormBodySchema here.
+// Form values are strings on the wire; z.coerce.number() handles the conversion.
+export const LabFormBodySchema = z.object({
+  label: z.string(),
+  quantity: z.coerce.number().int(),
+})

@@ -540,24 +540,20 @@ test('K3: JSON array where an object is expected is a clean 422', async ({ reque
 // L. INLINE BODY (Step 0 verification + Phase 2 fixme)
 // ===========================================================================
 
-test('lab/inline-body: valid inline body is accepted (no Zod wired — generator limitation)', async ({
+test('lab/inline-body: valid inline body is accepted and echoed', async ({
   request,
 }) => {
-  // The inline body has no safeParse wired by the generator (getBodyInfo returns
-  // typeName:undefined for inline schemas, so no schema name is derived and no
-  // validation block is emitted). The handler accepts anything.
+  // Bug #1 fixed: LabInlineBodySchema.safeParse is now wired. Valid input passes and is echoed.
   const ok = await labPost(request, 'inline-body', { title: 'hello', rank: 3 })
   expect(ok.status).toBe(LAB_OK)
   expect(ok.body).toEqual({ title: 'hello', rank: 3 })
 })
 
-test.fixme(
-  'lab/inline-body: constraint violations on inline body → 422 (Phase 2: no safeParse wired for inline schemas)',
+test(
+  'lab/inline-body: constraint violations on inline body → 422',
   async ({ request }) => {
-    // FIXME: the router emits `const body = await c.req.json()` with NO safeParse call for
-    // inline (non-$ref) request bodies. getBodyInfo() in shared.ts returns { typeName: undefined }
-    // for inline schemas, so no schema name is derived and no validation is emitted.
-    // Root cause: packages/openapi-server/src/plugins/shared.ts getBodyInfo() line 227.
+    // Bug #1 fixed: getBodyInfo() now synthesizes LabInlineBody from the operationId for
+    // inline JSON schemas. The router wires LabInlineBodySchema.safeParse → 422 on violation.
     expect((await labPost(request, 'inline-body', { title: 'x', rank: 3 })).status).toBe(422) // minLength:2
     expect((await labPost(request, 'inline-body', { title: 'hello', rank: 9 })).status).toBe(422) // max:5
     expect((await labPost(request, 'inline-body', { title: 'hello' })).status).toBe(422) // required rank
@@ -649,15 +645,12 @@ test(
 // P6: /lab/form-body — application/x-www-form-urlencoded not decoded
 // ---------------------------------------------------------------------------
 
-test.fixme(
-  'lab/form-body: form-urlencoded body is decoded and echoed (Phase 2: generator calls c.req.json() → 500)',
+test(
+  'lab/form-body: form-urlencoded body is decoded and echoed',
   async ({ request }) => {
-    // PROMISED: POST with application/x-www-form-urlencoded body is decoded to { label, quantity }.
-    // ACTUAL: router emits const body = await c.req.json() which calls JSON.parse() on the
-    // URL-encoded string. JSON.parse('label=hello&quantity=5') throws a SyntaxError.
-    // Hono's default error handler catches this and returns 500 Internal Server Error.
-    // Root cause: getBodyInfo() in shared.ts only inspects content['application/json'];
-    // non-JSON content types get { typeName: undefined } → no schema, plain c.req.json() call.
+    // Bug #7 fixed: getBodyInfo() now recognises application/x-www-form-urlencoded.
+    // Router checks CT, decodes via c.req.parseBody(), runs LabFormBodySchema.safeParse
+    // (z.coerce.number() converts string quantity to integer). Returns 200 echo.
     const res = await request.post(`${LAB_BASE}/form-body`, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       data: 'label=hello&quantity=5',
