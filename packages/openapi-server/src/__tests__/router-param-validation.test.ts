@@ -630,3 +630,191 @@ describe('$ref path params resolve to their schema for validation', () => {
     expect(content).toContain('_pv')
   })
 })
+
+// ── Query param: enum constraint ──────────────────────────────────────────────
+
+describe('query param with enum emits z.enum([...])', () => {
+  const enumQuerySpec = makeSpec({
+    '/items': {
+      get: {
+        operationId: 'listItems',
+        parameters: [
+          {
+            name: 'tier',
+            in: 'query',
+            required: true,
+            schema: { type: 'string', enum: ['bronze', 'silver', 'gold'] },
+          },
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it.each(allFrameworks)('%s: emits z.enum([...]) for string enum constraint', (_, gen) => {
+    const { content } = gen(enumQuerySpec)
+    expect(content).toContain('_qv')
+    expect(content).toContain('z.enum(["bronze", "silver", "gold"])')
+    expect(content).toContain("import { z } from 'zod'")
+  })
+})
+
+// ── Query param: min/max constraints ─────────────────────────────────────────
+
+describe('query param with minimum/maximum emits .min()/.max() on z.number()', () => {
+  const rangeQuerySpec = makeSpec({
+    '/items': {
+      get: {
+        operationId: 'listItems',
+        parameters: [
+          {
+            name: 'count',
+            in: 'query',
+            required: true,
+            schema: { type: 'integer', minimum: 1, maximum: 100 },
+          },
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it.each(allFrameworks)('%s: emits z.number().min(1).max(100)', (_, gen) => {
+    const { content } = gen(rangeQuerySpec)
+    expect(content).toContain('_qv')
+    expect(content).toContain('z.number().min(1).max(100)')
+  })
+})
+
+// ── Query param: pattern constraint ──────────────────────────────────────────
+
+describe('query param with pattern emits .regex() on z.string()', () => {
+  const patternQuerySpec = makeSpec({
+    '/items': {
+      get: {
+        operationId: 'listItems',
+        parameters: [
+          {
+            name: 'code',
+            in: 'query',
+            required: true,
+            schema: { type: 'string', pattern: '^[A-Z]{3}$' },
+          },
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it.each(allFrameworks)('%s: emits z.string().regex(/^[A-Z]{3}$/) for pattern constraint', (_, gen) => {
+    const { content } = gen(patternQuerySpec)
+    expect(content).toContain('_qv')
+    expect(content).toContain('z.string().regex(/^[A-Z]{3}$/)')
+  })
+})
+
+// ── Query param: optional string with constraint still emits _qv ─────────────
+
+describe('optional string query param with enum constraint still emits validation', () => {
+  const optionalEnumSpec = makeSpec({
+    '/items': {
+      get: {
+        operationId: 'listItems',
+        parameters: [
+          {
+            name: 'status',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', enum: ['active', 'inactive'] },
+          },
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it.each(allFrameworks)('%s: optional enum param still emits _qv with z.enum([...]).optional()', (_, gen) => {
+    const { content } = gen(optionalEnumSpec)
+    expect(content).toContain('_qv')
+    expect(content).toContain('z.enum(["active", "inactive"]).optional()')
+  })
+})
+
+// ── Header param: pattern constraint ─────────────────────────────────────────
+
+describe('header param with pattern emits .regex() on z.string()', () => {
+  const patternHeaderSpec = makeSpec({
+    '/items': {
+      get: {
+        operationId: 'listItems',
+        parameters: [
+          {
+            name: 'x-token',
+            in: 'header',
+            required: true,
+            schema: { type: 'string', pattern: '^tok-[0-9]{4}$' },
+          },
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it.each(allFrameworks)('%s: emits z.string().regex(/^tok-[0-9]{4}$/) for header pattern', (_, gen) => {
+    const { content } = gen(patternHeaderSpec)
+    expect(content).toContain('_hv')
+    expect(content).toContain('z.string().regex(/^tok-[0-9]{4}$/)')
+  })
+})
+
+// ── Path param: integer range constraint ──────────────────────────────────────
+
+describe('integer path param with minimum/maximum generates Zod coerce validation', () => {
+  const intPathSpec = makeSpec({
+    '/items/{score}': {
+      get: {
+        operationId: 'getItem',
+        parameters: [
+          {
+            name: 'score',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer', minimum: 10, maximum: 20 },
+          },
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it.each(allFrameworks)('%s: emits _pv with z.coerce.number().min(10).max(20)', (_, gen) => {
+    const { content } = gen(intPathSpec)
+    expect(content).toContain('_pv')
+    expect(content).toContain('z.coerce.number().min(10).max(20)')
+    expect(content).toContain("import { z } from 'zod'")
+  })
+
+  it('Hono: _pv.safeParse uses c.req.param("score") accessor', () => {
+    const { content } = generateRouter(intPathSpec)
+    expect(content).toContain('c.req.param("score")')
+    expect(content).toContain('_pv.success')
+    expect(content).toContain("error: 'Invalid path parameters'")
+  })
+
+  it('integer path param without min/max does NOT generate _pv', () => {
+    const noConstraintSpec = makeSpec({
+      '/items/{id}': {
+        get: {
+          operationId: 'getItem',
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'integer' } },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateRouter(noConstraintSpec)
+    expect(content).not.toContain('_pv')
+    expect(content).not.toContain('z.coerce.number()')
+  })
+})

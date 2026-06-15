@@ -44,6 +44,14 @@ interface HeaderParam {
   rawName: string
   /** Whether the header is required. */
   required: boolean
+  /** Allowed values from the schema enum constraint. */
+  enum?: string[]
+  /** Minimum string length from schema.minLength. */
+  minLength?: number
+  /** Maximum string length from schema.maxLength. */
+  maxLength?: number
+  /** Regex pattern from schema.pattern. */
+  pattern?: string
 }
 
 /**
@@ -68,14 +76,40 @@ function formatToZodModifier(format: string): string {
 
 /**
  * Build a Zod expression for a path parameter based on its schema.
- * Returns undefined when the parameter does not need format validation
- * (simple string with no format constraint or non-string types used as strings in URLs).
+ * Returns undefined when the parameter does not need validation.
+ *
+ * String params: validates format (uuid, email, url, date-time) via z.string().format().
+ * Integer/number params: validates range (minimum/maximum) via z.coerce.number().min().max().
+ * z.coerce.number() is used for path params because c.req.param() always returns a string;
+ * coercion converts the URL string to a number before the min/max check.
  */
 function pathParamZodExpr(
   schema: OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
 ): string | undefined {
   if (schema === undefined || isRef(schema)) return undefined
-  const s = schema as OpenAPIV3_1.SchemaObject
+  const s = schema as OpenAPIV3_1.SchemaObject & {
+    exclusiveMinimum?: number | boolean
+    exclusiveMaximum?: number | boolean
+  }
+
+  // Integer / number path params with range constraints
+  if (s.type === 'integer' || s.type === 'number') {
+    const hasMin = typeof s.minimum === 'number'
+    const hasMax = typeof s.maximum === 'number'
+    const hasExcMin = typeof s.exclusiveMinimum === 'number'
+    const hasExcMax = typeof s.exclusiveMaximum === 'number'
+    if (hasMin || hasMax || hasExcMin || hasExcMax) {
+      let expr = 'z.coerce.number()'
+      if (hasMin) expr += `.min(${s.minimum})`
+      if (hasMax) expr += `.max(${s.maximum})`
+      if (hasExcMin) expr += `.gt(${s.exclusiveMinimum})`
+      if (hasExcMax) expr += `.lt(${s.exclusiveMaximum})`
+      return expr
+    }
+    return undefined
+  }
+
+  // String path params: only validated when a known format modifier exists
   if (s.type !== 'string') return undefined
   const format = s.format as string | undefined
   if (format === undefined) return undefined
@@ -85,33 +119,53 @@ function pathParamZodExpr(
 }
 
 /**
- * Build a Zod expression for a query or header parameter based on its schema.
+ * Build a Zod expression for a query parameter based on its captured constraints.
  * Number/integer types use z.number() (after coercion by extraction code).
- * String types use z.string(). Boolean types use z.boolean().
+ * String types use z.string() with optional format/enum/pattern/length modifiers.
  * Appends .optional() for non-required params.
  */
-function paramZodExpr(
-  tsType: string,
-  required: boolean,
-  schema?: OpenAPIV3_1.SchemaObject | ReferenceObject
-): string {
+function queryParamZodExpr(param: QueryParam): string {
   let base: string
-  if (tsType === 'number') {
+  if (param.tsType === 'number') {
     base = 'z.number()'
-  } else if (tsType === 'boolean') {
+    if (param.minimum !== undefined) base += `.min(${param.minimum})`
+    if (param.maximum !== undefined) base += `.max(${param.maximum})`
+    if (param.exclusiveMinimum !== undefined) base += `.gt(${param.exclusiveMinimum})`
+    if (param.exclusiveMaximum !== undefined) base += `.lt(${param.exclusiveMaximum})`
+  } else if (param.tsType === 'boolean') {
     base = 'z.boolean()'
   } else {
-    // string
-    if (schema !== undefined && !isRef(schema)) {
-      const s = schema as OpenAPIV3_1.SchemaObject
-      const format = s.format as string | undefined
-      const modifier = format !== undefined ? formatToZodModifier(format) : ''
-      base = `z.string()${modifier}`
+    // string — check for enum first, then format/pattern/length
+    if (param.enum !== undefined && param.enum.length > 0) {
+      const members = param.enum.map((v) => JSON.stringify(v)).join(', ')
+      base = `z.enum([${members}])`
     } else {
       base = 'z.string()'
     }
+    if (param.minLength !== undefined) base += `.min(${param.minLength})`
+    if (param.maxLength !== undefined) base += `.max(${param.maxLength})`
+    if (param.pattern !== undefined) base += `.regex(/${param.pattern}/)`
   }
-  return required ? base : `${base}.optional()`
+  return param.required ? base : `${base}.optional()`
+}
+
+/**
+ * Build a Zod expression for a header parameter based on its captured constraints.
+ * Header values are always strings; emits z.string() or z.enum([...]) with optional
+ * pattern/length modifiers. Appends .optional() for non-required params.
+ */
+function headerParamZodExpr(param: HeaderParam): string {
+  let base: string
+  if (param.enum !== undefined && param.enum.length > 0) {
+    const members = param.enum.map((v) => JSON.stringify(v)).join(', ')
+    base = `z.enum([${members}])`
+  } else {
+    base = 'z.string()'
+  }
+  if (param.minLength !== undefined) base += `.min(${param.minLength})`
+  if (param.maxLength !== undefined) base += `.max(${param.maxLength})`
+  if (param.pattern !== undefined) base += `.regex(/${param.pattern}/)`
+  return param.required ? base : `${base}.optional()`
 }
 
 /**
@@ -146,7 +200,7 @@ function getPathParamValidations(
 }
 
 /**
- * Collect header parameters from an operation.
+ * Collect header parameters from an operation, including schema constraints.
  */
 function getHeaderParams(operation: OperationObject, spec: OpenAPIV3_1.Document): HeaderParam[] {
   const parameters = operation.parameters as (ParameterObject | ReferenceObject)[] | undefined
@@ -156,20 +210,49 @@ function getHeaderParams(operation: OperationObject, spec: OpenAPIV3_1.Document)
   for (const p of parameters) {
     const resolved = resolveParam(p, spec)
     if (resolved === undefined || resolved.in !== 'header') continue
-    result.push({
+    const param: HeaderParam = {
       rawName: resolved.name,
       required: resolved.required === true,
-    })
+    }
+    const schema = resolved.schema as OpenAPIV3_1.SchemaObject | undefined
+    if (schema !== undefined && !isRef(schema)) {
+      const s = schema as OpenAPIV3_1.SchemaObject
+      if (Array.isArray(s.enum)) param.enum = s.enum as string[]
+      if (typeof s.minLength === 'number') param.minLength = s.minLength
+      if (typeof s.maxLength === 'number') param.maxLength = s.maxLength
+      if (typeof s.pattern === 'string') param.pattern = s.pattern
+    }
+    result.push(param)
   }
   return result
 }
 
 /**
+ * Returns true when a query param carries schema constraints beyond basic type/required.
+ * These constraints require a Zod validation block even if the param is optional or string.
+ */
+function queryParamHasConstraints(q: QueryParam): boolean {
+  return (
+    q.enum !== undefined ||
+    q.minimum !== undefined ||
+    q.maximum !== undefined ||
+    q.exclusiveMinimum !== undefined ||
+    q.exclusiveMaximum !== undefined ||
+    q.minLength !== undefined ||
+    q.maxLength !== undefined ||
+    q.pattern !== undefined
+  )
+}
+
+/**
  * Determine whether query params need a Zod validation block.
- * Triggered when any param is required or has a non-string type (to catch NaN/invalid input).
+ * Triggered when any param is required, has a non-string type (to catch NaN/invalid input),
+ * or carries schema constraints (enum, min/max, pattern, etc.).
  */
 function queryParamsNeedValidation(queryParams: QueryParam[]): boolean {
-  return queryParams.some((q) => q.required || q.tsType !== 'string')
+  return queryParams.some(
+    (q) => q.required || q.tsType !== 'string' || queryParamHasConstraints(q)
+  )
 }
 
 /**
@@ -183,7 +266,7 @@ function emitQueryValidation(lines: string[], queryParams: QueryParam[], indent:
   const fieldIndent = `${indent}    `
   const fields = queryParams
     .map((q) => {
-      const expr = paramZodExpr(q.tsType, q.required)
+      const expr = queryParamZodExpr(q)
       return `${fieldIndent}${q.name}: ${expr}`
     })
     .join(',\n')
@@ -254,7 +337,7 @@ function emitHeaderValidation(
   const schemaFields = headerParams
     .map((h) => {
       const key = JSON.stringify(h.rawName)
-      const expr = h.required ? 'z.string()' : 'z.string().optional()'
+      const expr = headerParamZodExpr(h)
       return `${fieldIndent}${key}: ${expr}`
     })
     .join(',\n')

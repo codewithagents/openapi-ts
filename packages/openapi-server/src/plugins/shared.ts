@@ -175,6 +175,22 @@ export interface QueryParam {
   name: string
   tsType: string
   required: boolean
+  /** Allowed values from the schema enum constraint. */
+  enum?: string[]
+  /** Inclusive minimum from schema.minimum. */
+  minimum?: number
+  /** Inclusive maximum from schema.maximum. */
+  maximum?: number
+  /** Exclusive minimum from schema.exclusiveMinimum (numeric form, OpenAPI 3.1). */
+  exclusiveMinimum?: number
+  /** Exclusive maximum from schema.exclusiveMaximum (numeric form, OpenAPI 3.1). */
+  exclusiveMaximum?: number
+  /** Minimum string length from schema.minLength. */
+  minLength?: number
+  /** Maximum string length from schema.maxLength. */
+  maxLength?: number
+  /** Regex pattern from schema.pattern. */
+  pattern?: string
 }
 
 export function getQueryParams(
@@ -189,12 +205,30 @@ export function getQueryParams(
     const resolved = resolveParam(p, spec)
     if (resolved === undefined || resolved.in !== 'query') continue
 
-    const schema = resolved.schema as OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
-    result.push({
+    const schema = resolved.schema as OpenAPIV3_1.SchemaObject | undefined
+    const param: QueryParam = {
       name: normalizeParamName(resolved.name),
       tsType: schemaToTsType(schema),
       required: resolved.required === true,
-    })
+    }
+
+    if (schema !== undefined && !isRef(schema)) {
+      const s = schema as OpenAPIV3_1.SchemaObject & {
+        exclusiveMinimum?: number | boolean
+        exclusiveMaximum?: number | boolean
+      }
+      if (Array.isArray(s.enum)) param.enum = s.enum as string[]
+      if (typeof s.minimum === 'number') param.minimum = s.minimum
+      if (typeof s.maximum === 'number') param.maximum = s.maximum
+      // OpenAPI 3.1 uses numeric exclusiveMinimum/exclusiveMaximum; 3.0 uses boolean.
+      if (typeof s.exclusiveMinimum === 'number') param.exclusiveMinimum = s.exclusiveMinimum
+      if (typeof s.exclusiveMaximum === 'number') param.exclusiveMaximum = s.exclusiveMaximum
+      if (typeof s.minLength === 'number') param.minLength = s.minLength
+      if (typeof s.maxLength === 'number') param.maxLength = s.maxLength
+      if (typeof s.pattern === 'string') param.pattern = s.pattern
+    }
+
+    result.push(param)
   }
   return result
 }

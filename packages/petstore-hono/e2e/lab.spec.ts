@@ -462,13 +462,9 @@ test('lab/query: required query params missing → 422; valid params → 200 ech
   expect((await labGet(request, 'query?tier=gold&count=50')).status).toBe(422)
 })
 
-test.fixme(
-  'lab/query: enum+min/max+pattern query param violations → 422 (Phase 2: generator does not emit those constraints on query params)',
+test(
+  'lab/query: enum+min/max+pattern query param violations → 422',
   async ({ request }) => {
-    // FIXME: the generator emits only z.string()/z.number() for query params,
-    // no enum/min/max/pattern constraints. These 422s cannot fire yet.
-    // Root cause: router.ts emitQueryValidation uses paramZodExpr which only
-    // checks tsType (string/number) and required, ignoring schema constraints.
     expect((await labGet(request, 'query?tier=platinum&count=50&code=ABC')).status).toBe(422) // enum
     expect((await labGet(request, 'query?tier=gold&count=0&code=ABC')).status).toBe(422) // min:1
     expect((await labGet(request, 'query?tier=gold&count=999&code=ABC')).status).toBe(422) // max:100
@@ -491,13 +487,9 @@ test('lab/header: required header present → 200; missing header → 422', asyn
   expect(missing.status).toBe(422)
 })
 
-test.fixme(
-  'lab/header: pattern-violating header value → 422 (Phase 2: generator emits z.string() only, pattern ignored)',
+test(
+  'lab/header: pattern-violating header value → 422',
   async ({ request }) => {
-    // FIXME: the generator emits z.string() for header params — pattern ^tok-[0-9]{4}$ is not
-    // enforced. Root cause: router.ts emitHeaderValidation uses a bare z.string() expression
-    // regardless of the spec pattern constraint (shared.ts getHeaderParams only captures
-    // rawName and required, not the schema).
     const bad = await labGet(request, 'header', { 'X-Lab-Token': 'garbage' })
     expect(bad.status).toBe(422)
   },
@@ -645,14 +637,9 @@ test('lab/path/{score}: in-range integer path param round-trips as number', asyn
   expect(typeof body.score).toBe('number')
 })
 
-test.fixme(
-  'lab/path/{score}: out-of-range integer path param → 422 (Phase 2: generator emits no path-param validation)',
+test(
+  'lab/path/{score}: out-of-range integer path param → 422',
   async ({ request }) => {
-    // PROMISED: score=25 (exceeds maximum:20) → 422.
-    // ACTUAL: generator emits c.req.param('score') with NO range validation. The router
-    // calls service.labPath('25') directly → 200 with { score: 25 }.
-    // Root cause: router.ts path-param extraction has no Zod validation block for integer
-    // path params; only format validators (uuid, email, date-time, url) have special handling.
     expect((await labGet(request, 'path/5')).status).toBe(422)  // below minimum:10
     expect((await labGet(request, 'path/25')).status).toBe(422) // above maximum:20
   },
