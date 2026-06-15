@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "openapi-zod-ts && openapi-server && openapi-react-query",
-    "dev": "concurrently \"vite\" \"tsx watch src/server/index.ts\"",
-    "build": "vite build",
+    "generate": "node node_modules/openapi-zod-ts/dist/cli.cjs && node node_modules/@codewithagents/openapi-server/dist/cli.cjs && node node_modules/@codewithagents/openapi-react-query/dist/cli.js",
+    "dev": "pnpm generate && concurrently \"vite\" \"tsx watch src/server/index.ts\"",
+    "build": "pnpm generate && vite build",
     "start": "tsx src/server/index.ts",
-    "test:e2e": "vite build && playwright test"
+    "test:e2e": "pnpm generate && vite build && playwright test"
   },
   "dependencies": {
     "openapi-zod-ts": "workspace:*",

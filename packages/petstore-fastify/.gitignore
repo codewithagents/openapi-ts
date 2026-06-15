@@ -1,0 +1,6 @@
+# Generated output — regenerated on demand, never committed.
+# Run `pnpm generate` (or `pnpm test`) to recreate.
+generated/
+
+# Test artifacts
+test-results/

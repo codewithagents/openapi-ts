@@ -96,5 +96,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
         working-directory: packages/petstore-hono
+      # Generated code is not committed. test:e2e runs `pnpm generate` first, which
+      # rebuilds generated/ from spec/api.json using the workspace generators built above.
       - name: Run E2E tests
         run: pnpm --filter @codewithagents/petstore-hono run test:e2e
