@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v1.1.0...openapi-zod-ts-v2.0.0) (2026-06-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* **generator:** int64 fields previously generated as bigint / z.bigint(). Consumers who relied on bigint types for int64 fields must update their code. User-owned schemas.ts files containing z.bigint() for int64 properties will get TS compile errors and must be manually updated to z.number().
+
+### Bug Fixes
+
+* **generator:** codegen typing fixes for [#292](https://github.com/codewithagents/openapi-zod-ts/issues/292), [#293](https://github.com/codewithagents/openapi-zod-ts/issues/293), [#294](https://github.com/codewithagents/openapi-zod-ts/issues/294) ([#297](https://github.com/codewithagents/openapi-zod-ts/issues/297)) ([6ac859b](https://github.com/codewithagents/openapi-zod-ts/commit/6ac859b8b5a8dcd806222ea9b24f732b63650210))
+* **generator:** codegen typing fixes for [#298](https://github.com/codewithagents/openapi-zod-ts/issues/298), [#299](https://github.com/codewithagents/openapi-zod-ts/issues/299), [#300](https://github.com/codewithagents/openapi-zod-ts/issues/300) ([#301](https://github.com/codewithagents/openapi-zod-ts/issues/301)) ([42d2f66](https://github.com/codewithagents/openapi-zod-ts/commit/42d2f66336de796dff65454c3875dfd9164c4692))
+
 ## [1.1.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v1.0.1...openapi-zod-ts-v1.1.0) (2026-06-10)
 
 

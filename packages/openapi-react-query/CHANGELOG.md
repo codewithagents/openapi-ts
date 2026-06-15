@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.12.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-react-query-v3.12.0...openapi-react-query-v3.12.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* **generator:** codegen typing fixes for [#298](https://github.com/codewithagents/openapi-zod-ts/issues/298), [#299](https://github.com/codewithagents/openapi-zod-ts/issues/299), [#300](https://github.com/codewithagents/openapi-zod-ts/issues/300) ([#301](https://github.com/codewithagents/openapi-zod-ts/issues/301)) ([42d2f66](https://github.com/codewithagents/openapi-zod-ts/commit/42d2f66336de796dff65454c3875dfd9164c4692))
+
 ## [3.12.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-react-query-v3.11.0...openapi-react-query-v3.12.0) (2026-06-10)
 
 

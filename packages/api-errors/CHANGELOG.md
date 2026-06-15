@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/codewithagents/openapi-zod-ts/compare/api-errors-v1.1.0...api-errors-v1.2.0) (2026-06-15)
+
+
+### Features
+
+* **api-errors:** Zod flatten + GraphQL parsers, Formik/TanStack/vanilla adapters ([#295](https://github.com/codewithagents/openapi-zod-ts/issues/295)) ([65fb88b](https://github.com/codewithagents/openapi-zod-ts/commit/65fb88ba44fdd3e2e7a6aa04169aefb63e049a64))
+
 ## [1.1.0](https://github.com/codewithagents/openapi-zod-ts/compare/api-errors-v1.0.6...api-errors-v1.1.0) (2026-06-01)
 
 
