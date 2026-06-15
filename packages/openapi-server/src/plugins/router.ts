@@ -393,7 +393,7 @@ function emitHeaderValidation(
 }
 
 interface ResponseStatus {
-  status: 200 | 201 | 204
+  status: number
   isVoid: boolean
 }
 
@@ -422,6 +422,25 @@ function getResponseStatus(
   if (responses['200'] !== undefined) {
     if (response200IsVoid(responses['200'])) return { status: 204, isVoid: true }
     return { status: 200, isVoid: false }
+  }
+
+  // Single non-200/201/204 2xx declared: honor that exact status code.
+  // Multi-2xx is bug #10 (out of scope); fall through to default in that case.
+  const twoxxKeys = Object.keys(responses).filter(
+    (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
+  )
+  if (twoxxKeys.length === 1) {
+    const code = parseInt(twoxxKeys[0], 10)
+    const resp = responses[twoxxKeys[0]]
+    const isVoid =
+      isRef(resp)
+        ? false
+        : (() => {
+            const r = resp as ResponseObject
+            const content = r.content as Record<string, unknown> | undefined
+            return content === undefined || Object.keys(content).length === 0
+          })()
+    return { status: code, isVoid }
   }
 
   // Default: delete -> 204, otherwise 200
@@ -688,10 +707,10 @@ function buildRouteHandler(op: RouteOperation, indent: string, schemaNames?: Set
   if (op.responseStatus.isVoid) {
     lines.push(`${indent}    await ${serviceCall}`)
     lines.push(`${indent}    return new Response(null, { status: ${op.responseStatus.status} })`)
-  } else if (op.responseStatus.status === 201) {
-    lines.push(`${indent}    return c.json(await ${serviceCall}, 201)`)
-  } else {
+  } else if (op.responseStatus.status === 200) {
     lines.push(`${indent}    return c.json(await ${serviceCall})`)
+  } else {
+    lines.push(`${indent}    return c.json(await ${serviceCall}, ${op.responseStatus.status})`)
   }
   lines.push(`${indent}  } catch (err) {`)
   lines.push(`${indent}    if (err instanceof HttpError) {`)
@@ -828,10 +847,10 @@ function buildExpressRouteHandler(
   if (op.responseStatus.isVoid) {
     lines.push(`${indent}    await ${serviceCall}`)
     lines.push(`${indent}    res.status(${op.responseStatus.status}).end()`)
-  } else if (op.responseStatus.status === 201) {
-    lines.push(`${indent}    res.status(201).json(await ${serviceCall})`)
-  } else {
+  } else if (op.responseStatus.status === 200) {
     lines.push(`${indent}    res.json(await ${serviceCall})`)
+  } else {
+    lines.push(`${indent}    res.status(${op.responseStatus.status}).json(await ${serviceCall})`)
   }
   lines.push(`${indent}  } catch (err) {`)
   lines.push(`${indent}    if (err instanceof HttpError) {`)
@@ -1019,10 +1038,10 @@ function buildFastifyRouteHandler(
   if (op.responseStatus.isVoid) {
     lines.push(`${indent}    await ${serviceCall}`)
     lines.push(`${indent}    reply.status(${op.responseStatus.status}).send()`)
-  } else if (op.responseStatus.status === 201) {
-    lines.push(`${indent}    reply.status(201)`)
+  } else if (op.responseStatus.status === 200) {
     lines.push(`${indent}    return ${serviceCall}`)
   } else {
+    lines.push(`${indent}    reply.status(${op.responseStatus.status})`)
     lines.push(`${indent}    return ${serviceCall}`)
   }
   lines.push(`${indent}  } catch (err) {`)

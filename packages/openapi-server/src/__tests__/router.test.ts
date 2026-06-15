@@ -240,6 +240,30 @@ describe('generateRouter', () => {
     expect(result.content).toContain('new Response(null, { status: 204 })')
   })
 
+  it('POST with only 202 declared emits c.json(result, 202)', () => {
+    // Bug #9: when the single declared 2xx is not 200/201/204, honor that code.
+    const spec = makeSpec({
+      '/jobs': {
+        post: {
+          operationId: 'enqueueJob',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: {
+            '202': {
+              description: 'accepted',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Job' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateRouter(spec)
+    expect(result.content).toContain('c.json(await service.enqueueJob(')
+    expect(result.content).toContain(', 202)')
+  })
+
   it('returns empty Hono app when no operations', () => {
     const spec = makeSpec({})
     const result = generateRouter(spec)
@@ -870,6 +894,29 @@ describe('generateExpressRouter', () => {
     expect(result.content).toContain('res.status(204).end()')
   })
 
+  it('POST with only 202 declared emits res.status(202).json()', () => {
+    // Bug #9: when the single declared 2xx is not 200/201/204, honor that code.
+    const spec = makeSpec({
+      '/jobs': {
+        post: {
+          operationId: 'enqueueJob',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: {
+            '202': {
+              description: 'accepted',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Job' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateExpressRouter(spec)
+    expect(result.content).toContain('res.status(202).json(await service.enqueueJob(')
+  })
+
   it('GET with 200 uses res.json()', () => {
     const spec = makeSpec({
       '/pets': {
@@ -1123,6 +1170,30 @@ describe('generateFastifyRouter', () => {
     })
     const result = generateFastifyRouter(spec)
     expect(result.content).toContain('reply.status(204).send()')
+  })
+
+  it('POST with only 202 declared emits reply.status(202) then return', () => {
+    // Bug #9: when the single declared 2xx is not 200/201/204, honor that code.
+    const spec = makeSpec({
+      '/jobs': {
+        post: {
+          operationId: 'enqueueJob',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: {
+            '202': {
+              description: 'accepted',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Job' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateFastifyRouter(spec)
+    expect(result.content).toContain('reply.status(202)')
+    expect(result.content).toContain('return service.enqueueJob(')
   })
 
   it('GET with 200 uses return (Fastify auto-serializes)', () => {

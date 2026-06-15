@@ -278,6 +278,33 @@ describe('generateService', () => {
     expect(content).toContain('deletePet(id: string): Promise<void>')
   })
 
+  it('POST with only 202 declared infers return type from 202 content schema', () => {
+    // Bug #9: getReturnInfo() must check non-200/201 2xx codes for response content.
+    const spec = makeSpec({
+      '/jobs': {
+        post: {
+          operationId: 'enqueueJob',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Job' } },
+            },
+          },
+          responses: {
+            '202': {
+              description: 'accepted',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/Job' } },
+              },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('enqueueJob(body: Job): Promise<Job>')
+  })
+
   it('multiple operations produce multiple methods', () => {
     const spec = makeSpec({
       '/pets': {
