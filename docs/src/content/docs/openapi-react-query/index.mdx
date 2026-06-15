@@ -20,7 +20,7 @@ Running the generator produces two files in your output directory:
 Key guarantees:
 
 - **One hook per operation.** Every GET maps to a `useQuery` variant; every write maps to a `useMutation`. Types are derived directly from the generated client: `Awaited<ReturnType<typeof fn>>` for data, `Parameters<typeof fn>[N]` for variables.
-- **Smart detail hooks.** Path-parameter hooks widen the parameter type to `string | undefined | null` and set `enabled: false` automatically when the value is nullish. No `enabled: !!id` at every call site.
+- **Smart detail hooks.** Path-parameter hooks widen the parameter type to allow `undefined | null` (the base type is derived from the client function) and set `enabled: false` automatically when the value is nullish. No `enabled: !!id` at every call site.
 - **Key factories included.** Every resource gets a structured `resourceKeys` object: `all()`, `list(params)`, `detail(id)`. Use these directly with `queryClient.invalidateQueries` for consistent cache management.
 - **Auto-invalidate on mutation.** Set `auto_invalidate: true` and mutation hooks call `queryClient.invalidateQueries` on success with no boilerplate at the call site.
 - **Suspense variants.** Set `suspense: true` to generate a `useSuspense*` hook alongside every query hook. Data is never `undefined` inside a Suspense boundary.
@@ -113,7 +113,15 @@ npx openapi-react-query --config ./config/openapi-react-query.config.json
 | `gc_time`         | `number`  | No       | `300000` | `gcTime` in ms applied to all `useQuery` hooks                                                    |
 | `suspense`        | `boolean` | No       | `false`  | When `true`, generates a `useSuspense*` variant alongside every query hook                        |
 | `auto_invalidate` | `boolean` | No       | `false`  | When `true`, mutation hooks auto-invalidate related resource queries on success                   |
+| `infinite_query`  | `boolean \| 'auto'` | No | `'auto'` | Controls `useXxxInfinite` hook generation: `'auto'` emits one when a recognised pagination param is detected, `true` forces generation for all list GET ops, `false` disables it entirely |
 | `overrides`       | `object`  | No       | none     | Per-resource cache timing overrides (see [Per-resource cache timing](#per-resource-cache-timing)) |
+
+<Aside type="note">
+  When `infinite_query` is `'auto'` or `true`, paginated list endpoints (those with a recognised
+  pagination param such as `page`, `cursor`, or `offset`) also get a generated `useXxxInfinite`
+  hook powered by React Query's `useInfiniteQuery`. Provide `getNextPageParam` and
+  `initialPageParam` via `options` to activate real pagination. Shipped in 3.11.0 (#189).
+</Aside>
 
 **Full config example:**
 
@@ -145,7 +153,7 @@ The main output file. For a spec with a `/tasks` resource the generated file con
 export const taskKeys = {
   all: () => ['tasks'] as const,
   list: (params?: Parameters<typeof listTasks>[0]) => ['tasks', 'list', params] as const,
-  detail: (id: string) => ['tasks', id] as const,
+  detail: (id: Parameters<typeof getTask>[0]) => ['tasks', id] as const,
 }
 ```
 
@@ -171,7 +179,7 @@ export function useListTasks(
 
 // Detail hook: id widened to allow undefined/null, auto-disabled until id is set
 export function useGetTask(
-  id: string | undefined | null,
+  id: Parameters<typeof getTask>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTask>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -217,7 +225,7 @@ export function useUpdateTask(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateTask>>,
       ApiError,
-      { id: string; body: Parameters<typeof updateTask>[1] }
+      { id: Parameters<typeof updateTask>[0]; body: Parameters<typeof updateTask>[1] }
     >,
     'mutationFn'
   >
@@ -225,21 +233,21 @@ export function useUpdateTask(
   return useMutation<
     Awaited<ReturnType<typeof updateTask>>,
     ApiError,
-    { id: string; body: Parameters<typeof updateTask>[1] }
+    { id: Parameters<typeof updateTask>[0]; body: Parameters<typeof updateTask>[1] }
   >({
     mutationFn: ({ id, body }) => updateTask(id, body),
     ...options,
   })
 }
 
-// Delete with a single path param: variables type is 'string' directly
+// Delete with a single path param: variables type is the path param type (Parameters<typeof deleteTask>[0])
 export function useDeleteTask(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteTask>>, ApiError, string>,
+    UseMutationOptions<Awaited<ReturnType<typeof deleteTask>>, ApiError, Parameters<typeof deleteTask>[0]>,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteTask>>, ApiError, string>({
+  return useMutation<Awaited<ReturnType<typeof deleteTask>>, ApiError, Parameters<typeof deleteTask>[0]>({
     mutationFn: (id) => deleteTask(id),
     ...options,
   })
@@ -278,7 +286,7 @@ function TaskBoard() {
 
 ### Detail hook with auto-disable
 
-The path-parameter hook (`useGetTask`) widens `id` to `string | undefined | null` and sets `enabled: false` automatically when the value is nullish. No `enabled: !!id` required at the call site:
+The path-parameter hook (`useGetTask`) widens `id` to allow `undefined | null` (the base type is derived from the client function) and sets `enabled: false` automatically when the value is nullish. No `enabled: !!id` required at the call site:
 
 ```tsx
 import { useGetTask } from './src/api/hooks'
@@ -436,7 +444,7 @@ When a resource has exactly one GET with path parameters, the key factory uses t
 export const taskKeys = {
   all: () => ['tasks'] as const,
   list: (params?) => ['tasks', 'list', params] as const,
-  detail: (id: string) => ['tasks', id] as const,
+  detail: (id: Parameters<typeof getTask>[0]) => ['tasks', id] as const,
 }
 ```
 
@@ -449,8 +457,8 @@ When a resource has **more than one** GET with path parameters (e.g. `/items/{id
 //       GET /items/{id}/usage  operationId: getItemUsage
 export const itemKeys = {
   all: () => ['items'] as const,
-  getItemById: (id: string) => ['items', 'getItemById', id] as const,
-  getItemUsage: (id: string) => ['items', 'getItemUsage', id] as const,
+  getItemById: (id: Parameters<typeof getItemById>[0]) => ['items', 'getItemById', id] as const,
+  getItemUsage: (id: Parameters<typeof getItemUsage>[0]) => ['items', 'getItemUsage', id] as const,
 }
 ```
 
@@ -677,7 +685,7 @@ When your spec marks an operation as `deprecated: true`, the generated hook gets
 
 ```ts
 /** @deprecated */
-export function useGetLegacyTask(id: string | undefined | null, options?: ...) { ... }
+export function useGetLegacyTask(id: Parameters<typeof getLegacyTask>[0] | undefined | null, options?: ...) { ... }
 ```
 
 ## Works with

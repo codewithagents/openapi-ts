@@ -26,7 +26,7 @@ reading.
 Most generators treat your generated code as disposable: every run overwrites everything, so the
 output is a black box you are not meant to touch. `openapi-zod-ts` is built around the opposite idea.
 The Zod schema file is **bootstrapped once and then yours forever**, the client uses **native `fetch`
-with no runtime library**, and the whole thing is **1.0 and deliberately small** rather than a moving
+with no runtime library**, and the whole thing is **2.x and deliberately small** rather than a moving
 target. You trade breadth for ownership and stability.
 
 ## Feature matrix
@@ -42,10 +42,10 @@ target. You trade breadth for ownership and stability.
 | React Query / TanStack hooks | Yes (React) | Yes (multi) | Yes (multi) | Yes (React, Vue, SWR) | Companion pkg |
 | Hooks for Vue / Svelte / Angular / Solid | No | Yes | Yes | Vue | Via ecosystem |
 | **Server-side service interface + router** | **Yes (Hono, Express, Fastify)** | No | No | No | No |
-| Mocks (MSW / faker) | No | Yes (plugin) | Yes | Yes | No |
+| Mocks (MSW / faker) | Yes (openapi-msw, MSW v2 + Faker) | Yes (plugin) | Yes | Yes | No |
 | OpenAPI 3.1 | Yes | Yes | Yes | Yes | Yes |
 | Swagger 2.0 | No | No | Yes | Yes | No |
-| Stable 1.0 with semver | Yes | No (0.x) | Yes | Yes | Yes |
+| Stable release with semver | Yes (2.x, semver) | No (0.x) | Yes | Yes | Yes |
 
 ## Where this toolchain genuinely differs
 
@@ -68,7 +68,7 @@ target. You trade breadth for ownership and stability.
     have.
   </Card>
   <Card title="Boring on purpose" icon="approve-check-circle">
-    1.0 and semver-stable, proven on 128 real-world specs in CI with live smoke tests, mutation
+    2.x and semver-stable, proven on 128 real-world specs in CI with live smoke tests, mutation
     testing, and published provenance. A code generator has a wide blast radius; for this layer of your
     stack, predictable beats cutting-edge.
   </Card>
@@ -81,7 +81,9 @@ Being honest about this is the point.
 - **Breadth of frameworks.** We generate React Query hooks only. hey-api, orval, and kubb generate
   hooks for Vue, Svelte, Angular, Solid, and more. If your frontend is not React, they win outright.
 - **Mocks and test fixtures.** orval and kubb generate MSW handlers and faker mocks; hey-api has a
-  plugin for it. We do not generate mocks at all.
+  plugin for it. This toolchain ships `@codewithagents/openapi-msw` (MSW v2 handlers + seeded Faker
+  data), so basic mock generation is covered. The alternatives may still lead on faker breadth,
+  plugins, and ecosystem maturity around mocking.
 - **Plugin ecosystems.** hey-api has 20+ plugins and is used by Vercel, OpenCode, and PayPal. kubb is
   a plugin meta-framework. If you want to bolt on MSW, Cypress, MCP, or a custom transformer, they are
   built for that. We are deliberately small and opinionated.
@@ -97,14 +99,14 @@ Being honest about this is the point.
 - You want to **add your own validation rules to the schemas** and keep them across regenerations.
 - You also own the **backend** and want one spec to drive both ends.
 - You want **zero runtime footprint** and code you can read, review, and commit.
-- You value a **stable 1.0** for a generator that touches every API call in your app.
+- You value a **semver-stable 2.x** for a generator that touches every API call in your app.
 
 </Aside>
 
 <Aside type="note" title="Pick something else when">
 
 - Your frontend is **Vue, Svelte, Angular, or Solid**: reach for hey-api, orval, or kubb.
-- You need **generated mocks** (MSW, faker): orval or kubb.
+- You need **advanced mock generation** with rich faker plugins or framework-specific mock tooling: orval or kubb lead here despite `openapi-msw` covering the basics.
 - You have a **Swagger 2.0** spec: orval or kubb.
 - You want the **largest ecosystem and adoption**: hey-api.
 - You only need **types plus a tiny client**, no validation: openapi-fetch is the lightest option.

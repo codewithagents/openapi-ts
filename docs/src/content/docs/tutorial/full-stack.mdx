@@ -188,7 +188,7 @@ export type Pet = z.infer<typeof PetSchema>
 export type CreatePetRequest = z.infer<typeof CreatePetRequestSchema>
 ```
 
-The generated `client.ts` also calls `CreatePetRequestSchema.strip().parse(body)` before sending `POST /pets`, and `PetSchema.parse(await res.json())` after every response, so type drift between client and server is caught at runtime.
+The generated `client.ts` also calls `CreatePetRequestSchema.parse(body)` before sending `POST /pets`, and `PetSchema.parse(await res.json())` after every response, so type drift between client and server is caught at runtime.
 
 <Aside type="note">
   `openapi-zod-ts` is a prerequisite for both `openapi-server` and `openapi-react-query`. Run it first
@@ -573,7 +573,7 @@ test('shows validation errors when submitting empty fields', async ({ page }) =>
 })
 ```
 
-The validation error test is the full round-trip in action: the React form submits empty strings, the generated client calls `CreatePetRequestSchema.strip().parse(body)` before the request fires, that fails with a `ZodError`, the `onError` callback catches it, and the component renders the field-level error messages.
+The validation error test is the full round-trip in action: the React form submits empty strings, the Hono router's `CreatePetRequestSchema.safeParse` rejects them and returns `422` with the Zod issue list, the generated client throws an `ApiError` (status 422, body `{ issues: [...] }`), the `onError` callback in `useCreatePet` runs `parseValidationErrors`, and the component renders the field-level error messages.
 
 These tests also run in CI as a separate parallel `E2E (Petstore)` job alongside the standard `Build, Lint & Test` job.
 
