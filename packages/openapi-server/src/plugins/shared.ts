@@ -173,6 +173,8 @@ export function schemaToTsType(
 
 export interface QueryParam {
   name: string
+  /** Raw parameter name as it appears in the spec (before normalizeParamName). */
+  rawName: string
   tsType: string
   required: boolean
   /** Allowed values from the schema enum constraint. */
@@ -191,6 +193,23 @@ export interface QueryParam {
   maxLength?: number
   /** Regex pattern from schema.pattern. */
   pattern?: string
+  /**
+   * Delimiter style for array query params with explode:false.
+   * 'csv' = comma (style:form + explode:false), 'ssv' = space, 'psv' = pipe.
+   * When set, the raw query string value must be split on the delimiter before Zod validation.
+   */
+  delimiterStyle?: 'csv' | 'ssv' | 'psv'
+  /**
+   * When true, this param uses style:deepObject (e.g. filter[gte]=10&filter[lte]=20).
+   * The router must collect all name[key]=value query entries and assemble them into a
+   * nested object before Zod validation.
+   */
+  isDeepObject?: boolean
+  /**
+   * For deepObject params: property names and their types from the schema object.
+   * Used to emit typed coercion (e.g. z.coerce.number()) per property.
+   */
+  deepObjectProperties?: Array<{ key: string; tsType: string }>
 }
 
 export function getQueryParams(
@@ -206,10 +225,43 @@ export function getQueryParams(
     if (resolved === undefined || resolved.in !== 'query') continue
 
     const schema = resolved.schema as OpenAPIV3_1.SchemaObject | undefined
+    const resolvedStyle = (resolved as { style?: string }).style as string | undefined
+    const resolvedExplode = (resolved as { explode?: boolean }).explode as boolean | undefined
     const param: QueryParam = {
       name: normalizeParamName(resolved.name),
+      rawName: resolved.name,
       tsType: schemaToTsType(schema),
       required: resolved.required === true,
+    }
+
+    // Detect deepObject style: all name[key]=value entries must be assembled before validation.
+    if (resolvedStyle === 'deepObject' && schema !== undefined && !isRef(schema)) {
+      const s = schema as OpenAPIV3_1.SchemaObject
+      if (s.type === 'object' && s.properties !== undefined) {
+        param.isDeepObject = true
+        param.deepObjectProperties = Object.entries(s.properties).map(([key, propSchema]) => ({
+          key,
+          tsType: schemaToTsType(propSchema as OpenAPIV3_1.SchemaObject | undefined),
+        }))
+      }
+    }
+
+    // Detect delimited array styles with explode:false: value arrives as a single string.
+    if (
+      !param.isDeepObject &&
+      schema !== undefined &&
+      !isRef(schema) &&
+      (schema as OpenAPIV3_1.SchemaObject).type === 'array' &&
+      resolvedExplode === false
+    ) {
+      if (resolvedStyle === 'spaceDelimited') {
+        param.delimiterStyle = 'ssv'
+      } else if (resolvedStyle === 'pipeDelimited') {
+        param.delimiterStyle = 'psv'
+      } else {
+        // style:form with explode:false = CSV (also the default for arrays when explode:false)
+        param.delimiterStyle = 'csv'
+      }
     }
 
     if (schema !== undefined && !isRef(schema)) {

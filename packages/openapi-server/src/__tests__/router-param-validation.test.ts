@@ -818,3 +818,186 @@ describe('integer path param with minimum/maximum generates Zod coerce validatio
     expect(content).not.toContain('z.coerce.number()')
   })
 })
+
+// ── Bug #4: delimited array query params (style/explode:false) ────────────────
+
+describe('delimited array query param (style:form, explode:false) splits on comma', () => {
+  const csvSpec = makeSpec({
+    '/items': {
+      get: {
+        operationId: 'listItems',
+        parameters: [
+          {
+            name: 'csv',
+            in: 'query',
+            required: true,
+            style: 'form',
+            explode: false,
+            schema: { type: 'array', items: { type: 'string' } },
+          } as OpenAPIV3_1.ParameterObject,
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it('Hono: emits .split(",") for csv param and z.array(z.string()) for validation', () => {
+    const { content } = generateRouter(csvSpec)
+    expect(content).toContain(".split(\",\")")
+    expect(content).toContain("z.array(z.string())")
+    expect(content).toContain('_qv')
+  })
+
+  it('Express: emits .split(",") for csv param', () => {
+    const { content } = generateExpressRouter(csvSpec)
+    expect(content).toContain(".split(\",\")")
+    expect(content).toContain("z.array(z.string())")
+  })
+
+  it('Fastify: emits _dq cast and .split(",") for csv param', () => {
+    const { content } = generateFastifyRouter(csvSpec)
+    expect(content).toContain('_dq')
+    expect(content).toContain(".split(\",\")")
+    expect(content).toContain("z.array(z.string())")
+  })
+})
+
+describe('spaceDelimited array query param splits on space', () => {
+  const ssvSpec = makeSpec({
+    '/items': {
+      get: {
+        operationId: 'listItems',
+        parameters: [
+          {
+            name: 'ssv',
+            in: 'query',
+            required: true,
+            style: 'spaceDelimited',
+            explode: false,
+            schema: { type: 'array', items: { type: 'string' } },
+          } as OpenAPIV3_1.ParameterObject,
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it.each(allFrameworks)('%s: emits .split(" ") for ssv param', (_, gen) => {
+    const { content } = gen(ssvSpec)
+    expect(content).toContain('.split(" ")')
+    expect(content).toContain('z.array(z.string())')
+  })
+})
+
+describe('pipeDelimited array query param splits on pipe', () => {
+  const psvSpec = makeSpec({
+    '/items': {
+      get: {
+        operationId: 'listItems',
+        parameters: [
+          {
+            name: 'psv',
+            in: 'query',
+            required: true,
+            style: 'pipeDelimited',
+            explode: false,
+            schema: { type: 'array', items: { type: 'string' } },
+          } as OpenAPIV3_1.ParameterObject,
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it.each(allFrameworks)('%s: emits .split("|") for psv param', (_, gen) => {
+    const { content } = gen(psvSpec)
+    expect(content).toContain('.split("|")')
+    expect(content).toContain('z.array(z.string())')
+  })
+})
+
+// ── Bug #5: deepObject query param assembly ───────────────────────────────────
+
+describe('deepObject query param assembles bracket-notation keys into object', () => {
+  const deepSpec = makeSpec({
+    '/items': {
+      get: {
+        operationId: 'listItems',
+        parameters: [
+          {
+            name: 'filter',
+            in: 'query',
+            required: true,
+            style: 'deepObject',
+            explode: true,
+            schema: {
+              type: 'object',
+              required: ['gte', 'lte'],
+              properties: {
+                gte: { type: 'number' },
+                lte: { type: 'number' },
+                color: { type: 'string' },
+              },
+            },
+          } as OpenAPIV3_1.ParameterObject,
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it("Hono: emits c.req.queries() and filter[ prefix assembly", () => {
+    const { content } = generateRouter(deepSpec)
+    expect(content).toContain('c.req.queries()')
+    expect(content).toContain("startsWith('filter[')")
+    expect(content).toContain('_dq')
+    expect(content).toContain('z.coerce.number()')
+    expect(content).toContain('_qv')
+  })
+
+  it('Hono: Zod object uses coerce.number for numeric properties', () => {
+    const { content } = generateRouter(deepSpec)
+    expect(content).toContain('gte: z.coerce.number().optional()')
+    expect(content).toContain('lte: z.coerce.number().optional()')
+    expect(content).toContain('color: z.string().optional()')
+  })
+
+  it('Express: emits bracket-notation deepObject access via req.query', () => {
+    const { content } = generateExpressRouter(deepSpec)
+    expect(content).toContain("req.query['filter']")
+    expect(content).toContain('z.coerce.number()')
+  })
+
+  it('Fastify: emits _dq cast and filter[ prefix assembly', () => {
+    const { content } = generateFastifyRouter(deepSpec)
+    expect(content).toContain('_dq')
+    expect(content).toContain("startsWith('filter[')")
+    expect(content).toContain('z.coerce.number()')
+  })
+
+  it('deepObject param without properties does NOT generate deepObject assembly', () => {
+    // If the schema has no properties, isDeepObject stays unset
+    const noPropsSpec = makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            {
+              name: 'filter',
+              in: 'query',
+              required: true,
+              style: 'deepObject',
+              explode: true,
+              schema: { type: 'object' },
+            } as OpenAPIV3_1.ParameterObject,
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateRouter(noPropsSpec)
+    // Falls back to plain string extraction, no bracket assembly
+    expect(content).not.toContain('c.req.queries()')
+    expect(content).not.toContain("startsWith('filter[')")
+  })
+})

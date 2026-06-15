@@ -122,9 +122,29 @@ function pathParamZodExpr(
  * Build a Zod expression for a query parameter based on its captured constraints.
  * Number/integer types use z.number() (after coercion by extraction code).
  * String types use z.string() with optional format/enum/pattern/length modifiers.
+ * Delimited array params use z.array(z.string()).
+ * DeepObject params use z.object({...}) with per-property coercion.
  * Appends .optional() for non-required params.
  */
 function queryParamZodExpr(param: QueryParam): string {
+  // Delimited array param: value has been split into string[]
+  if (param.delimiterStyle !== undefined) {
+    const base = 'z.array(z.string())'
+    return param.required ? base : `${base}.optional()`
+  }
+
+  // DeepObject param: assembled into Record<string, string>; emit z.object with coercion
+  if (param.isDeepObject === true && param.deepObjectProperties !== undefined) {
+    const propFields = param.deepObjectProperties.map((p) => {
+      const coerced = p.tsType === 'number' ? 'z.coerce.number()' : 'z.string()'
+      // Only required properties are known from the spec; treat all as optional here
+      // so Zod validates presence via .required() on the outer object if needed.
+      return `${p.key}: ${coerced}.optional()`
+    })
+    const base = `z.object({ ${propFields.join(', ')} })`
+    return param.required ? base : `${base}.optional()`
+  }
+
   let base: string
   if (param.tsType === 'number') {
     base = 'z.number()'
@@ -240,7 +260,9 @@ function queryParamHasConstraints(q: QueryParam): boolean {
     q.exclusiveMaximum !== undefined ||
     q.minLength !== undefined ||
     q.maxLength !== undefined ||
-    q.pattern !== undefined
+    q.pattern !== undefined ||
+    q.delimiterStyle !== undefined ||
+    q.isDeepObject === true
   )
 }
 
@@ -253,6 +275,13 @@ function queryParamsNeedValidation(queryParams: QueryParam[]): boolean {
   return queryParams.some(
     (q) => q.required || q.tsType !== 'string' || queryParamHasConstraints(q)
   )
+}
+
+/** Returns the delimiter character for a delimited-style array query param. */
+function delimiterChar(style: 'csv' | 'ssv' | 'psv'): string {
+  if (style === 'ssv') return ' '
+  if (style === 'psv') return '|'
+  return ','
 }
 
 /**
@@ -529,8 +558,33 @@ function buildRouteHandler(op: RouteOperation, indent: string, schemaNames?: Set
 
   // Query params extraction
   if (op.queryParams.length > 0) {
+    // Emit deepObject assembly blocks before the params object.
+    // c.req.queries() returns Record<string, string[]> with raw bracket-notation keys.
+    const deepObjectParams = op.queryParams.filter((q) => q.isDeepObject === true)
+    if (deepObjectParams.length > 0) {
+      lines.push(`${indent}  const _dq = c.req.queries()`)
+      for (const q of deepObjectParams) {
+        const prefixLen = q.rawName.length + 1 // e.g. 'filter['.length
+        const bracketPrefix = q.rawName + '['
+        lines.push(`${indent}  const ${q.name} = Object.fromEntries(`)
+        lines.push(
+          `${indent}    Object.entries(_dq).filter(([k]) => k.startsWith('${bracketPrefix}') && k.endsWith(']')).map(([k, vs]) => [k.slice(${prefixLen}, -1), vs[0]])`
+        )
+        lines.push(`${indent}  )`)
+      }
+    }
+
     const fields = op.queryParams
       .map((q) => {
+        if (q.isDeepObject === true) {
+          // Already assembled above as a local variable
+          return `    ${q.name}`
+        }
+        if (q.delimiterStyle !== undefined) {
+          // Use rawName to match the actual URL query key (e.g. 'csv', 'ssv', 'psv').
+          const delim = JSON.stringify(delimiterChar(q.delimiterStyle))
+          return `    ${q.name}: c.req.query('${q.rawName}') !== undefined ? c.req.query('${q.rawName}')!.split(${delim}) : undefined`
+        }
         if (q.tsType === 'number') {
           return `    ${q.name}: c.req.query('${q.name}') !== undefined ? Number(c.req.query('${q.name}')) : undefined`
         }
@@ -678,8 +732,19 @@ function buildExpressRouteHandler(
 
   // Query params extraction
   if (op.queryParams.length > 0) {
+    // Express (qs, extended:true) parses bracket-notation automatically:
+    // filter[gte]=10 → req.query.filter = { gte: '10' }.
+    // DeepObject params are already assembled; just cast the nested object.
     const fields = op.queryParams
       .map((q) => {
+        if (q.isDeepObject === true) {
+          // Express with qs: req.query['filter'] is already { gte: '10', lte: '20' }
+          return `    ${q.name}: (req.query['${q.rawName}'] ?? {}) as Record<string, string | undefined>`
+        }
+        if (q.delimiterStyle !== undefined) {
+          const delim = JSON.stringify(delimiterChar(q.delimiterStyle))
+          return `    ${q.name}: typeof req.query['${q.rawName}'] === 'string' ? (req.query['${q.rawName}'] as string).split(${delim}) : undefined`
+        }
         if (q.tsType === 'number') {
           return `    ${q.name}: Number(req.query['${q.name}'] as string)`
         }
@@ -793,14 +858,27 @@ function buildFastifyRouteHandler(
   const genericParts: string[] = []
 
   if (op.queryParams.length > 0) {
-    const queryFields = op.queryParams
-      .map((q) => {
-        if (q.tsType === 'number') return `${q.name}?: number`
-        if (q.tsType === 'boolean') return `${q.name}?: boolean`
-        return `${q.name}?: string`
-      })
-      .join('; ')
-    genericParts.push(`Querystring: { ${queryFields} }`)
+    // DeepObject and delimited params use bracket-notation keys or raw strings;
+    // include them as Record<string, string> or string[] in the Querystring generic.
+    const hasDeepOrDelimited = op.queryParams.some(
+      (q) => q.isDeepObject === true || q.delimiterStyle !== undefined
+    )
+    let querystringType: string
+    if (hasDeepOrDelimited) {
+      // Use a loose Querystring type that allows bracket-notation keys (fast-querystring stores
+      // them as literal strings, e.g. 'filter[gte]') and array values for delimited params.
+      querystringType = 'Record<string, string | string[] | undefined>'
+    } else {
+      const queryFields = op.queryParams
+        .map((q) => {
+          if (q.tsType === 'number') return `${q.name}?: number`
+          if (q.tsType === 'boolean') return `${q.name}?: boolean`
+          return `${q.name}?: string`
+        })
+        .join('; ')
+      querystringType = `{ ${queryFields} }`
+    }
+    genericParts.push(`Querystring: ${querystringType}`)
   }
 
   if (op.bodyInfo !== undefined && op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized) {
@@ -832,7 +910,48 @@ function buildFastifyRouteHandler(
 
   // Query params extraction
   if (op.queryParams.length > 0) {
-    const fields = op.queryParams.map((q) => `    ${q.name}: req.query.${q.name}`).join(',\n')
+    // fast-querystring (Fastify default) stores bracket-notation keys as literals:
+    // filter[gte]=10 → req.query['filter[gte]'] = '10'.
+    // DeepObject and delimited params need raw string access; emit _dq cast once.
+    const deepObjectParams = op.queryParams.filter((q) => q.isDeepObject === true)
+    const hasDeepOrDelimited = op.queryParams.some(
+      (q) => q.isDeepObject === true || q.delimiterStyle !== undefined
+    )
+
+    if (hasDeepOrDelimited) {
+      lines.push(
+        `${indent}  const _dq = req.query as unknown as Record<string, string | undefined>`
+      )
+    }
+
+    if (deepObjectParams.length > 0) {
+      for (const q of deepObjectParams) {
+        const prefixLen = q.rawName.length + 1 // e.g. 'filter['.length
+        const bracketPrefix = q.rawName + '['
+        lines.push(`${indent}  const ${q.name} = Object.fromEntries(`)
+        lines.push(
+          `${indent}    Object.entries(_dq).filter(([k]) => k.startsWith('${bracketPrefix}') && k.endsWith(']')).map(([k, v]) => [k.slice(${prefixLen}, -1), v])`
+        )
+        lines.push(`${indent}  )`)
+      }
+    }
+
+    const fields = op.queryParams
+      .map((q) => {
+        if (q.isDeepObject === true) {
+          // Already assembled above as a local variable
+          return `    ${q.name}`
+        }
+        if (q.delimiterStyle !== undefined) {
+          const delim = JSON.stringify(delimiterChar(q.delimiterStyle))
+          return `    ${q.name}: typeof _dq['${q.rawName}'] === 'string' ? _dq['${q.rawName}']!.split(${delim}) : undefined`
+        }
+        // When _dq is defined, use it for consistent access; otherwise use typed req.query.
+        return hasDeepOrDelimited
+          ? `    ${q.name}: _dq['${q.rawName}']`
+          : `    ${q.name}: req.query.${q.name}`
+      })
+      .join(',\n')
     lines.push(`${indent}  const params = {`)
     lines.push(fields)
     lines.push(`${indent}  }`)
