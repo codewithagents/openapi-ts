@@ -43,13 +43,16 @@ import {
 
 export const paymentLinkKeys = {
   all: () => ['paymentLinks'] as const,
-  detail: (linkId: string) => ['paymentLinks', linkId] as const,
+  detail: (linkId: Parameters<typeof getPaymentLinksLinkId>[0]) =>
+    ['paymentLinks', linkId] as const,
 }
 
 export const sessionKeys = {
   all: () => ['sessions'] as const,
-  detail: (sessionId: string, params: Parameters<typeof getSessionsSessionId>[1]) =>
-    ['sessions', sessionId, params] as const,
+  detail: (
+    sessionId: Parameters<typeof getSessionsSessionId>[0],
+    params: Parameters<typeof getSessionsSessionId>[1]
+  ) => ['sessions', sessionId, params] as const,
 }
 
 export const storedPaymentMethodKeys = {
@@ -61,7 +64,7 @@ export const storedPaymentMethodKeys = {
 // ── Query options factories ──────────────────────────────────
 
 export function getPaymentLinksLinkIdQueryOptions(
-  linkId: string,
+  linkId: Parameters<typeof getPaymentLinksLinkId>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getPaymentLinksLinkId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -77,7 +80,7 @@ export function getPaymentLinksLinkIdQueryOptions(
 }
 
 export function getSessionsSessionIdQueryOptions(
-  sessionId: string,
+  sessionId: Parameters<typeof getSessionsSessionId>[0],
   params: Parameters<typeof getSessionsSessionId>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSessionsSessionId>>, ApiError>,
@@ -112,7 +115,7 @@ export function getStoredPaymentMethodsQueryOptions(
 // ── Queries ──────────────────────────────────────────────────
 
 export function useGetPaymentLinksLinkId(
-  linkId: string | undefined | null,
+  linkId: Parameters<typeof getPaymentLinksLinkId>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getPaymentLinksLinkId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -129,7 +132,7 @@ export function useGetPaymentLinksLinkId(
 }
 
 export function useGetSessionsSessionId(
-  sessionId: string | undefined | null,
+  sessionId: Parameters<typeof getSessionsSessionId>[0] | undefined | null,
   params: Parameters<typeof getSessionsSessionId>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSessionsSessionId>>, ApiError>,
@@ -388,7 +391,10 @@ export function usePatchPaymentLinksLinkId(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchPaymentLinksLinkId>>,
       ApiError,
-      { linkId: string; body: Parameters<typeof patchPaymentLinksLinkId>[1] }
+      {
+        linkId: Parameters<typeof patchPaymentLinksLinkId>[0]
+        body: Parameters<typeof patchPaymentLinksLinkId>[1]
+      }
     >,
     'mutationFn'
   >
@@ -396,7 +402,10 @@ export function usePatchPaymentLinksLinkId(
   return useMutation<
     Awaited<ReturnType<typeof patchPaymentLinksLinkId>>,
     ApiError,
-    { linkId: string; body: Parameters<typeof patchPaymentLinksLinkId>[1] }
+    {
+      linkId: Parameters<typeof patchPaymentLinksLinkId>[0]
+      body: Parameters<typeof patchPaymentLinksLinkId>[1]
+    }
   >({
     mutationFn: ({ linkId, body }) => patchPaymentLinksLinkId(linkId, body),
     ...options,
@@ -507,7 +516,7 @@ export function usePostPaymentsPaymentPspReferenceAmountUpdates(
       Awaited<ReturnType<typeof postPaymentsPaymentPspReferenceAmountUpdates>>,
       ApiError,
       {
-        paymentPspReference: string
+        paymentPspReference: Parameters<typeof postPaymentsPaymentPspReferenceAmountUpdates>[0]
         body: Parameters<typeof postPaymentsPaymentPspReferenceAmountUpdates>[1]
         params: Parameters<typeof postPaymentsPaymentPspReferenceAmountUpdates>[2]
       }
@@ -519,7 +528,7 @@ export function usePostPaymentsPaymentPspReferenceAmountUpdates(
     Awaited<ReturnType<typeof postPaymentsPaymentPspReferenceAmountUpdates>>,
     ApiError,
     {
-      paymentPspReference: string
+      paymentPspReference: Parameters<typeof postPaymentsPaymentPspReferenceAmountUpdates>[0]
       body: Parameters<typeof postPaymentsPaymentPspReferenceAmountUpdates>[1]
       params: Parameters<typeof postPaymentsPaymentPspReferenceAmountUpdates>[2]
     }
@@ -536,7 +545,7 @@ export function usePostPaymentsPaymentPspReferenceCancels(
       Awaited<ReturnType<typeof postPaymentsPaymentPspReferenceCancels>>,
       ApiError,
       {
-        paymentPspReference: string
+        paymentPspReference: Parameters<typeof postPaymentsPaymentPspReferenceCancels>[0]
         body: Parameters<typeof postPaymentsPaymentPspReferenceCancels>[1]
         params: Parameters<typeof postPaymentsPaymentPspReferenceCancels>[2]
       }
@@ -548,7 +557,7 @@ export function usePostPaymentsPaymentPspReferenceCancels(
     Awaited<ReturnType<typeof postPaymentsPaymentPspReferenceCancels>>,
     ApiError,
     {
-      paymentPspReference: string
+      paymentPspReference: Parameters<typeof postPaymentsPaymentPspReferenceCancels>[0]
       body: Parameters<typeof postPaymentsPaymentPspReferenceCancels>[1]
       params: Parameters<typeof postPaymentsPaymentPspReferenceCancels>[2]
     }
@@ -565,7 +574,7 @@ export function usePostPaymentsPaymentPspReferenceCaptures(
       Awaited<ReturnType<typeof postPaymentsPaymentPspReferenceCaptures>>,
       ApiError,
       {
-        paymentPspReference: string
+        paymentPspReference: Parameters<typeof postPaymentsPaymentPspReferenceCaptures>[0]
         body: Parameters<typeof postPaymentsPaymentPspReferenceCaptures>[1]
         params: Parameters<typeof postPaymentsPaymentPspReferenceCaptures>[2]
       }
@@ -577,7 +586,7 @@ export function usePostPaymentsPaymentPspReferenceCaptures(
     Awaited<ReturnType<typeof postPaymentsPaymentPspReferenceCaptures>>,
     ApiError,
     {
-      paymentPspReference: string
+      paymentPspReference: Parameters<typeof postPaymentsPaymentPspReferenceCaptures>[0]
       body: Parameters<typeof postPaymentsPaymentPspReferenceCaptures>[1]
       params: Parameters<typeof postPaymentsPaymentPspReferenceCaptures>[2]
     }
@@ -594,7 +603,7 @@ export function usePostPaymentsPaymentPspReferenceRefunds(
       Awaited<ReturnType<typeof postPaymentsPaymentPspReferenceRefunds>>,
       ApiError,
       {
-        paymentPspReference: string
+        paymentPspReference: Parameters<typeof postPaymentsPaymentPspReferenceRefunds>[0]
         body: Parameters<typeof postPaymentsPaymentPspReferenceRefunds>[1]
         params: Parameters<typeof postPaymentsPaymentPspReferenceRefunds>[2]
       }
@@ -606,7 +615,7 @@ export function usePostPaymentsPaymentPspReferenceRefunds(
     Awaited<ReturnType<typeof postPaymentsPaymentPspReferenceRefunds>>,
     ApiError,
     {
-      paymentPspReference: string
+      paymentPspReference: Parameters<typeof postPaymentsPaymentPspReferenceRefunds>[0]
       body: Parameters<typeof postPaymentsPaymentPspReferenceRefunds>[1]
       params: Parameters<typeof postPaymentsPaymentPspReferenceRefunds>[2]
     }
@@ -623,7 +632,7 @@ export function usePostPaymentsPaymentPspReferenceReversals(
       Awaited<ReturnType<typeof postPaymentsPaymentPspReferenceReversals>>,
       ApiError,
       {
-        paymentPspReference: string
+        paymentPspReference: Parameters<typeof postPaymentsPaymentPspReferenceReversals>[0]
         body: Parameters<typeof postPaymentsPaymentPspReferenceReversals>[1]
         params: Parameters<typeof postPaymentsPaymentPspReferenceReversals>[2]
       }
@@ -635,7 +644,7 @@ export function usePostPaymentsPaymentPspReferenceReversals(
     Awaited<ReturnType<typeof postPaymentsPaymentPspReferenceReversals>>,
     ApiError,
     {
-      paymentPspReference: string
+      paymentPspReference: Parameters<typeof postPaymentsPaymentPspReferenceReversals>[0]
       body: Parameters<typeof postPaymentsPaymentPspReferenceReversals>[1]
       params: Parameters<typeof postPaymentsPaymentPspReferenceReversals>[2]
     }
@@ -724,7 +733,7 @@ export function useDeleteStoredPaymentMethodsStoredPaymentMethodId(
       Awaited<ReturnType<typeof deleteStoredPaymentMethodsStoredPaymentMethodId>>,
       ApiError,
       {
-        storedPaymentMethodId: string
+        storedPaymentMethodId: Parameters<typeof deleteStoredPaymentMethodsStoredPaymentMethodId>[0]
         params: Parameters<typeof deleteStoredPaymentMethodsStoredPaymentMethodId>[1]
       }
     >,
@@ -735,7 +744,7 @@ export function useDeleteStoredPaymentMethodsStoredPaymentMethodId(
     Awaited<ReturnType<typeof deleteStoredPaymentMethodsStoredPaymentMethodId>>,
     ApiError,
     {
-      storedPaymentMethodId: string
+      storedPaymentMethodId: Parameters<typeof deleteStoredPaymentMethodsStoredPaymentMethodId>[0]
       params: Parameters<typeof deleteStoredPaymentMethodsStoredPaymentMethodId>[1]
     }
   >({

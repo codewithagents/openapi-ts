@@ -52,15 +52,31 @@ function resolveDeepRefToTs(
 }
 
 /**
- * Resolve the TypeScript Record type for an inline object schema.
- * When additionalProperties is a schema object, recurse to produce Record<string, T>.
- * Otherwise fall back to Record<string, unknown>.
+ * Resolve the TypeScript type for an inline object schema.
+ *
+ * Priority:
+ * 1. When the schema has explicit `properties`, expand them to an inline object
+ *    type respecting the `required` array (missing from required -> optional `?`).
+ * 2. When the schema has only `additionalProperties` (no explicit properties),
+ *    produce Record<string, T> where T is the value schema.
+ * 3. Fall back to Record<string, unknown>.
  */
 function inlineObjectSchemaToTs(
   s: SchemaObject,
   spec?: OpenAPIV3_1.Document,
   visited?: Set<string>
 ): string {
+  const props = s.properties as Record<string, SchemaObject | ReferenceObject> | undefined
+  if (props !== undefined && Object.keys(props).length > 0) {
+    const required = new Set<string>(Array.isArray(s.required) ? (s.required as string[]) : [])
+    const fields = Object.entries(props).map(([key, propSchema]) => {
+      const optional = !required.has(key)
+      const propKey = toPropertyKey(key)
+      const typStr = inlineSchemaToTs(propSchema, spec, visited)
+      return `${propKey}${optional ? '?' : ''}: ${typStr}`
+    })
+    return `{ ${fields.join('; ')} }`
+  }
   if (
     s.additionalProperties !== undefined &&
     s.additionalProperties !== true &&
@@ -141,6 +157,70 @@ function resolveSchema(
   }
   // For inline objects and primitives, emit the full inline type string
   return { typeName: inlineSchemaToTs(s, spec), isArray: false }
+}
+
+/**
+ * Walk a schema tree and collect the names of every component schema $ref
+ * (#/components/schemas/X), mapped through refToTypeName. These are the named
+ * types the generated client must import from ./models.js when a response type
+ * is an inline-expanded object or array that references component schemas
+ * (e.g. an envelope { data: User[]; total?: number }).
+ *
+ * Mirrors the traversal in inlineSchemaToTs so the collected set matches exactly
+ * what the rendered type string references: deep (non-component) refs are
+ * resolved inline by inlineSchemaToTs, so we follow them here too in case their
+ * targets contain component refs. A visited set breaks ref cycles.
+ */
+// fallow-ignore-next-line complexity
+function collectComponentRefNames(
+  schema: SchemaObject | ReferenceObject | undefined,
+  spec: OpenAPIV3_1.Document,
+  out: Set<string>,
+  visited?: Set<string>
+): void {
+  if (schema === undefined) return
+  const visitedSet = visited ?? new Set<string>()
+  if (isRef(schema)) {
+    const ref = (schema as ReferenceObject).$ref
+    if (isDeepRef(ref)) {
+      if (visitedSet.has(ref)) return
+      visitedSet.add(ref)
+      const resolved = resolveJsonPointer(spec, ref) as SchemaObject | ReferenceObject | undefined
+      collectComponentRefNames(resolved, spec, out, visitedSet)
+      visitedSet.delete(ref)
+      return
+    }
+    const name = refToTypeName(ref)
+    if (isImportableType(name)) out.add(name)
+    return
+  }
+  const s = schema as SchemaObject
+  if (s.type === 'array') {
+    const items = (s as OpenAPIV3_1.ArraySchemaObject).items as
+      | SchemaObject
+      | ReferenceObject
+      | undefined
+    collectComponentRefNames(items, spec, out, visitedSet)
+    return
+  }
+  const props = s.properties as Record<string, SchemaObject | ReferenceObject> | undefined
+  if (props !== undefined) {
+    for (const propSchema of Object.values(props)) {
+      collectComponentRefNames(propSchema, spec, out, visitedSet)
+    }
+  }
+  if (
+    s.additionalProperties !== undefined &&
+    s.additionalProperties !== true &&
+    s.additionalProperties !== false
+  ) {
+    collectComponentRefNames(
+      s.additionalProperties as SchemaObject | ReferenceObject,
+      spec,
+      out,
+      visitedSet
+    )
+  }
 }
 
 function primitiveToTs(type: string | undefined): string {
@@ -279,7 +359,8 @@ function pickResponseContent(
 // fallow-ignore-next-line complexity
 function getReturnType(
   operation: OperationObject,
-  spec?: OpenAPIV3_1.Document
+  spec?: OpenAPIV3_1.Document,
+  importsOut?: Set<string>
 ): {
   typeName: string
   isArray: boolean
@@ -315,6 +396,11 @@ function getReturnType(
 
     if (picked.kind === 'json') {
       if (picked.entry.schema === undefined) continue
+      // Collect component schema names referenced anywhere in the response type so
+      // inline-expanded objects/arrays (e.g. { data: User[] }) import their members.
+      if (importsOut !== undefined && spec !== undefined) {
+        collectComponentRefNames(picked.entry.schema, spec, importsOut)
+      }
       const resolved = resolveSchema(picked.entry.schema, spec)
       return { ...resolved, isVoid: false, bodyKind: 'json', mayBeEmpty: has204 }
     }
@@ -413,6 +499,21 @@ function mergeParams(
 interface PathParam {
   name: string // sanitized camelCase TS identifier (e.g. 'changeSetId' from 'change-set-id')
   urlName: string // original name for URL template (e.g. 'change-set-id')
+  type: string // TypeScript type derived from the parameter schema (default: 'string')
+}
+
+/**
+ * Map a path parameter schema to its TypeScript type.
+ * Path params are always required positional values; only primitives make sense here.
+ * Defaults to 'string' when the schema is absent, a $ref, or has no recognised type.
+ */
+function pathParamType(schema: SchemaObject | ReferenceObject | undefined): string {
+  if (schema === undefined || isRef(schema)) return 'string'
+  const s = schema as SchemaObject
+  const type = s.type as string | undefined
+  if (type === 'integer' || type === 'number') return 'number'
+  if (type === 'boolean') return 'boolean'
+  return 'string'
 }
 
 function getPathParams(
@@ -425,6 +526,7 @@ function getPathParams(
     .map((p) => ({
       name: sanitizeOperationId(p.name),
       urlName: p.name,
+      type: pathParamType(p.schema as SchemaObject | ReferenceObject | undefined),
     }))
 }
 
@@ -634,7 +736,8 @@ interface RequestBodyInfo {
 function getRequestBodyInfo(
   operation: OperationObject,
   spec?: OpenAPIV3_1.Document,
-  writableVariantMap?: Map<string, string>
+  writableVariantMap?: Map<string, string>,
+  importsOut?: Set<string>
 ): RequestBodyInfo | undefined {
   const requestBody = operation.requestBody as RequestBodyObject | ReferenceObject | undefined
   if (requestBody === undefined) return undefined
@@ -705,6 +808,12 @@ function getRequestBodyInfo(
         return { typeName: writableName, kind: 'json' }
       }
     }
+    // No writable redirect on this path, so the rendered inline type references the
+    // read-shape component names. Collect them so inline-expanded objects/arrays
+    // (e.g. { push: Push }) import their members from ./models.js (#298).
+    if (importsOut !== undefined && spec !== undefined) {
+      collectComponentRefNames(schema, spec, importsOut)
+    }
     return { typeName: inlineSchemaToTs(schema, spec), kind: 'json' }
   }
 
@@ -722,6 +831,9 @@ function getRequestBodyInfo(
     if (writableName !== undefined) {
       return { typeName: writableName, kind: 'form' }
     }
+  }
+  if (importsOut !== undefined && spec !== undefined) {
+    collectComponentRefNames(formSchema, spec, importsOut)
   }
   return { typeName: inlineSchemaToTs(formSchema, spec), kind: 'form' }
 }
@@ -1273,19 +1385,25 @@ function generateFunctionCode(
 
   // Build function signature
   const sigParts: string[] = []
-  // Path params first (positional) — use sanitized TS name
+  // Path params first (positional) — use sanitized TS name with schema-derived type
   for (const param of pathParams) {
-    sigParts.push(`${param.name}: string`)
+    sigParts.push(`${param.name}: ${param.type}`)
   }
   // Body param
   if (bodyInfo !== undefined) {
     sigParts.push(`body: ${bodyInfo.typeName}`)
   }
 
-  // Query params + header params share the same params object
+  // Query params + header params share the same params object.
+  // When the wire name ends with '[]' (PHP/Rails bracket notation), preserve the wire
+  // name as the interface key so callers see params["ids[]"] — the original API name.
+  // For all other params, use the normalized camelCase identifier (qp.name).
   const allParamFields: string[] = []
   for (const qp of queryParams) {
-    allParamFields.push(`  ${toPropertyKey(qp.name)}${qp.required ? '' : '?'}: ${qp.type}`)
+    const fieldKey = qp.urlName.endsWith('[]')
+      ? toPropertyKey(qp.urlName)
+      : toPropertyKey(qp.name)
+    allParamFields.push(`  ${fieldKey}${qp.required ? '' : '?'}: ${qp.type}`)
   }
   for (const hp of headerParams) {
     allParamFields.push(`  ${hp.name}${hp.required ? '' : '?'}: ${hp.type}`)
@@ -1336,15 +1454,25 @@ function generateFunctionCode(
   if (queryParams.length > 0) {
     lines.push(`  const searchParams = new URLSearchParams()`)
     for (const qp of queryParams) {
+      // When the wire name uses bracket notation (e.g. 'ids[]'), use bracket access in
+      // the generated code so the property key matches the interface declaration.
+      // For all other params, use dot notation with the normalized identifier.
+      const isBracket = qp.urlName.endsWith('[]')
+      const access = isBracket
+        ? `params?.[${JSON.stringify(qp.urlName)}]`
+        : `params?.${qp.name}`
+      const valueAccess = isBracket
+        ? `params[${JSON.stringify(qp.urlName)}]`
+        : `params.${qp.name}`
       if (qp.type.endsWith('[]')) {
-        // Array params: use append in a loop (not set) so multiple values are preserved
-        // Use urlName for the wire format (may differ from TS name, e.g. 'ids[]' vs 'ids')
+        // Array params: use append in a loop (not set) so multiple values are preserved.
+        // urlName is used as the wire key (e.g. 'ids[]' -> searchParams.append('ids[]', ...)).
         lines.push(
-          `  if (params?.${qp.name} != null) { for (const v of params.${qp.name}) searchParams.append('${qp.urlName}', String(v)) }`
+          `  if (${access} != null) { for (const v of ${valueAccess}) searchParams.append('${qp.urlName}', String(v)) }`
         )
       } else {
         lines.push(
-          `  if (params?.${qp.name} != null) searchParams.set('${qp.urlName}', String(params.${qp.name}))`
+          `  if (${access} != null) searchParams.set('${qp.urlName}', String(${valueAccess}))`
         )
       }
     }
@@ -1599,8 +1727,13 @@ export function generateClient(
         const pathParams = getPathParams(pathItem, operation, spec)
         const queryParams = getQueryParams(pathItem, operation, spec)
         const headerParams = getHeaderParams(pathItem, operation, spec)
-        const bodyInfo = getRequestBodyInfo(operation, spec, resolvedWritableVariantMap)
-        const returnType = getReturnType(operation, spec)
+        const bodyInfo = getRequestBodyInfo(
+          operation,
+          spec,
+          resolvedWritableVariantMap,
+          collectedTypeNames
+        )
+        const returnType = getReturnType(operation, spec, collectedTypeNames)
         const deprecated = operation.deprecated === true
         const throwsTags = getThrowsTags(operation)
 

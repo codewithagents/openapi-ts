@@ -262,27 +262,28 @@ import {
 export const assistantKeys = {
   all: () => ['assistants'] as const,
   list: (params?: Parameters<typeof listAssistants>[0]) => ['assistants', 'list', params] as const,
-  detail: (assistantId: string) => ['assistants', assistantId] as const,
+  detail: (assistantId: Parameters<typeof getAssistant>[0]) => ['assistants', assistantId] as const,
 }
 
 export const audioKeys = {
   all: () => ['audio'] as const,
   list: (params?: Parameters<typeof listVoiceConsents>[0]) => ['audio', 'list', params] as const,
-  detail: (consentId: string) => ['audio', consentId] as const,
+  detail: (consentId: Parameters<typeof getVoiceConsent>[0]) => ['audio', consentId] as const,
 }
 
 export const batchKeys = {
   all: () => ['batches'] as const,
   list: (params?: Parameters<typeof listBatches>[0]) => ['batches', 'list', params] as const,
-  detail: (batchId: string) => ['batches', batchId] as const,
+  detail: (batchId: Parameters<typeof retrieveBatch>[0]) => ['batches', batchId] as const,
 }
 
 export const chatKeys = {
   all: () => ['chat'] as const,
   list: (params?: Parameters<typeof listChatCompletions>[0]) => ['chat', 'list', params] as const,
-  getChatCompletion: (completionId: string) => ['chat', 'getChatCompletion', completionId] as const,
+  getChatCompletion: (completionId: Parameters<typeof getChatCompletion>[0]) =>
+    ['chat', 'getChatCompletion', completionId] as const,
   getChatCompletionMessages: (
-    completionId: string,
+    completionId: Parameters<typeof getChatCompletionMessages>[0],
     params?: Parameters<typeof getChatCompletionMessages>[1]
   ) => ['chat', 'getChatCompletionMessages', completionId, params] as const,
 }
@@ -290,52 +291,66 @@ export const chatKeys = {
 export const containerKeys = {
   all: () => ['containers'] as const,
   list: (params?: Parameters<typeof listContainers>[0]) => ['containers', 'list', params] as const,
-  retrieveContainer: (containerId: string) =>
+  retrieveContainer: (containerId: Parameters<typeof retrieveContainer>[0]) =>
     ['containers', 'retrieveContainer', containerId] as const,
-  listContainerFiles: (containerId: string, params?: Parameters<typeof listContainerFiles>[1]) =>
-    ['containers', 'listContainerFiles', containerId, params] as const,
-  retrieveContainerFile: (containerId: string, fileId: string) =>
-    ['containers', 'retrieveContainerFile', containerId, fileId] as const,
-  retrieveContainerFileContent: (containerId: string, fileId: string) =>
-    ['containers', 'retrieveContainerFileContent', containerId, fileId] as const,
+  listContainerFiles: (
+    containerId: Parameters<typeof listContainerFiles>[0],
+    params?: Parameters<typeof listContainerFiles>[1]
+  ) => ['containers', 'listContainerFiles', containerId, params] as const,
+  retrieveContainerFile: (
+    containerId: Parameters<typeof retrieveContainerFile>[0],
+    fileId: Parameters<typeof retrieveContainerFile>[1]
+  ) => ['containers', 'retrieveContainerFile', containerId, fileId] as const,
+  retrieveContainerFileContent: (
+    containerId: Parameters<typeof retrieveContainerFileContent>[0],
+    fileId: Parameters<typeof retrieveContainerFileContent>[1]
+  ) => ['containers', 'retrieveContainerFileContent', containerId, fileId] as const,
 }
 
 export const conversationKeys = {
   all: () => ['conversations'] as const,
   listConversationItems: (
-    conversationId: string,
+    conversationId: Parameters<typeof listConversationItems>[0],
     params?: Parameters<typeof listConversationItems>[1]
   ) => ['conversations', 'listConversationItems', conversationId, params] as const,
   getConversationItem: (
-    conversationId: string,
-    itemId: string,
+    conversationId: Parameters<typeof getConversationItem>[0],
+    itemId: Parameters<typeof getConversationItem>[1],
     params?: Parameters<typeof getConversationItem>[2]
   ) => ['conversations', 'getConversationItem', conversationId, itemId, params] as const,
-  getConversation: (conversationId: string) =>
+  getConversation: (conversationId: Parameters<typeof getConversation>[0]) =>
     ['conversations', 'getConversation', conversationId] as const,
 }
 
 export const evalKeys = {
   all: () => ['evals'] as const,
   list: (params?: Parameters<typeof listEvals>[0]) => ['evals', 'list', params] as const,
-  getEval: (evalId: string) => ['evals', 'getEval', evalId] as const,
-  getEvalRuns: (evalId: string, params?: Parameters<typeof getEvalRuns>[1]) =>
-    ['evals', 'getEvalRuns', evalId, params] as const,
-  getEvalRun: (evalId: string, runId: string) => ['evals', 'getEvalRun', evalId, runId] as const,
+  getEval: (evalId: Parameters<typeof getEval>[0]) => ['evals', 'getEval', evalId] as const,
+  getEvalRuns: (
+    evalId: Parameters<typeof getEvalRuns>[0],
+    params?: Parameters<typeof getEvalRuns>[1]
+  ) => ['evals', 'getEvalRuns', evalId, params] as const,
+  getEvalRun: (evalId: Parameters<typeof getEvalRun>[0], runId: Parameters<typeof getEvalRun>[1]) =>
+    ['evals', 'getEvalRun', evalId, runId] as const,
   getEvalRunOutputItems: (
-    evalId: string,
-    runId: string,
+    evalId: Parameters<typeof getEvalRunOutputItems>[0],
+    runId: Parameters<typeof getEvalRunOutputItems>[1],
     params?: Parameters<typeof getEvalRunOutputItems>[2]
   ) => ['evals', 'getEvalRunOutputItems', evalId, runId, params] as const,
-  getEvalRunOutputItem: (evalId: string, runId: string, outputItemId: string) =>
-    ['evals', 'getEvalRunOutputItem', evalId, runId, outputItemId] as const,
+  getEvalRunOutputItem: (
+    evalId: Parameters<typeof getEvalRunOutputItem>[0],
+    runId: Parameters<typeof getEvalRunOutputItem>[1],
+    outputItemId: Parameters<typeof getEvalRunOutputItem>[2]
+  ) => ['evals', 'getEvalRunOutputItem', evalId, runId, outputItemId] as const,
 }
 
 export const fileKeys = {
   all: () => ['files'] as const,
   list: (params?: Parameters<typeof listFiles>[0]) => ['files', 'list', params] as const,
-  retrieveFile: (fileId: string) => ['files', 'retrieveFile', fileId] as const,
-  downloadFile: (fileId: string) => ['files', 'downloadFile', fileId] as const,
+  retrieveFile: (fileId: Parameters<typeof retrieveFile>[0]) =>
+    ['files', 'retrieveFile', fileId] as const,
+  downloadFile: (fileId: Parameters<typeof downloadFile>[0]) =>
+    ['files', 'downloadFile', fileId] as const,
 }
 
 export const fineTuningKeys = {
@@ -343,7 +358,7 @@ export const fineTuningKeys = {
   list: (params?: Parameters<typeof listPaginatedFineTuningJobs>[0]) =>
     ['fine_tuning', 'list', params] as const,
   listFineTuningCheckpointPermissions: (
-    fineTunedModelCheckpoint: string,
+    fineTunedModelCheckpoint: Parameters<typeof listFineTuningCheckpointPermissions>[0],
     params?: Parameters<typeof listFineTuningCheckpointPermissions>[1]
   ) =>
     [
@@ -352,14 +367,14 @@ export const fineTuningKeys = {
       fineTunedModelCheckpoint,
       params,
     ] as const,
-  retrieveFineTuningJob: (fineTuningJobId: string) =>
+  retrieveFineTuningJob: (fineTuningJobId: Parameters<typeof retrieveFineTuningJob>[0]) =>
     ['fine_tuning', 'retrieveFineTuningJob', fineTuningJobId] as const,
   listFineTuningJobCheckpoints: (
-    fineTuningJobId: string,
+    fineTuningJobId: Parameters<typeof listFineTuningJobCheckpoints>[0],
     params?: Parameters<typeof listFineTuningJobCheckpoints>[1]
   ) => ['fine_tuning', 'listFineTuningJobCheckpoints', fineTuningJobId, params] as const,
   listFineTuningEvents: (
-    fineTuningJobId: string,
+    fineTuningJobId: Parameters<typeof listFineTuningEvents>[0],
     params?: Parameters<typeof listFineTuningEvents>[1]
   ) => ['fine_tuning', 'listFineTuningEvents', fineTuningJobId, params] as const,
 }
@@ -367,7 +382,7 @@ export const fineTuningKeys = {
 export const modelKeys = {
   all: () => ['models'] as const,
   list: () => ['models', 'list'] as const,
-  detail: (model: string) => ['models', model] as const,
+  detail: (model: Parameters<typeof retrieveModel>[0]) => ['models', model] as const,
 }
 
 export const organizationKeys = {
@@ -406,44 +421,64 @@ export const organizationKeys = {
     ['organization', 'usageVectorStores', params] as const,
   listUsers: (params?: Parameters<typeof listUsers>[0]) =>
     ['organization', 'listUsers', params] as const,
-  adminApiKeysGet: (keyId: string) => ['organization', 'adminApiKeysGet', keyId] as const,
-  getCertificate: (certificateId: string, params?: Parameters<typeof getCertificate>[1]) =>
-    ['organization', 'getCertificate', certificateId, params] as const,
+  adminApiKeysGet: (keyId: Parameters<typeof adminApiKeysGet>[0]) =>
+    ['organization', 'adminApiKeysGet', keyId] as const,
+  getCertificate: (
+    certificateId: Parameters<typeof getCertificate>[0],
+    params?: Parameters<typeof getCertificate>[1]
+  ) => ['organization', 'getCertificate', certificateId, params] as const,
   listGroupRoleAssignments: (
-    groupId: string,
+    groupId: Parameters<typeof listGroupRoleAssignments>[0],
     params?: Parameters<typeof listGroupRoleAssignments>[1]
   ) => ['organization', 'listGroupRoleAssignments', groupId, params] as const,
-  listGroupUsers: (groupId: string, params?: Parameters<typeof listGroupUsers>[1]) =>
-    ['organization', 'listGroupUsers', groupId, params] as const,
-  retrieveInvite: (inviteId: string) => ['organization', 'retrieveInvite', inviteId] as const,
-  retrieveProject: (projectId: string) => ['organization', 'retrieveProject', projectId] as const,
-  listProjectApiKeys: (projectId: string, params?: Parameters<typeof listProjectApiKeys>[1]) =>
-    ['organization', 'listProjectApiKeys', projectId, params] as const,
-  retrieveProjectApiKey: (projectId: string, apiKeyId: string) =>
-    ['organization', 'retrieveProjectApiKey', projectId, apiKeyId] as const,
+  listGroupUsers: (
+    groupId: Parameters<typeof listGroupUsers>[0],
+    params?: Parameters<typeof listGroupUsers>[1]
+  ) => ['organization', 'listGroupUsers', groupId, params] as const,
+  retrieveInvite: (inviteId: Parameters<typeof retrieveInvite>[0]) =>
+    ['organization', 'retrieveInvite', inviteId] as const,
+  retrieveProject: (projectId: Parameters<typeof retrieveProject>[0]) =>
+    ['organization', 'retrieveProject', projectId] as const,
+  listProjectApiKeys: (
+    projectId: Parameters<typeof listProjectApiKeys>[0],
+    params?: Parameters<typeof listProjectApiKeys>[1]
+  ) => ['organization', 'listProjectApiKeys', projectId, params] as const,
+  retrieveProjectApiKey: (
+    projectId: Parameters<typeof retrieveProjectApiKey>[0],
+    apiKeyId: Parameters<typeof retrieveProjectApiKey>[1]
+  ) => ['organization', 'retrieveProjectApiKey', projectId, apiKeyId] as const,
   listProjectCertificates: (
-    projectId: string,
+    projectId: Parameters<typeof listProjectCertificates>[0],
     params?: Parameters<typeof listProjectCertificates>[1]
   ) => ['organization', 'listProjectCertificates', projectId, params] as const,
-  listProjectGroups: (projectId: string, params?: Parameters<typeof listProjectGroups>[1]) =>
-    ['organization', 'listProjectGroups', projectId, params] as const,
+  listProjectGroups: (
+    projectId: Parameters<typeof listProjectGroups>[0],
+    params?: Parameters<typeof listProjectGroups>[1]
+  ) => ['organization', 'listProjectGroups', projectId, params] as const,
   listProjectRateLimits: (
-    projectId: string,
+    projectId: Parameters<typeof listProjectRateLimits>[0],
     params?: Parameters<typeof listProjectRateLimits>[1]
   ) => ['organization', 'listProjectRateLimits', projectId, params] as const,
   listProjectServiceAccounts: (
-    projectId: string,
+    projectId: Parameters<typeof listProjectServiceAccounts>[0],
     params?: Parameters<typeof listProjectServiceAccounts>[1]
   ) => ['organization', 'listProjectServiceAccounts', projectId, params] as const,
-  retrieveProjectServiceAccount: (projectId: string, serviceAccountId: string) =>
-    ['organization', 'retrieveProjectServiceAccount', projectId, serviceAccountId] as const,
-  listProjectUsers: (projectId: string, params?: Parameters<typeof listProjectUsers>[1]) =>
-    ['organization', 'listProjectUsers', projectId, params] as const,
-  retrieveProjectUser: (projectId: string, userId: string) =>
-    ['organization', 'retrieveProjectUser', projectId, userId] as const,
-  retrieveUser: (userId: string) => ['organization', 'retrieveUser', userId] as const,
+  retrieveProjectServiceAccount: (
+    projectId: Parameters<typeof retrieveProjectServiceAccount>[0],
+    serviceAccountId: Parameters<typeof retrieveProjectServiceAccount>[1]
+  ) => ['organization', 'retrieveProjectServiceAccount', projectId, serviceAccountId] as const,
+  listProjectUsers: (
+    projectId: Parameters<typeof listProjectUsers>[0],
+    params?: Parameters<typeof listProjectUsers>[1]
+  ) => ['organization', 'listProjectUsers', projectId, params] as const,
+  retrieveProjectUser: (
+    projectId: Parameters<typeof retrieveProjectUser>[0],
+    userId: Parameters<typeof retrieveProjectUser>[1]
+  ) => ['organization', 'retrieveProjectUser', projectId, userId] as const,
+  retrieveUser: (userId: Parameters<typeof retrieveUser>[0]) =>
+    ['organization', 'retrieveUser', userId] as const,
   listUserRoleAssignments: (
-    userId: string,
+    userId: Parameters<typeof listUserRoleAssignments>[0],
     params?: Parameters<typeof listUserRoleAssignments>[1]
   ) => ['organization', 'listUserRoleAssignments', userId, params] as const,
 }
@@ -451,43 +486,58 @@ export const organizationKeys = {
 export const projectKeys = {
   all: () => ['projects'] as const,
   listProjectGroupRoleAssignments: (
-    projectId: string,
-    groupId: string,
+    projectId: Parameters<typeof listProjectGroupRoleAssignments>[0],
+    groupId: Parameters<typeof listProjectGroupRoleAssignments>[1],
     params?: Parameters<typeof listProjectGroupRoleAssignments>[2]
   ) => ['projects', 'listProjectGroupRoleAssignments', projectId, groupId, params] as const,
-  listProjectRoles: (projectId: string, params?: Parameters<typeof listProjectRoles>[1]) =>
-    ['projects', 'listProjectRoles', projectId, params] as const,
+  listProjectRoles: (
+    projectId: Parameters<typeof listProjectRoles>[0],
+    params?: Parameters<typeof listProjectRoles>[1]
+  ) => ['projects', 'listProjectRoles', projectId, params] as const,
   listProjectUserRoleAssignments: (
-    projectId: string,
-    userId: string,
+    projectId: Parameters<typeof listProjectUserRoleAssignments>[0],
+    userId: Parameters<typeof listProjectUserRoleAssignments>[1],
     params?: Parameters<typeof listProjectUserRoleAssignments>[2]
   ) => ['projects', 'listProjectUserRoleAssignments', projectId, userId, params] as const,
 }
 
 export const responseKeys = {
   all: () => ['responses'] as const,
-  getResponse: (responseId: string, params?: Parameters<typeof getResponse>[1]) =>
-    ['responses', 'getResponse', responseId, params] as const,
-  listInputItems: (responseId: string, params?: Parameters<typeof listInputItems>[1]) =>
-    ['responses', 'listInputItems', responseId, params] as const,
+  getResponse: (
+    responseId: Parameters<typeof getResponse>[0],
+    params?: Parameters<typeof getResponse>[1]
+  ) => ['responses', 'getResponse', responseId, params] as const,
+  listInputItems: (
+    responseId: Parameters<typeof listInputItems>[0],
+    params?: Parameters<typeof listInputItems>[1]
+  ) => ['responses', 'listInputItems', responseId, params] as const,
 }
 
 export const threadKeys = {
   all: () => ['threads'] as const,
-  getThread: (threadId: string) => ['threads', 'getThread', threadId] as const,
-  listMessages: (threadId: string, params?: Parameters<typeof listMessages>[1]) =>
-    ['threads', 'listMessages', threadId, params] as const,
-  getMessage: (threadId: string, messageId: string) =>
-    ['threads', 'getMessage', threadId, messageId] as const,
-  listRuns: (threadId: string, params?: Parameters<typeof listRuns>[1]) =>
+  getThread: (threadId: Parameters<typeof getThread>[0]) =>
+    ['threads', 'getThread', threadId] as const,
+  listMessages: (
+    threadId: Parameters<typeof listMessages>[0],
+    params?: Parameters<typeof listMessages>[1]
+  ) => ['threads', 'listMessages', threadId, params] as const,
+  getMessage: (
+    threadId: Parameters<typeof getMessage>[0],
+    messageId: Parameters<typeof getMessage>[1]
+  ) => ['threads', 'getMessage', threadId, messageId] as const,
+  listRuns: (threadId: Parameters<typeof listRuns>[0], params?: Parameters<typeof listRuns>[1]) =>
     ['threads', 'listRuns', threadId, params] as const,
-  getRun: (threadId: string, runId: string) => ['threads', 'getRun', threadId, runId] as const,
-  listRunSteps: (threadId: string, runId: string, params?: Parameters<typeof listRunSteps>[2]) =>
-    ['threads', 'listRunSteps', threadId, runId, params] as const,
+  getRun: (threadId: Parameters<typeof getRun>[0], runId: Parameters<typeof getRun>[1]) =>
+    ['threads', 'getRun', threadId, runId] as const,
+  listRunSteps: (
+    threadId: Parameters<typeof listRunSteps>[0],
+    runId: Parameters<typeof listRunSteps>[1],
+    params?: Parameters<typeof listRunSteps>[2]
+  ) => ['threads', 'listRunSteps', threadId, runId, params] as const,
   getRunStep: (
-    threadId: string,
-    runId: string,
-    stepId: string,
+    threadId: Parameters<typeof getRunStep>[0],
+    runId: Parameters<typeof getRunStep>[1],
+    stepId: Parameters<typeof getRunStep>[2],
     params?: Parameters<typeof getRunStep>[3]
   ) => ['threads', 'getRunStep', threadId, runId, stepId, params] as const,
 }
@@ -496,53 +546,72 @@ export const vectorStoreKeys = {
   all: () => ['vector_stores'] as const,
   list: (params?: Parameters<typeof listVectorStores>[0]) =>
     ['vector_stores', 'list', params] as const,
-  getVectorStore: (vectorStoreId: string) =>
+  getVectorStore: (vectorStoreId: Parameters<typeof getVectorStore>[0]) =>
     ['vector_stores', 'getVectorStore', vectorStoreId] as const,
-  getVectorStoreFileBatch: (vectorStoreId: string, batchId: string) =>
-    ['vector_stores', 'getVectorStoreFileBatch', vectorStoreId, batchId] as const,
+  getVectorStoreFileBatch: (
+    vectorStoreId: Parameters<typeof getVectorStoreFileBatch>[0],
+    batchId: Parameters<typeof getVectorStoreFileBatch>[1]
+  ) => ['vector_stores', 'getVectorStoreFileBatch', vectorStoreId, batchId] as const,
   listFilesInVectorStoreBatch: (
-    vectorStoreId: string,
-    batchId: string,
+    vectorStoreId: Parameters<typeof listFilesInVectorStoreBatch>[0],
+    batchId: Parameters<typeof listFilesInVectorStoreBatch>[1],
     params?: Parameters<typeof listFilesInVectorStoreBatch>[2]
   ) => ['vector_stores', 'listFilesInVectorStoreBatch', vectorStoreId, batchId, params] as const,
   listVectorStoreFiles: (
-    vectorStoreId: string,
+    vectorStoreId: Parameters<typeof listVectorStoreFiles>[0],
     params?: Parameters<typeof listVectorStoreFiles>[1]
   ) => ['vector_stores', 'listVectorStoreFiles', vectorStoreId, params] as const,
-  getVectorStoreFile: (vectorStoreId: string, fileId: string) =>
-    ['vector_stores', 'getVectorStoreFile', vectorStoreId, fileId] as const,
-  retrieveVectorStoreFileContent: (vectorStoreId: string, fileId: string) =>
-    ['vector_stores', 'retrieveVectorStoreFileContent', vectorStoreId, fileId] as const,
+  getVectorStoreFile: (
+    vectorStoreId: Parameters<typeof getVectorStoreFile>[0],
+    fileId: Parameters<typeof getVectorStoreFile>[1]
+  ) => ['vector_stores', 'getVectorStoreFile', vectorStoreId, fileId] as const,
+  retrieveVectorStoreFileContent: (
+    vectorStoreId: Parameters<typeof retrieveVectorStoreFileContent>[0],
+    fileId: Parameters<typeof retrieveVectorStoreFileContent>[1]
+  ) => ['vector_stores', 'retrieveVectorStoreFileContent', vectorStoreId, fileId] as const,
 }
 
 export const videoKeys = {
   all: () => ['videos'] as const,
   list: (params?: Parameters<typeof listVideos>[0]) => ['videos', 'list', params] as const,
-  getVideoCharacter: (characterId: string) => ['videos', 'getVideoCharacter', characterId] as const,
-  getVideo: (videoId: string) => ['videos', 'getVideo', videoId] as const,
-  retrieveVideoContent: (videoId: string, params?: Parameters<typeof retrieveVideoContent>[1]) =>
-    ['videos', 'retrieveVideoContent', videoId, params] as const,
+  getVideoCharacter: (characterId: Parameters<typeof getVideoCharacter>[0]) =>
+    ['videos', 'getVideoCharacter', characterId] as const,
+  getVideo: (videoId: Parameters<typeof getVideo>[0]) => ['videos', 'getVideo', videoId] as const,
+  retrieveVideoContent: (
+    videoId: Parameters<typeof retrieveVideoContent>[0],
+    params?: Parameters<typeof retrieveVideoContent>[1]
+  ) => ['videos', 'retrieveVideoContent', videoId, params] as const,
 }
 
 export const skillKeys = {
   all: () => ['skills'] as const,
   list: (params?: Parameters<typeof listSkills>[0]) => ['skills', 'list', params] as const,
-  getSkill: (skillId: string) => ['skills', 'getSkill', skillId] as const,
-  getSkillContent: (skillId: string) => ['skills', 'getSkillContent', skillId] as const,
-  listSkillVersions: (skillId: string, params?: Parameters<typeof listSkillVersions>[1]) =>
-    ['skills', 'listSkillVersions', skillId, params] as const,
-  getSkillVersion: (skillId: string, version: string) =>
-    ['skills', 'getSkillVersion', skillId, version] as const,
-  getSkillVersionContent: (skillId: string, version: string) =>
-    ['skills', 'getSkillVersionContent', skillId, version] as const,
+  getSkill: (skillId: Parameters<typeof getSkill>[0]) => ['skills', 'getSkill', skillId] as const,
+  getSkillContent: (skillId: Parameters<typeof getSkillContent>[0]) =>
+    ['skills', 'getSkillContent', skillId] as const,
+  listSkillVersions: (
+    skillId: Parameters<typeof listSkillVersions>[0],
+    params?: Parameters<typeof listSkillVersions>[1]
+  ) => ['skills', 'listSkillVersions', skillId, params] as const,
+  getSkillVersion: (
+    skillId: Parameters<typeof getSkillVersion>[0],
+    version: Parameters<typeof getSkillVersion>[1]
+  ) => ['skills', 'getSkillVersion', skillId, version] as const,
+  getSkillVersionContent: (
+    skillId: Parameters<typeof getSkillVersionContent>[0],
+    version: Parameters<typeof getSkillVersionContent>[1]
+  ) => ['skills', 'getSkillVersionContent', skillId, version] as const,
 }
 
 export const chatkitKeys = {
   all: () => ['chatkit'] as const,
   list: (params?: Parameters<typeof listThreadsMethod>[0]) => ['chatkit', 'list', params] as const,
-  listThreadItemsMethod: (threadId: string, params?: Parameters<typeof listThreadItemsMethod>[1]) =>
-    ['chatkit', 'listThreadItemsMethod', threadId, params] as const,
-  getThreadMethod: (threadId: string) => ['chatkit', 'getThreadMethod', threadId] as const,
+  listThreadItemsMethod: (
+    threadId: Parameters<typeof listThreadItemsMethod>[0],
+    params?: Parameters<typeof listThreadItemsMethod>[1]
+  ) => ['chatkit', 'listThreadItemsMethod', threadId, params] as const,
+  getThreadMethod: (threadId: Parameters<typeof getThreadMethod>[0]) =>
+    ['chatkit', 'getThreadMethod', threadId] as const,
 }
 
 // ── Query options factories ──────────────────────────────────
@@ -566,7 +635,7 @@ export function listAssistantsQueryOptions(
 
 /** @deprecated */
 export function getAssistantQueryOptions(
-  assistantId: string,
+  assistantId: Parameters<typeof getAssistant>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAssistant>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -598,7 +667,7 @@ export function listVoiceConsentsQueryOptions(
 }
 
 export function getVoiceConsentQueryOptions(
-  consentId: string,
+  consentId: Parameters<typeof getVoiceConsent>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVoiceConsent>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -630,7 +699,7 @@ export function listBatchesQueryOptions(
 }
 
 export function retrieveBatchQueryOptions(
-  batchId: string,
+  batchId: Parameters<typeof retrieveBatch>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveBatch>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -662,7 +731,7 @@ export function listChatCompletionsQueryOptions(
 }
 
 export function getChatCompletionQueryOptions(
-  completionId: string,
+  completionId: Parameters<typeof getChatCompletion>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getChatCompletion>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -678,7 +747,7 @@ export function getChatCompletionQueryOptions(
 }
 
 export function getChatCompletionMessagesQueryOptions(
-  completionId: string,
+  completionId: Parameters<typeof getChatCompletionMessages>[0],
   params?: Parameters<typeof getChatCompletionMessages>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getChatCompletionMessages>>, ApiError>,
@@ -711,7 +780,7 @@ export function listContainersQueryOptions(
 }
 
 export function retrieveContainerQueryOptions(
-  containerId: string,
+  containerId: Parameters<typeof retrieveContainer>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveContainer>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -727,7 +796,7 @@ export function retrieveContainerQueryOptions(
 }
 
 export function listContainerFilesQueryOptions(
-  containerId: string,
+  containerId: Parameters<typeof listContainerFiles>[0],
   params?: Parameters<typeof listContainerFiles>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listContainerFiles>>, ApiError>,
@@ -744,8 +813,8 @@ export function listContainerFilesQueryOptions(
 }
 
 export function retrieveContainerFileQueryOptions(
-  containerId: string,
-  fileId: string,
+  containerId: Parameters<typeof retrieveContainerFile>[0],
+  fileId: Parameters<typeof retrieveContainerFile>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveContainerFile>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -761,8 +830,8 @@ export function retrieveContainerFileQueryOptions(
 }
 
 export function retrieveContainerFileContentQueryOptions(
-  containerId: string,
-  fileId: string,
+  containerId: Parameters<typeof retrieveContainerFileContent>[0],
+  fileId: Parameters<typeof retrieveContainerFileContent>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveContainerFileContent>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -778,7 +847,7 @@ export function retrieveContainerFileContentQueryOptions(
 }
 
 export function listConversationItemsQueryOptions(
-  conversationId: string,
+  conversationId: Parameters<typeof listConversationItems>[0],
   params?: Parameters<typeof listConversationItems>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listConversationItems>>, ApiError>,
@@ -795,8 +864,8 @@ export function listConversationItemsQueryOptions(
 }
 
 export function getConversationItemQueryOptions(
-  conversationId: string,
-  itemId: string,
+  conversationId: Parameters<typeof getConversationItem>[0],
+  itemId: Parameters<typeof getConversationItem>[1],
   params?: Parameters<typeof getConversationItem>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getConversationItem>>, ApiError>,
@@ -829,7 +898,7 @@ export function listEvalsQueryOptions(
 }
 
 export function getEvalQueryOptions(
-  evalId: string,
+  evalId: Parameters<typeof getEval>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEval>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -845,7 +914,7 @@ export function getEvalQueryOptions(
 }
 
 export function getEvalRunsQueryOptions(
-  evalId: string,
+  evalId: Parameters<typeof getEvalRuns>[0],
   params?: Parameters<typeof getEvalRuns>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEvalRuns>>, ApiError>,
@@ -862,8 +931,8 @@ export function getEvalRunsQueryOptions(
 }
 
 export function getEvalRunQueryOptions(
-  evalId: string,
-  runId: string,
+  evalId: Parameters<typeof getEvalRun>[0],
+  runId: Parameters<typeof getEvalRun>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEvalRun>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -879,8 +948,8 @@ export function getEvalRunQueryOptions(
 }
 
 export function getEvalRunOutputItemsQueryOptions(
-  evalId: string,
-  runId: string,
+  evalId: Parameters<typeof getEvalRunOutputItems>[0],
+  runId: Parameters<typeof getEvalRunOutputItems>[1],
   params?: Parameters<typeof getEvalRunOutputItems>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEvalRunOutputItems>>, ApiError>,
@@ -897,9 +966,9 @@ export function getEvalRunOutputItemsQueryOptions(
 }
 
 export function getEvalRunOutputItemQueryOptions(
-  evalId: string,
-  runId: string,
-  outputItemId: string,
+  evalId: Parameters<typeof getEvalRunOutputItem>[0],
+  runId: Parameters<typeof getEvalRunOutputItem>[1],
+  outputItemId: Parameters<typeof getEvalRunOutputItem>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEvalRunOutputItem>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -931,7 +1000,7 @@ export function listFilesQueryOptions(
 }
 
 export function retrieveFileQueryOptions(
-  fileId: string,
+  fileId: Parameters<typeof retrieveFile>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveFile>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -947,7 +1016,7 @@ export function retrieveFileQueryOptions(
 }
 
 export function downloadFileQueryOptions(
-  fileId: string,
+  fileId: Parameters<typeof downloadFile>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof downloadFile>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -963,7 +1032,7 @@ export function downloadFileQueryOptions(
 }
 
 export function listFineTuningCheckpointPermissionsQueryOptions(
-  fineTunedModelCheckpoint: string,
+  fineTunedModelCheckpoint: Parameters<typeof listFineTuningCheckpointPermissions>[0],
   params?: Parameters<typeof listFineTuningCheckpointPermissions>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listFineTuningCheckpointPermissions>>, ApiError>,
@@ -996,7 +1065,7 @@ export function listPaginatedFineTuningJobsQueryOptions(
 }
 
 export function retrieveFineTuningJobQueryOptions(
-  fineTuningJobId: string,
+  fineTuningJobId: Parameters<typeof retrieveFineTuningJob>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveFineTuningJob>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1012,7 +1081,7 @@ export function retrieveFineTuningJobQueryOptions(
 }
 
 export function listFineTuningJobCheckpointsQueryOptions(
-  fineTuningJobId: string,
+  fineTuningJobId: Parameters<typeof listFineTuningJobCheckpoints>[0],
   params?: Parameters<typeof listFineTuningJobCheckpoints>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listFineTuningJobCheckpoints>>, ApiError>,
@@ -1029,7 +1098,7 @@ export function listFineTuningJobCheckpointsQueryOptions(
 }
 
 export function listFineTuningEventsQueryOptions(
-  fineTuningJobId: string,
+  fineTuningJobId: Parameters<typeof listFineTuningEvents>[0],
   params?: Parameters<typeof listFineTuningEvents>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listFineTuningEvents>>, ApiError>,
@@ -1061,7 +1130,7 @@ export function listModelsQueryOptions(
 }
 
 export function retrieveModelQueryOptions(
-  model: string,
+  model: Parameters<typeof retrieveModel>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveModel>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1093,7 +1162,7 @@ export function adminApiKeysListQueryOptions(
 }
 
 export function adminApiKeysGetQueryOptions(
-  keyId: string,
+  keyId: Parameters<typeof adminApiKeysGet>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof adminApiKeysGet>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1141,7 +1210,7 @@ export function listOrganizationCertificatesQueryOptions(
 }
 
 export function getCertificateQueryOptions(
-  certificateId: string,
+  certificateId: Parameters<typeof getCertificate>[0],
   params?: Parameters<typeof getCertificate>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getCertificate>>, ApiError>,
@@ -1190,7 +1259,7 @@ export function listGroupsQueryOptions(
 }
 
 export function listGroupRoleAssignmentsQueryOptions(
-  groupId: string,
+  groupId: Parameters<typeof listGroupRoleAssignments>[0],
   params?: Parameters<typeof listGroupRoleAssignments>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listGroupRoleAssignments>>, ApiError>,
@@ -1207,7 +1276,7 @@ export function listGroupRoleAssignmentsQueryOptions(
 }
 
 export function listGroupUsersQueryOptions(
-  groupId: string,
+  groupId: Parameters<typeof listGroupUsers>[0],
   params?: Parameters<typeof listGroupUsers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listGroupUsers>>, ApiError>,
@@ -1240,7 +1309,7 @@ export function listInvitesQueryOptions(
 }
 
 export function retrieveInviteQueryOptions(
-  inviteId: string,
+  inviteId: Parameters<typeof retrieveInvite>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveInvite>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1272,7 +1341,7 @@ export function listProjectsQueryOptions(
 }
 
 export function retrieveProjectQueryOptions(
-  projectId: string,
+  projectId: Parameters<typeof retrieveProject>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveProject>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1288,7 +1357,7 @@ export function retrieveProjectQueryOptions(
 }
 
 export function listProjectApiKeysQueryOptions(
-  projectId: string,
+  projectId: Parameters<typeof listProjectApiKeys>[0],
   params?: Parameters<typeof listProjectApiKeys>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectApiKeys>>, ApiError>,
@@ -1305,8 +1374,8 @@ export function listProjectApiKeysQueryOptions(
 }
 
 export function retrieveProjectApiKeyQueryOptions(
-  projectId: string,
-  apiKeyId: string,
+  projectId: Parameters<typeof retrieveProjectApiKey>[0],
+  apiKeyId: Parameters<typeof retrieveProjectApiKey>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveProjectApiKey>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1322,7 +1391,7 @@ export function retrieveProjectApiKeyQueryOptions(
 }
 
 export function listProjectCertificatesQueryOptions(
-  projectId: string,
+  projectId: Parameters<typeof listProjectCertificates>[0],
   params?: Parameters<typeof listProjectCertificates>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectCertificates>>, ApiError>,
@@ -1339,7 +1408,7 @@ export function listProjectCertificatesQueryOptions(
 }
 
 export function listProjectGroupsQueryOptions(
-  projectId: string,
+  projectId: Parameters<typeof listProjectGroups>[0],
   params?: Parameters<typeof listProjectGroups>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectGroups>>, ApiError>,
@@ -1356,7 +1425,7 @@ export function listProjectGroupsQueryOptions(
 }
 
 export function listProjectRateLimitsQueryOptions(
-  projectId: string,
+  projectId: Parameters<typeof listProjectRateLimits>[0],
   params?: Parameters<typeof listProjectRateLimits>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectRateLimits>>, ApiError>,
@@ -1373,7 +1442,7 @@ export function listProjectRateLimitsQueryOptions(
 }
 
 export function listProjectServiceAccountsQueryOptions(
-  projectId: string,
+  projectId: Parameters<typeof listProjectServiceAccounts>[0],
   params?: Parameters<typeof listProjectServiceAccounts>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectServiceAccounts>>, ApiError>,
@@ -1390,8 +1459,8 @@ export function listProjectServiceAccountsQueryOptions(
 }
 
 export function retrieveProjectServiceAccountQueryOptions(
-  projectId: string,
-  serviceAccountId: string,
+  projectId: Parameters<typeof retrieveProjectServiceAccount>[0],
+  serviceAccountId: Parameters<typeof retrieveProjectServiceAccount>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveProjectServiceAccount>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1407,7 +1476,7 @@ export function retrieveProjectServiceAccountQueryOptions(
 }
 
 export function listProjectUsersQueryOptions(
-  projectId: string,
+  projectId: Parameters<typeof listProjectUsers>[0],
   params?: Parameters<typeof listProjectUsers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectUsers>>, ApiError>,
@@ -1424,8 +1493,8 @@ export function listProjectUsersQueryOptions(
 }
 
 export function retrieveProjectUserQueryOptions(
-  projectId: string,
-  userId: string,
+  projectId: Parameters<typeof retrieveProjectUser>[0],
+  userId: Parameters<typeof retrieveProjectUser>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveProjectUser>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1601,7 +1670,7 @@ export function listUsersQueryOptions(
 }
 
 export function retrieveUserQueryOptions(
-  userId: string,
+  userId: Parameters<typeof retrieveUser>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveUser>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1617,7 +1686,7 @@ export function retrieveUserQueryOptions(
 }
 
 export function listUserRoleAssignmentsQueryOptions(
-  userId: string,
+  userId: Parameters<typeof listUserRoleAssignments>[0],
   params?: Parameters<typeof listUserRoleAssignments>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listUserRoleAssignments>>, ApiError>,
@@ -1634,8 +1703,8 @@ export function listUserRoleAssignmentsQueryOptions(
 }
 
 export function listProjectGroupRoleAssignmentsQueryOptions(
-  projectId: string,
-  groupId: string,
+  projectId: Parameters<typeof listProjectGroupRoleAssignments>[0],
+  groupId: Parameters<typeof listProjectGroupRoleAssignments>[1],
   params?: Parameters<typeof listProjectGroupRoleAssignments>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectGroupRoleAssignments>>, ApiError>,
@@ -1652,7 +1721,7 @@ export function listProjectGroupRoleAssignmentsQueryOptions(
 }
 
 export function listProjectRolesQueryOptions(
-  projectId: string,
+  projectId: Parameters<typeof listProjectRoles>[0],
   params?: Parameters<typeof listProjectRoles>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectRoles>>, ApiError>,
@@ -1669,8 +1738,8 @@ export function listProjectRolesQueryOptions(
 }
 
 export function listProjectUserRoleAssignmentsQueryOptions(
-  projectId: string,
-  userId: string,
+  projectId: Parameters<typeof listProjectUserRoleAssignments>[0],
+  userId: Parameters<typeof listProjectUserRoleAssignments>[1],
   params?: Parameters<typeof listProjectUserRoleAssignments>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectUserRoleAssignments>>, ApiError>,
@@ -1687,7 +1756,7 @@ export function listProjectUserRoleAssignmentsQueryOptions(
 }
 
 export function getResponseQueryOptions(
-  responseId: string,
+  responseId: Parameters<typeof getResponse>[0],
   params?: Parameters<typeof getResponse>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getResponse>>, ApiError>,
@@ -1704,7 +1773,7 @@ export function getResponseQueryOptions(
 }
 
 export function listInputItemsQueryOptions(
-  responseId: string,
+  responseId: Parameters<typeof listInputItems>[0],
   params?: Parameters<typeof listInputItems>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listInputItems>>, ApiError>,
@@ -1721,7 +1790,7 @@ export function listInputItemsQueryOptions(
 }
 
 export function getThreadQueryOptions(
-  threadId: string,
+  threadId: Parameters<typeof getThread>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getThread>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1737,7 +1806,7 @@ export function getThreadQueryOptions(
 }
 
 export function listMessagesQueryOptions(
-  threadId: string,
+  threadId: Parameters<typeof listMessages>[0],
   params?: Parameters<typeof listMessages>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listMessages>>, ApiError>,
@@ -1754,8 +1823,8 @@ export function listMessagesQueryOptions(
 }
 
 export function getMessageQueryOptions(
-  threadId: string,
-  messageId: string,
+  threadId: Parameters<typeof getMessage>[0],
+  messageId: Parameters<typeof getMessage>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getMessage>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1771,7 +1840,7 @@ export function getMessageQueryOptions(
 }
 
 export function listRunsQueryOptions(
-  threadId: string,
+  threadId: Parameters<typeof listRuns>[0],
   params?: Parameters<typeof listRuns>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listRuns>>, ApiError>,
@@ -1788,8 +1857,8 @@ export function listRunsQueryOptions(
 }
 
 export function getRunQueryOptions(
-  threadId: string,
-  runId: string,
+  threadId: Parameters<typeof getRun>[0],
+  runId: Parameters<typeof getRun>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getRun>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1805,8 +1874,8 @@ export function getRunQueryOptions(
 }
 
 export function listRunStepsQueryOptions(
-  threadId: string,
-  runId: string,
+  threadId: Parameters<typeof listRunSteps>[0],
+  runId: Parameters<typeof listRunSteps>[1],
   params?: Parameters<typeof listRunSteps>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listRunSteps>>, ApiError>,
@@ -1823,9 +1892,9 @@ export function listRunStepsQueryOptions(
 }
 
 export function getRunStepQueryOptions(
-  threadId: string,
-  runId: string,
-  stepId: string,
+  threadId: Parameters<typeof getRunStep>[0],
+  runId: Parameters<typeof getRunStep>[1],
+  stepId: Parameters<typeof getRunStep>[2],
   params?: Parameters<typeof getRunStep>[3],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getRunStep>>, ApiError>,
@@ -1858,7 +1927,7 @@ export function listVectorStoresQueryOptions(
 }
 
 export function getVectorStoreQueryOptions(
-  vectorStoreId: string,
+  vectorStoreId: Parameters<typeof getVectorStore>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVectorStore>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1874,8 +1943,8 @@ export function getVectorStoreQueryOptions(
 }
 
 export function getVectorStoreFileBatchQueryOptions(
-  vectorStoreId: string,
-  batchId: string,
+  vectorStoreId: Parameters<typeof getVectorStoreFileBatch>[0],
+  batchId: Parameters<typeof getVectorStoreFileBatch>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVectorStoreFileBatch>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1891,8 +1960,8 @@ export function getVectorStoreFileBatchQueryOptions(
 }
 
 export function listFilesInVectorStoreBatchQueryOptions(
-  vectorStoreId: string,
-  batchId: string,
+  vectorStoreId: Parameters<typeof listFilesInVectorStoreBatch>[0],
+  batchId: Parameters<typeof listFilesInVectorStoreBatch>[1],
   params?: Parameters<typeof listFilesInVectorStoreBatch>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listFilesInVectorStoreBatch>>, ApiError>,
@@ -1909,7 +1978,7 @@ export function listFilesInVectorStoreBatchQueryOptions(
 }
 
 export function listVectorStoreFilesQueryOptions(
-  vectorStoreId: string,
+  vectorStoreId: Parameters<typeof listVectorStoreFiles>[0],
   params?: Parameters<typeof listVectorStoreFiles>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listVectorStoreFiles>>, ApiError>,
@@ -1926,8 +1995,8 @@ export function listVectorStoreFilesQueryOptions(
 }
 
 export function getVectorStoreFileQueryOptions(
-  vectorStoreId: string,
-  fileId: string,
+  vectorStoreId: Parameters<typeof getVectorStoreFile>[0],
+  fileId: Parameters<typeof getVectorStoreFile>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVectorStoreFile>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1943,8 +2012,8 @@ export function getVectorStoreFileQueryOptions(
 }
 
 export function retrieveVectorStoreFileContentQueryOptions(
-  vectorStoreId: string,
-  fileId: string,
+  vectorStoreId: Parameters<typeof retrieveVectorStoreFileContent>[0],
+  fileId: Parameters<typeof retrieveVectorStoreFileContent>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveVectorStoreFileContent>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1960,7 +2029,7 @@ export function retrieveVectorStoreFileContentQueryOptions(
 }
 
 export function getConversationQueryOptions(
-  conversationId: string,
+  conversationId: Parameters<typeof getConversation>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getConversation>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1992,7 +2061,7 @@ export function listVideosQueryOptions(
 }
 
 export function getVideoCharacterQueryOptions(
-  characterId: string,
+  characterId: Parameters<typeof getVideoCharacter>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVideoCharacter>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2008,7 +2077,7 @@ export function getVideoCharacterQueryOptions(
 }
 
 export function getVideoQueryOptions(
-  videoId: string,
+  videoId: Parameters<typeof getVideo>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVideo>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2024,7 +2093,7 @@ export function getVideoQueryOptions(
 }
 
 export function retrieveVideoContentQueryOptions(
-  videoId: string,
+  videoId: Parameters<typeof retrieveVideoContent>[0],
   params?: Parameters<typeof retrieveVideoContent>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveVideoContent>>, ApiError>,
@@ -2057,7 +2126,7 @@ export function listSkillsQueryOptions(
 }
 
 export function getSkillQueryOptions(
-  skillId: string,
+  skillId: Parameters<typeof getSkill>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSkill>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2073,7 +2142,7 @@ export function getSkillQueryOptions(
 }
 
 export function getSkillContentQueryOptions(
-  skillId: string,
+  skillId: Parameters<typeof getSkillContent>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSkillContent>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2089,7 +2158,7 @@ export function getSkillContentQueryOptions(
 }
 
 export function listSkillVersionsQueryOptions(
-  skillId: string,
+  skillId: Parameters<typeof listSkillVersions>[0],
   params?: Parameters<typeof listSkillVersions>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listSkillVersions>>, ApiError>,
@@ -2106,8 +2175,8 @@ export function listSkillVersionsQueryOptions(
 }
 
 export function getSkillVersionQueryOptions(
-  skillId: string,
-  version: string,
+  skillId: Parameters<typeof getSkillVersion>[0],
+  version: Parameters<typeof getSkillVersion>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSkillVersion>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2123,8 +2192,8 @@ export function getSkillVersionQueryOptions(
 }
 
 export function getSkillVersionContentQueryOptions(
-  skillId: string,
-  version: string,
+  skillId: Parameters<typeof getSkillVersionContent>[0],
+  version: Parameters<typeof getSkillVersionContent>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSkillVersionContent>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2140,7 +2209,7 @@ export function getSkillVersionContentQueryOptions(
 }
 
 export function listThreadItemsMethodQueryOptions(
-  threadId: string,
+  threadId: Parameters<typeof listThreadItemsMethod>[0],
   params?: Parameters<typeof listThreadItemsMethod>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listThreadItemsMethod>>, ApiError>,
@@ -2157,7 +2226,7 @@ export function listThreadItemsMethodQueryOptions(
 }
 
 export function getThreadMethodQueryOptions(
-  threadId: string,
+  threadId: Parameters<typeof getThreadMethod>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getThreadMethod>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2241,7 +2310,7 @@ export function useListAssistantsInfinite(
 
 /** @deprecated */
 export function useGetAssistant(
-  assistantId: string | undefined | null,
+  assistantId: Parameters<typeof getAssistant>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAssistant>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2305,7 +2374,7 @@ export function useListVoiceConsentsInfinite(
 }
 
 export function useGetVoiceConsent(
-  consentId: string | undefined | null,
+  consentId: Parameters<typeof getVoiceConsent>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVoiceConsent>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2369,7 +2438,7 @@ export function useListBatchesInfinite(
 }
 
 export function useRetrieveBatch(
-  batchId: string | undefined | null,
+  batchId: Parameters<typeof retrieveBatch>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveBatch>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2433,7 +2502,7 @@ export function useListChatCompletionsInfinite(
 }
 
 export function useGetChatCompletion(
-  completionId: string | undefined | null,
+  completionId: Parameters<typeof getChatCompletion>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getChatCompletion>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2450,7 +2519,7 @@ export function useGetChatCompletion(
 }
 
 export function useGetChatCompletionMessages(
-  completionId: string | undefined | null,
+  completionId: Parameters<typeof getChatCompletionMessages>[0] | undefined | null,
   params?: Parameters<typeof getChatCompletionMessages>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getChatCompletionMessages>>, ApiError>,
@@ -2515,7 +2584,7 @@ export function useListContainersInfinite(
 }
 
 export function useRetrieveContainer(
-  containerId: string | undefined | null,
+  containerId: Parameters<typeof retrieveContainer>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveContainer>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2532,7 +2601,7 @@ export function useRetrieveContainer(
 }
 
 export function useListContainerFiles(
-  containerId: string | undefined | null,
+  containerId: Parameters<typeof listContainerFiles>[0] | undefined | null,
   params?: Parameters<typeof listContainerFiles>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listContainerFiles>>, ApiError>,
@@ -2550,8 +2619,8 @@ export function useListContainerFiles(
 }
 
 export function useRetrieveContainerFile(
-  containerId: string | undefined | null,
-  fileId: string | undefined | null,
+  containerId: Parameters<typeof retrieveContainerFile>[0] | undefined | null,
+  fileId: Parameters<typeof retrieveContainerFile>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveContainerFile>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2568,8 +2637,8 @@ export function useRetrieveContainerFile(
 }
 
 export function useRetrieveContainerFileContent(
-  containerId: string | undefined | null,
-  fileId: string | undefined | null,
+  containerId: Parameters<typeof retrieveContainerFileContent>[0] | undefined | null,
+  fileId: Parameters<typeof retrieveContainerFileContent>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveContainerFileContent>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2586,7 +2655,7 @@ export function useRetrieveContainerFileContent(
 }
 
 export function useListConversationItems(
-  conversationId: string | undefined | null,
+  conversationId: Parameters<typeof listConversationItems>[0] | undefined | null,
   params?: Parameters<typeof listConversationItems>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listConversationItems>>, ApiError>,
@@ -2604,8 +2673,8 @@ export function useListConversationItems(
 }
 
 export function useGetConversationItem(
-  conversationId: string | undefined | null,
-  itemId: string | undefined | null,
+  conversationId: Parameters<typeof getConversationItem>[0] | undefined | null,
+  itemId: Parameters<typeof getConversationItem>[1] | undefined | null,
   params?: Parameters<typeof getConversationItem>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getConversationItem>>, ApiError>,
@@ -2670,7 +2739,7 @@ export function useListEvalsInfinite(
 }
 
 export function useGetEval(
-  evalId: string | undefined | null,
+  evalId: Parameters<typeof getEval>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEval>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2687,7 +2756,7 @@ export function useGetEval(
 }
 
 export function useGetEvalRuns(
-  evalId: string | undefined | null,
+  evalId: Parameters<typeof getEvalRuns>[0] | undefined | null,
   params?: Parameters<typeof getEvalRuns>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEvalRuns>>, ApiError>,
@@ -2705,8 +2774,8 @@ export function useGetEvalRuns(
 }
 
 export function useGetEvalRun(
-  evalId: string | undefined | null,
-  runId: string | undefined | null,
+  evalId: Parameters<typeof getEvalRun>[0] | undefined | null,
+  runId: Parameters<typeof getEvalRun>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEvalRun>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2723,8 +2792,8 @@ export function useGetEvalRun(
 }
 
 export function useGetEvalRunOutputItems(
-  evalId: string | undefined | null,
-  runId: string | undefined | null,
+  evalId: Parameters<typeof getEvalRunOutputItems>[0] | undefined | null,
+  runId: Parameters<typeof getEvalRunOutputItems>[1] | undefined | null,
   params?: Parameters<typeof getEvalRunOutputItems>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEvalRunOutputItems>>, ApiError>,
@@ -2742,9 +2811,9 @@ export function useGetEvalRunOutputItems(
 }
 
 export function useGetEvalRunOutputItem(
-  evalId: string | undefined | null,
-  runId: string | undefined | null,
-  outputItemId: string | undefined | null,
+  evalId: Parameters<typeof getEvalRunOutputItem>[0] | undefined | null,
+  runId: Parameters<typeof getEvalRunOutputItem>[1] | undefined | null,
+  outputItemId: Parameters<typeof getEvalRunOutputItem>[2] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEvalRunOutputItem>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2808,7 +2877,7 @@ export function useListFilesInfinite(
 }
 
 export function useRetrieveFile(
-  fileId: string | undefined | null,
+  fileId: Parameters<typeof retrieveFile>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveFile>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2825,7 +2894,7 @@ export function useRetrieveFile(
 }
 
 export function useDownloadFile(
-  fileId: string | undefined | null,
+  fileId: Parameters<typeof downloadFile>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof downloadFile>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2842,7 +2911,10 @@ export function useDownloadFile(
 }
 
 export function useListFineTuningCheckpointPermissions(
-  fineTunedModelCheckpoint: string | undefined | null,
+  fineTunedModelCheckpoint:
+    | Parameters<typeof listFineTuningCheckpointPermissions>[0]
+    | undefined
+    | null,
   params?: Parameters<typeof listFineTuningCheckpointPermissions>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listFineTuningCheckpointPermissions>>, ApiError>,
@@ -2908,7 +2980,7 @@ export function useListPaginatedFineTuningJobsInfinite(
 }
 
 export function useRetrieveFineTuningJob(
-  fineTuningJobId: string | undefined | null,
+  fineTuningJobId: Parameters<typeof retrieveFineTuningJob>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveFineTuningJob>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2925,7 +2997,7 @@ export function useRetrieveFineTuningJob(
 }
 
 export function useListFineTuningJobCheckpoints(
-  fineTuningJobId: string | undefined | null,
+  fineTuningJobId: Parameters<typeof listFineTuningJobCheckpoints>[0] | undefined | null,
   params?: Parameters<typeof listFineTuningJobCheckpoints>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listFineTuningJobCheckpoints>>, ApiError>,
@@ -2943,7 +3015,7 @@ export function useListFineTuningJobCheckpoints(
 }
 
 export function useListFineTuningEvents(
-  fineTuningJobId: string | undefined | null,
+  fineTuningJobId: Parameters<typeof listFineTuningEvents>[0] | undefined | null,
   params?: Parameters<typeof listFineTuningEvents>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listFineTuningEvents>>, ApiError>,
@@ -2976,7 +3048,7 @@ export function useListModels(
 }
 
 export function useRetrieveModel(
-  model: string | undefined | null,
+  model: Parameters<typeof retrieveModel>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveModel>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -3040,7 +3112,7 @@ export function useAdminApiKeysListInfinite(
 }
 
 export function useAdminApiKeysGet(
-  keyId: string | undefined | null,
+  keyId: Parameters<typeof adminApiKeysGet>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof adminApiKeysGet>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -3152,7 +3224,7 @@ export function useListOrganizationCertificatesInfinite(
 }
 
 export function useGetCertificate(
-  certificateId: string | undefined | null,
+  certificateId: Parameters<typeof getCertificate>[0] | undefined | null,
   params?: Parameters<typeof getCertificate>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getCertificate>>, ApiError>,
@@ -3264,7 +3336,7 @@ export function useListGroupsInfinite(
 }
 
 export function useListGroupRoleAssignments(
-  groupId: string | undefined | null,
+  groupId: Parameters<typeof listGroupRoleAssignments>[0] | undefined | null,
   params?: Parameters<typeof listGroupRoleAssignments>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listGroupRoleAssignments>>, ApiError>,
@@ -3282,7 +3354,7 @@ export function useListGroupRoleAssignments(
 }
 
 export function useListGroupUsers(
-  groupId: string | undefined | null,
+  groupId: Parameters<typeof listGroupUsers>[0] | undefined | null,
   params?: Parameters<typeof listGroupUsers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listGroupUsers>>, ApiError>,
@@ -3347,7 +3419,7 @@ export function useListInvitesInfinite(
 }
 
 export function useRetrieveInvite(
-  inviteId: string | undefined | null,
+  inviteId: Parameters<typeof retrieveInvite>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveInvite>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -3411,7 +3483,7 @@ export function useListProjectsInfinite(
 }
 
 export function useRetrieveProject(
-  projectId: string | undefined | null,
+  projectId: Parameters<typeof retrieveProject>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveProject>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -3428,7 +3500,7 @@ export function useRetrieveProject(
 }
 
 export function useListProjectApiKeys(
-  projectId: string | undefined | null,
+  projectId: Parameters<typeof listProjectApiKeys>[0] | undefined | null,
   params?: Parameters<typeof listProjectApiKeys>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectApiKeys>>, ApiError>,
@@ -3446,8 +3518,8 @@ export function useListProjectApiKeys(
 }
 
 export function useRetrieveProjectApiKey(
-  projectId: string | undefined | null,
-  apiKeyId: string | undefined | null,
+  projectId: Parameters<typeof retrieveProjectApiKey>[0] | undefined | null,
+  apiKeyId: Parameters<typeof retrieveProjectApiKey>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveProjectApiKey>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -3464,7 +3536,7 @@ export function useRetrieveProjectApiKey(
 }
 
 export function useListProjectCertificates(
-  projectId: string | undefined | null,
+  projectId: Parameters<typeof listProjectCertificates>[0] | undefined | null,
   params?: Parameters<typeof listProjectCertificates>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectCertificates>>, ApiError>,
@@ -3482,7 +3554,7 @@ export function useListProjectCertificates(
 }
 
 export function useListProjectGroups(
-  projectId: string | undefined | null,
+  projectId: Parameters<typeof listProjectGroups>[0] | undefined | null,
   params?: Parameters<typeof listProjectGroups>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectGroups>>, ApiError>,
@@ -3500,7 +3572,7 @@ export function useListProjectGroups(
 }
 
 export function useListProjectRateLimits(
-  projectId: string | undefined | null,
+  projectId: Parameters<typeof listProjectRateLimits>[0] | undefined | null,
   params?: Parameters<typeof listProjectRateLimits>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectRateLimits>>, ApiError>,
@@ -3518,7 +3590,7 @@ export function useListProjectRateLimits(
 }
 
 export function useListProjectServiceAccounts(
-  projectId: string | undefined | null,
+  projectId: Parameters<typeof listProjectServiceAccounts>[0] | undefined | null,
   params?: Parameters<typeof listProjectServiceAccounts>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectServiceAccounts>>, ApiError>,
@@ -3536,8 +3608,8 @@ export function useListProjectServiceAccounts(
 }
 
 export function useRetrieveProjectServiceAccount(
-  projectId: string | undefined | null,
-  serviceAccountId: string | undefined | null,
+  projectId: Parameters<typeof retrieveProjectServiceAccount>[0] | undefined | null,
+  serviceAccountId: Parameters<typeof retrieveProjectServiceAccount>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveProjectServiceAccount>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -3554,7 +3626,7 @@ export function useRetrieveProjectServiceAccount(
 }
 
 export function useListProjectUsers(
-  projectId: string | undefined | null,
+  projectId: Parameters<typeof listProjectUsers>[0] | undefined | null,
   params?: Parameters<typeof listProjectUsers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectUsers>>, ApiError>,
@@ -3572,8 +3644,8 @@ export function useListProjectUsers(
 }
 
 export function useRetrieveProjectUser(
-  projectId: string | undefined | null,
-  userId: string | undefined | null,
+  projectId: Parameters<typeof retrieveProjectUser>[0] | undefined | null,
+  userId: Parameters<typeof retrieveProjectUser>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveProjectUser>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4061,7 +4133,7 @@ export function useListUsersInfinite(
 }
 
 export function useRetrieveUser(
-  userId: string | undefined | null,
+  userId: Parameters<typeof retrieveUser>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveUser>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4078,7 +4150,7 @@ export function useRetrieveUser(
 }
 
 export function useListUserRoleAssignments(
-  userId: string | undefined | null,
+  userId: Parameters<typeof listUserRoleAssignments>[0] | undefined | null,
   params?: Parameters<typeof listUserRoleAssignments>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listUserRoleAssignments>>, ApiError>,
@@ -4096,8 +4168,8 @@ export function useListUserRoleAssignments(
 }
 
 export function useListProjectGroupRoleAssignments(
-  projectId: string | undefined | null,
-  groupId: string | undefined | null,
+  projectId: Parameters<typeof listProjectGroupRoleAssignments>[0] | undefined | null,
+  groupId: Parameters<typeof listProjectGroupRoleAssignments>[1] | undefined | null,
   params?: Parameters<typeof listProjectGroupRoleAssignments>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectGroupRoleAssignments>>, ApiError>,
@@ -4115,7 +4187,7 @@ export function useListProjectGroupRoleAssignments(
 }
 
 export function useListProjectRoles(
-  projectId: string | undefined | null,
+  projectId: Parameters<typeof listProjectRoles>[0] | undefined | null,
   params?: Parameters<typeof listProjectRoles>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectRoles>>, ApiError>,
@@ -4133,8 +4205,8 @@ export function useListProjectRoles(
 }
 
 export function useListProjectUserRoleAssignments(
-  projectId: string | undefined | null,
-  userId: string | undefined | null,
+  projectId: Parameters<typeof listProjectUserRoleAssignments>[0] | undefined | null,
+  userId: Parameters<typeof listProjectUserRoleAssignments>[1] | undefined | null,
   params?: Parameters<typeof listProjectUserRoleAssignments>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listProjectUserRoleAssignments>>, ApiError>,
@@ -4152,7 +4224,7 @@ export function useListProjectUserRoleAssignments(
 }
 
 export function useGetResponse(
-  responseId: string | undefined | null,
+  responseId: Parameters<typeof getResponse>[0] | undefined | null,
   params?: Parameters<typeof getResponse>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getResponse>>, ApiError>,
@@ -4170,7 +4242,7 @@ export function useGetResponse(
 }
 
 export function useListInputItems(
-  responseId: string | undefined | null,
+  responseId: Parameters<typeof listInputItems>[0] | undefined | null,
   params?: Parameters<typeof listInputItems>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listInputItems>>, ApiError>,
@@ -4188,7 +4260,7 @@ export function useListInputItems(
 }
 
 export function useGetThread(
-  threadId: string | undefined | null,
+  threadId: Parameters<typeof getThread>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getThread>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4205,7 +4277,7 @@ export function useGetThread(
 }
 
 export function useListMessages(
-  threadId: string | undefined | null,
+  threadId: Parameters<typeof listMessages>[0] | undefined | null,
   params?: Parameters<typeof listMessages>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listMessages>>, ApiError>,
@@ -4223,8 +4295,8 @@ export function useListMessages(
 }
 
 export function useGetMessage(
-  threadId: string | undefined | null,
-  messageId: string | undefined | null,
+  threadId: Parameters<typeof getMessage>[0] | undefined | null,
+  messageId: Parameters<typeof getMessage>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getMessage>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4241,7 +4313,7 @@ export function useGetMessage(
 }
 
 export function useListRuns(
-  threadId: string | undefined | null,
+  threadId: Parameters<typeof listRuns>[0] | undefined | null,
   params?: Parameters<typeof listRuns>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listRuns>>, ApiError>,
@@ -4259,8 +4331,8 @@ export function useListRuns(
 }
 
 export function useGetRun(
-  threadId: string | undefined | null,
-  runId: string | undefined | null,
+  threadId: Parameters<typeof getRun>[0] | undefined | null,
+  runId: Parameters<typeof getRun>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getRun>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4277,8 +4349,8 @@ export function useGetRun(
 }
 
 export function useListRunSteps(
-  threadId: string | undefined | null,
-  runId: string | undefined | null,
+  threadId: Parameters<typeof listRunSteps>[0] | undefined | null,
+  runId: Parameters<typeof listRunSteps>[1] | undefined | null,
   params?: Parameters<typeof listRunSteps>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listRunSteps>>, ApiError>,
@@ -4296,9 +4368,9 @@ export function useListRunSteps(
 }
 
 export function useGetRunStep(
-  threadId: string | undefined | null,
-  runId: string | undefined | null,
-  stepId: string | undefined | null,
+  threadId: Parameters<typeof getRunStep>[0] | undefined | null,
+  runId: Parameters<typeof getRunStep>[1] | undefined | null,
+  stepId: Parameters<typeof getRunStep>[2] | undefined | null,
   params?: Parameters<typeof getRunStep>[3],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getRunStep>>, ApiError>,
@@ -4363,7 +4435,7 @@ export function useListVectorStoresInfinite(
 }
 
 export function useGetVectorStore(
-  vectorStoreId: string | undefined | null,
+  vectorStoreId: Parameters<typeof getVectorStore>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVectorStore>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4380,8 +4452,8 @@ export function useGetVectorStore(
 }
 
 export function useGetVectorStoreFileBatch(
-  vectorStoreId: string | undefined | null,
-  batchId: string | undefined | null,
+  vectorStoreId: Parameters<typeof getVectorStoreFileBatch>[0] | undefined | null,
+  batchId: Parameters<typeof getVectorStoreFileBatch>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVectorStoreFileBatch>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4398,8 +4470,8 @@ export function useGetVectorStoreFileBatch(
 }
 
 export function useListFilesInVectorStoreBatch(
-  vectorStoreId: string | undefined | null,
-  batchId: string | undefined | null,
+  vectorStoreId: Parameters<typeof listFilesInVectorStoreBatch>[0] | undefined | null,
+  batchId: Parameters<typeof listFilesInVectorStoreBatch>[1] | undefined | null,
   params?: Parameters<typeof listFilesInVectorStoreBatch>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listFilesInVectorStoreBatch>>, ApiError>,
@@ -4417,7 +4489,7 @@ export function useListFilesInVectorStoreBatch(
 }
 
 export function useListVectorStoreFiles(
-  vectorStoreId: string | undefined | null,
+  vectorStoreId: Parameters<typeof listVectorStoreFiles>[0] | undefined | null,
   params?: Parameters<typeof listVectorStoreFiles>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listVectorStoreFiles>>, ApiError>,
@@ -4435,8 +4507,8 @@ export function useListVectorStoreFiles(
 }
 
 export function useGetVectorStoreFile(
-  vectorStoreId: string | undefined | null,
-  fileId: string | undefined | null,
+  vectorStoreId: Parameters<typeof getVectorStoreFile>[0] | undefined | null,
+  fileId: Parameters<typeof getVectorStoreFile>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVectorStoreFile>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4453,8 +4525,8 @@ export function useGetVectorStoreFile(
 }
 
 export function useRetrieveVectorStoreFileContent(
-  vectorStoreId: string | undefined | null,
-  fileId: string | undefined | null,
+  vectorStoreId: Parameters<typeof retrieveVectorStoreFileContent>[0] | undefined | null,
+  fileId: Parameters<typeof retrieveVectorStoreFileContent>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveVectorStoreFileContent>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4471,7 +4543,7 @@ export function useRetrieveVectorStoreFileContent(
 }
 
 export function useGetConversation(
-  conversationId: string | undefined | null,
+  conversationId: Parameters<typeof getConversation>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getConversation>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4535,7 +4607,7 @@ export function useListVideosInfinite(
 }
 
 export function useGetVideoCharacter(
-  characterId: string | undefined | null,
+  characterId: Parameters<typeof getVideoCharacter>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVideoCharacter>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4552,7 +4624,7 @@ export function useGetVideoCharacter(
 }
 
 export function useGetVideo(
-  videoId: string | undefined | null,
+  videoId: Parameters<typeof getVideo>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVideo>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4569,7 +4641,7 @@ export function useGetVideo(
 }
 
 export function useRetrieveVideoContent(
-  videoId: string | undefined | null,
+  videoId: Parameters<typeof retrieveVideoContent>[0] | undefined | null,
   params?: Parameters<typeof retrieveVideoContent>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof retrieveVideoContent>>, ApiError>,
@@ -4634,7 +4706,7 @@ export function useListSkillsInfinite(
 }
 
 export function useGetSkill(
-  skillId: string | undefined | null,
+  skillId: Parameters<typeof getSkill>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSkill>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4651,7 +4723,7 @@ export function useGetSkill(
 }
 
 export function useGetSkillContent(
-  skillId: string | undefined | null,
+  skillId: Parameters<typeof getSkillContent>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSkillContent>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4668,7 +4740,7 @@ export function useGetSkillContent(
 }
 
 export function useListSkillVersions(
-  skillId: string | undefined | null,
+  skillId: Parameters<typeof listSkillVersions>[0] | undefined | null,
   params?: Parameters<typeof listSkillVersions>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listSkillVersions>>, ApiError>,
@@ -4686,8 +4758,8 @@ export function useListSkillVersions(
 }
 
 export function useGetSkillVersion(
-  skillId: string | undefined | null,
-  version: string | undefined | null,
+  skillId: Parameters<typeof getSkillVersion>[0] | undefined | null,
+  version: Parameters<typeof getSkillVersion>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSkillVersion>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4704,8 +4776,8 @@ export function useGetSkillVersion(
 }
 
 export function useGetSkillVersionContent(
-  skillId: string | undefined | null,
-  version: string | undefined | null,
+  skillId: Parameters<typeof getSkillVersionContent>[0] | undefined | null,
+  version: Parameters<typeof getSkillVersionContent>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSkillVersionContent>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4722,7 +4794,7 @@ export function useGetSkillVersionContent(
 }
 
 export function useListThreadItemsMethod(
-  threadId: string | undefined | null,
+  threadId: Parameters<typeof listThreadItemsMethod>[0] | undefined | null,
   params?: Parameters<typeof listThreadItemsMethod>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listThreadItemsMethod>>, ApiError>,
@@ -4740,7 +4812,7 @@ export function useListThreadItemsMethod(
 }
 
 export function useGetThreadMethod(
-  threadId: string | undefined | null,
+  threadId: Parameters<typeof getThreadMethod>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getThreadMethod>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -4832,7 +4904,10 @@ export function useModifyAssistant(
     UseMutationOptions<
       Awaited<ReturnType<typeof modifyAssistant>>,
       ApiError,
-      { assistantId: string; body: Parameters<typeof modifyAssistant>[1] }
+      {
+        assistantId: Parameters<typeof modifyAssistant>[0]
+        body: Parameters<typeof modifyAssistant>[1]
+      }
     >,
     'mutationFn'
   >
@@ -4840,7 +4915,10 @@ export function useModifyAssistant(
   return useMutation<
     Awaited<ReturnType<typeof modifyAssistant>>,
     ApiError,
-    { assistantId: string; body: Parameters<typeof modifyAssistant>[1] }
+    {
+      assistantId: Parameters<typeof modifyAssistant>[0]
+      body: Parameters<typeof modifyAssistant>[1]
+    }
   >({
     mutationFn: ({ assistantId, body }) => modifyAssistant(assistantId, body),
     ...options,
@@ -4850,11 +4928,19 @@ export function useModifyAssistant(
 /** @deprecated */
 export function useDeleteAssistant(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteAssistant>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteAssistant>>,
+      ApiError,
+      Parameters<typeof deleteAssistant>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteAssistant>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteAssistant>>,
+    ApiError,
+    Parameters<typeof deleteAssistant>[0]
+  >({
     mutationFn: (assistantId) => deleteAssistant(assistantId),
     ...options,
   })
@@ -4945,7 +5031,10 @@ export function useUpdateVoiceConsent(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateVoiceConsent>>,
       ApiError,
-      { consentId: string; body: Parameters<typeof updateVoiceConsent>[1] }
+      {
+        consentId: Parameters<typeof updateVoiceConsent>[0]
+        body: Parameters<typeof updateVoiceConsent>[1]
+      }
     >,
     'mutationFn'
   >
@@ -4953,7 +5042,10 @@ export function useUpdateVoiceConsent(
   return useMutation<
     Awaited<ReturnType<typeof updateVoiceConsent>>,
     ApiError,
-    { consentId: string; body: Parameters<typeof updateVoiceConsent>[1] }
+    {
+      consentId: Parameters<typeof updateVoiceConsent>[0]
+      body: Parameters<typeof updateVoiceConsent>[1]
+    }
   >({
     mutationFn: ({ consentId, body }) => updateVoiceConsent(consentId, body),
     ...options,
@@ -4962,11 +5054,19 @@ export function useUpdateVoiceConsent(
 
 export function useDeleteVoiceConsent(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteVoiceConsent>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteVoiceConsent>>,
+      ApiError,
+      Parameters<typeof deleteVoiceConsent>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteVoiceConsent>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteVoiceConsent>>,
+    ApiError,
+    Parameters<typeof deleteVoiceConsent>[0]
+  >({
     mutationFn: (consentId) => deleteVoiceConsent(consentId),
     ...options,
   })
@@ -5014,11 +5114,19 @@ export function useCreateBatch(
 
 export function useCancelBatch(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof cancelBatch>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof cancelBatch>>,
+      ApiError,
+      Parameters<typeof cancelBatch>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof cancelBatch>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof cancelBatch>>,
+    ApiError,
+    Parameters<typeof cancelBatch>[0]
+  >({
     mutationFn: (batchId) => cancelBatch(batchId),
     ...options,
   })
@@ -5049,7 +5157,10 @@ export function useUpdateChatCompletion(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateChatCompletion>>,
       ApiError,
-      { completionId: string; body: Parameters<typeof updateChatCompletion>[1] }
+      {
+        completionId: Parameters<typeof updateChatCompletion>[0]
+        body: Parameters<typeof updateChatCompletion>[1]
+      }
     >,
     'mutationFn'
   >
@@ -5057,7 +5168,10 @@ export function useUpdateChatCompletion(
   return useMutation<
     Awaited<ReturnType<typeof updateChatCompletion>>,
     ApiError,
-    { completionId: string; body: Parameters<typeof updateChatCompletion>[1] }
+    {
+      completionId: Parameters<typeof updateChatCompletion>[0]
+      body: Parameters<typeof updateChatCompletion>[1]
+    }
   >({
     mutationFn: ({ completionId, body }) => updateChatCompletion(completionId, body),
     ...options,
@@ -5066,11 +5180,19 @@ export function useUpdateChatCompletion(
 
 export function useDeleteChatCompletion(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteChatCompletion>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteChatCompletion>>,
+      ApiError,
+      Parameters<typeof deleteChatCompletion>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteChatCompletion>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteChatCompletion>>,
+    ApiError,
+    Parameters<typeof deleteChatCompletion>[0]
+  >({
     mutationFn: (completionId) => deleteChatCompletion(completionId),
     ...options,
   })
@@ -5118,11 +5240,19 @@ export function useCreateContainer(
 
 export function useDeleteContainer(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteContainer>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteContainer>>,
+      ApiError,
+      Parameters<typeof deleteContainer>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteContainer>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteContainer>>,
+    ApiError,
+    Parameters<typeof deleteContainer>[0]
+  >({
     mutationFn: (containerId) => deleteContainer(containerId),
     ...options,
   })
@@ -5133,7 +5263,10 @@ export function useCreateContainerFile(
     UseMutationOptions<
       Awaited<ReturnType<typeof createContainerFile>>,
       ApiError,
-      { containerId: string; body: Parameters<typeof createContainerFile>[1] }
+      {
+        containerId: Parameters<typeof createContainerFile>[0]
+        body: Parameters<typeof createContainerFile>[1]
+      }
     >,
     'mutationFn'
   >
@@ -5141,7 +5274,10 @@ export function useCreateContainerFile(
   return useMutation<
     Awaited<ReturnType<typeof createContainerFile>>,
     ApiError,
-    { containerId: string; body: Parameters<typeof createContainerFile>[1] }
+    {
+      containerId: Parameters<typeof createContainerFile>[0]
+      body: Parameters<typeof createContainerFile>[1]
+    }
   >({
     mutationFn: ({ containerId, body }) => createContainerFile(containerId, body),
     ...options,
@@ -5153,7 +5289,10 @@ export function useDeleteContainerFile(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteContainerFile>>,
       ApiError,
-      { containerId: string; fileId: string }
+      {
+        containerId: Parameters<typeof deleteContainerFile>[0]
+        fileId: Parameters<typeof deleteContainerFile>[1]
+      }
     >,
     'mutationFn'
   >
@@ -5161,7 +5300,10 @@ export function useDeleteContainerFile(
   return useMutation<
     Awaited<ReturnType<typeof deleteContainerFile>>,
     ApiError,
-    { containerId: string; fileId: string }
+    {
+      containerId: Parameters<typeof deleteContainerFile>[0]
+      fileId: Parameters<typeof deleteContainerFile>[1]
+    }
   >({
     mutationFn: ({ containerId, fileId }) => deleteContainerFile(containerId, fileId),
     ...options,
@@ -5174,7 +5316,7 @@ export function useCreateConversationItems(
       Awaited<ReturnType<typeof createConversationItems>>,
       ApiError,
       {
-        conversationId: string
+        conversationId: Parameters<typeof createConversationItems>[0]
         body: Parameters<typeof createConversationItems>[1]
         params: Parameters<typeof createConversationItems>[2]
       }
@@ -5186,7 +5328,7 @@ export function useCreateConversationItems(
     Awaited<ReturnType<typeof createConversationItems>>,
     ApiError,
     {
-      conversationId: string
+      conversationId: Parameters<typeof createConversationItems>[0]
       body: Parameters<typeof createConversationItems>[1]
       params: Parameters<typeof createConversationItems>[2]
     }
@@ -5202,7 +5344,10 @@ export function useDeleteConversationItem(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteConversationItem>>,
       ApiError,
-      { conversationId: string; itemId: string }
+      {
+        conversationId: Parameters<typeof deleteConversationItem>[0]
+        itemId: Parameters<typeof deleteConversationItem>[1]
+      }
     >,
     'mutationFn'
   >
@@ -5210,7 +5355,10 @@ export function useDeleteConversationItem(
   return useMutation<
     Awaited<ReturnType<typeof deleteConversationItem>>,
     ApiError,
-    { conversationId: string; itemId: string }
+    {
+      conversationId: Parameters<typeof deleteConversationItem>[0]
+      itemId: Parameters<typeof deleteConversationItem>[1]
+    }
   >({
     mutationFn: ({ conversationId, itemId }) => deleteConversationItem(conversationId, itemId),
     ...options,
@@ -5262,7 +5410,7 @@ export function useUpdateEval(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateEval>>,
       ApiError,
-      { evalId: string; body: Parameters<typeof updateEval>[1] }
+      { evalId: Parameters<typeof updateEval>[0]; body: Parameters<typeof updateEval>[1] }
     >,
     'mutationFn'
   >
@@ -5270,7 +5418,7 @@ export function useUpdateEval(
   return useMutation<
     Awaited<ReturnType<typeof updateEval>>,
     ApiError,
-    { evalId: string; body: Parameters<typeof updateEval>[1] }
+    { evalId: Parameters<typeof updateEval>[0]; body: Parameters<typeof updateEval>[1] }
   >({
     mutationFn: ({ evalId, body }) => updateEval(evalId, body),
     ...options,
@@ -5279,11 +5427,19 @@ export function useUpdateEval(
 
 export function useDeleteEval(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteEval>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteEval>>,
+      ApiError,
+      Parameters<typeof deleteEval>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteEval>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteEval>>,
+    ApiError,
+    Parameters<typeof deleteEval>[0]
+  >({
     mutationFn: (evalId) => deleteEval(evalId),
     ...options,
   })
@@ -5294,7 +5450,7 @@ export function useCreateEvalRun(
     UseMutationOptions<
       Awaited<ReturnType<typeof createEvalRun>>,
       ApiError,
-      { evalId: string; body: Parameters<typeof createEvalRun>[1] }
+      { evalId: Parameters<typeof createEvalRun>[0]; body: Parameters<typeof createEvalRun>[1] }
     >,
     'mutationFn'
   >
@@ -5302,7 +5458,7 @@ export function useCreateEvalRun(
   return useMutation<
     Awaited<ReturnType<typeof createEvalRun>>,
     ApiError,
-    { evalId: string; body: Parameters<typeof createEvalRun>[1] }
+    { evalId: Parameters<typeof createEvalRun>[0]; body: Parameters<typeof createEvalRun>[1] }
   >({
     mutationFn: ({ evalId, body }) => createEvalRun(evalId, body),
     ...options,
@@ -5314,7 +5470,7 @@ export function useCancelEvalRun(
     UseMutationOptions<
       Awaited<ReturnType<typeof cancelEvalRun>>,
       ApiError,
-      { evalId: string; runId: string }
+      { evalId: Parameters<typeof cancelEvalRun>[0]; runId: Parameters<typeof cancelEvalRun>[1] }
     >,
     'mutationFn'
   >
@@ -5322,7 +5478,7 @@ export function useCancelEvalRun(
   return useMutation<
     Awaited<ReturnType<typeof cancelEvalRun>>,
     ApiError,
-    { evalId: string; runId: string }
+    { evalId: Parameters<typeof cancelEvalRun>[0]; runId: Parameters<typeof cancelEvalRun>[1] }
   >({
     mutationFn: ({ evalId, runId }) => cancelEvalRun(evalId, runId),
     ...options,
@@ -5334,7 +5490,7 @@ export function useDeleteEvalRun(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteEvalRun>>,
       ApiError,
-      { evalId: string; runId: string }
+      { evalId: Parameters<typeof deleteEvalRun>[0]; runId: Parameters<typeof deleteEvalRun>[1] }
     >,
     'mutationFn'
   >
@@ -5342,7 +5498,7 @@ export function useDeleteEvalRun(
   return useMutation<
     Awaited<ReturnType<typeof deleteEvalRun>>,
     ApiError,
-    { evalId: string; runId: string }
+    { evalId: Parameters<typeof deleteEvalRun>[0]; runId: Parameters<typeof deleteEvalRun>[1] }
   >({
     mutationFn: ({ evalId, runId }) => deleteEvalRun(evalId, runId),
     ...options,
@@ -5371,11 +5527,19 @@ export function useCreateFile(
 
 export function useDeleteFile(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteFile>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteFile>>,
+      ApiError,
+      Parameters<typeof deleteFile>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteFile>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteFile>>,
+    ApiError,
+    Parameters<typeof deleteFile>[0]
+  >({
     mutationFn: (fileId) => deleteFile(fileId),
     ...options,
   })
@@ -5427,7 +5591,7 @@ export function useCreateFineTuningCheckpointPermission(
       Awaited<ReturnType<typeof createFineTuningCheckpointPermission>>,
       ApiError,
       {
-        fineTunedModelCheckpoint: string
+        fineTunedModelCheckpoint: Parameters<typeof createFineTuningCheckpointPermission>[0]
         body: Parameters<typeof createFineTuningCheckpointPermission>[1]
       }
     >,
@@ -5438,7 +5602,7 @@ export function useCreateFineTuningCheckpointPermission(
     Awaited<ReturnType<typeof createFineTuningCheckpointPermission>>,
     ApiError,
     {
-      fineTunedModelCheckpoint: string
+      fineTunedModelCheckpoint: Parameters<typeof createFineTuningCheckpointPermission>[0]
       body: Parameters<typeof createFineTuningCheckpointPermission>[1]
     }
   >({
@@ -5453,7 +5617,10 @@ export function useDeleteFineTuningCheckpointPermission(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteFineTuningCheckpointPermission>>,
       ApiError,
-      { fineTunedModelCheckpoint: string; permissionId: string }
+      {
+        fineTunedModelCheckpoint: Parameters<typeof deleteFineTuningCheckpointPermission>[0]
+        permissionId: Parameters<typeof deleteFineTuningCheckpointPermission>[1]
+      }
     >,
     'mutationFn'
   >
@@ -5461,7 +5628,10 @@ export function useDeleteFineTuningCheckpointPermission(
   return useMutation<
     Awaited<ReturnType<typeof deleteFineTuningCheckpointPermission>>,
     ApiError,
-    { fineTunedModelCheckpoint: string; permissionId: string }
+    {
+      fineTunedModelCheckpoint: Parameters<typeof deleteFineTuningCheckpointPermission>[0]
+      permissionId: Parameters<typeof deleteFineTuningCheckpointPermission>[1]
+    }
   >({
     mutationFn: ({ fineTunedModelCheckpoint, permissionId }) =>
       deleteFineTuningCheckpointPermission(fineTunedModelCheckpoint, permissionId),
@@ -5491,11 +5661,19 @@ export function useCreateFineTuningJob(
 
 export function useCancelFineTuningJob(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof cancelFineTuningJob>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof cancelFineTuningJob>>,
+      ApiError,
+      Parameters<typeof cancelFineTuningJob>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof cancelFineTuningJob>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof cancelFineTuningJob>>,
+    ApiError,
+    Parameters<typeof cancelFineTuningJob>[0]
+  >({
     mutationFn: (fineTuningJobId) => cancelFineTuningJob(fineTuningJobId),
     ...options,
   })
@@ -5503,11 +5681,19 @@ export function useCancelFineTuningJob(
 
 export function usePauseFineTuningJob(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof pauseFineTuningJob>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof pauseFineTuningJob>>,
+      ApiError,
+      Parameters<typeof pauseFineTuningJob>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof pauseFineTuningJob>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof pauseFineTuningJob>>,
+    ApiError,
+    Parameters<typeof pauseFineTuningJob>[0]
+  >({
     mutationFn: (fineTuningJobId) => pauseFineTuningJob(fineTuningJobId),
     ...options,
   })
@@ -5515,11 +5701,19 @@ export function usePauseFineTuningJob(
 
 export function useResumeFineTuningJob(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof resumeFineTuningJob>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof resumeFineTuningJob>>,
+      ApiError,
+      Parameters<typeof resumeFineTuningJob>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof resumeFineTuningJob>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof resumeFineTuningJob>>,
+    ApiError,
+    Parameters<typeof resumeFineTuningJob>[0]
+  >({
     mutationFn: (fineTuningJobId) => resumeFineTuningJob(fineTuningJobId),
     ...options,
   })
@@ -5587,11 +5781,19 @@ export function useCreateImageVariation(
 
 export function useDeleteModel(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteModel>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteModel>>,
+      ApiError,
+      Parameters<typeof deleteModel>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteModel>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteModel>>,
+    ApiError,
+    Parameters<typeof deleteModel>[0]
+  >({
     mutationFn: (model) => deleteModel(model),
     ...options,
   })
@@ -5639,11 +5841,19 @@ export function useAdminApiKeysCreate(
 
 export function useAdminApiKeysDelete(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof adminApiKeysDelete>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof adminApiKeysDelete>>,
+      ApiError,
+      Parameters<typeof adminApiKeysDelete>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof adminApiKeysDelete>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof adminApiKeysDelete>>,
+    ApiError,
+    Parameters<typeof adminApiKeysDelete>[0]
+  >({
     mutationFn: (keyId) => adminApiKeysDelete(keyId),
     ...options,
   })
@@ -5714,7 +5924,10 @@ export function useModifyCertificate(
     UseMutationOptions<
       Awaited<ReturnType<typeof modifyCertificate>>,
       ApiError,
-      { certificateId: string; body: Parameters<typeof modifyCertificate>[1] }
+      {
+        certificateId: Parameters<typeof modifyCertificate>[0]
+        body: Parameters<typeof modifyCertificate>[1]
+      }
     >,
     'mutationFn'
   >
@@ -5722,7 +5935,10 @@ export function useModifyCertificate(
   return useMutation<
     Awaited<ReturnType<typeof modifyCertificate>>,
     ApiError,
-    { certificateId: string; body: Parameters<typeof modifyCertificate>[1] }
+    {
+      certificateId: Parameters<typeof modifyCertificate>[0]
+      body: Parameters<typeof modifyCertificate>[1]
+    }
   >({
     mutationFn: ({ certificateId, body }) => modifyCertificate(certificateId, body),
     ...options,
@@ -5731,11 +5947,19 @@ export function useModifyCertificate(
 
 export function useDeleteCertificate(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteCertificate>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteCertificate>>,
+      ApiError,
+      Parameters<typeof deleteCertificate>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteCertificate>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteCertificate>>,
+    ApiError,
+    Parameters<typeof deleteCertificate>[0]
+  >({
     mutationFn: (certificateId) => deleteCertificate(certificateId),
     ...options,
   })
@@ -5766,7 +5990,7 @@ export function useUpdateGroup(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateGroup>>,
       ApiError,
-      { groupId: string; body: Parameters<typeof updateGroup>[1] }
+      { groupId: Parameters<typeof updateGroup>[0]; body: Parameters<typeof updateGroup>[1] }
     >,
     'mutationFn'
   >
@@ -5774,7 +5998,7 @@ export function useUpdateGroup(
   return useMutation<
     Awaited<ReturnType<typeof updateGroup>>,
     ApiError,
-    { groupId: string; body: Parameters<typeof updateGroup>[1] }
+    { groupId: Parameters<typeof updateGroup>[0]; body: Parameters<typeof updateGroup>[1] }
   >({
     mutationFn: ({ groupId, body }) => updateGroup(groupId, body),
     ...options,
@@ -5783,11 +6007,19 @@ export function useUpdateGroup(
 
 export function useDeleteGroup(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteGroup>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteGroup>>,
+      ApiError,
+      Parameters<typeof deleteGroup>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteGroup>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteGroup>>,
+    ApiError,
+    Parameters<typeof deleteGroup>[0]
+  >({
     mutationFn: (groupId) => deleteGroup(groupId),
     ...options,
   })
@@ -5798,7 +6030,10 @@ export function useAssignGroupRole(
     UseMutationOptions<
       Awaited<ReturnType<typeof assignGroupRole>>,
       ApiError,
-      { groupId: string; body: Parameters<typeof assignGroupRole>[1] }
+      {
+        groupId: Parameters<typeof assignGroupRole>[0]
+        body: Parameters<typeof assignGroupRole>[1]
+      }
     >,
     'mutationFn'
   >
@@ -5806,7 +6041,7 @@ export function useAssignGroupRole(
   return useMutation<
     Awaited<ReturnType<typeof assignGroupRole>>,
     ApiError,
-    { groupId: string; body: Parameters<typeof assignGroupRole>[1] }
+    { groupId: Parameters<typeof assignGroupRole>[0]; body: Parameters<typeof assignGroupRole>[1] }
   >({
     mutationFn: ({ groupId, body }) => assignGroupRole(groupId, body),
     ...options,
@@ -5818,7 +6053,10 @@ export function useUnassignGroupRole(
     UseMutationOptions<
       Awaited<ReturnType<typeof unassignGroupRole>>,
       ApiError,
-      { groupId: string; roleId: string }
+      {
+        groupId: Parameters<typeof unassignGroupRole>[0]
+        roleId: Parameters<typeof unassignGroupRole>[1]
+      }
     >,
     'mutationFn'
   >
@@ -5826,7 +6064,10 @@ export function useUnassignGroupRole(
   return useMutation<
     Awaited<ReturnType<typeof unassignGroupRole>>,
     ApiError,
-    { groupId: string; roleId: string }
+    {
+      groupId: Parameters<typeof unassignGroupRole>[0]
+      roleId: Parameters<typeof unassignGroupRole>[1]
+    }
   >({
     mutationFn: ({ groupId, roleId }) => unassignGroupRole(groupId, roleId),
     ...options,
@@ -5838,7 +6079,7 @@ export function useAddGroupUser(
     UseMutationOptions<
       Awaited<ReturnType<typeof addGroupUser>>,
       ApiError,
-      { groupId: string; body: Parameters<typeof addGroupUser>[1] }
+      { groupId: Parameters<typeof addGroupUser>[0]; body: Parameters<typeof addGroupUser>[1] }
     >,
     'mutationFn'
   >
@@ -5846,7 +6087,7 @@ export function useAddGroupUser(
   return useMutation<
     Awaited<ReturnType<typeof addGroupUser>>,
     ApiError,
-    { groupId: string; body: Parameters<typeof addGroupUser>[1] }
+    { groupId: Parameters<typeof addGroupUser>[0]; body: Parameters<typeof addGroupUser>[1] }
   >({
     mutationFn: ({ groupId, body }) => addGroupUser(groupId, body),
     ...options,
@@ -5858,7 +6099,10 @@ export function useRemoveGroupUser(
     UseMutationOptions<
       Awaited<ReturnType<typeof removeGroupUser>>,
       ApiError,
-      { groupId: string; userId: string }
+      {
+        groupId: Parameters<typeof removeGroupUser>[0]
+        userId: Parameters<typeof removeGroupUser>[1]
+      }
     >,
     'mutationFn'
   >
@@ -5866,7 +6110,10 @@ export function useRemoveGroupUser(
   return useMutation<
     Awaited<ReturnType<typeof removeGroupUser>>,
     ApiError,
-    { groupId: string; userId: string }
+    {
+      groupId: Parameters<typeof removeGroupUser>[0]
+      userId: Parameters<typeof removeGroupUser>[1]
+    }
   >({
     mutationFn: ({ groupId, userId }) => removeGroupUser(groupId, userId),
     ...options,
@@ -5895,11 +6142,19 @@ export function useInviteUser(
 
 export function useDeleteInvite(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteInvite>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteInvite>>,
+      ApiError,
+      Parameters<typeof deleteInvite>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteInvite>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteInvite>>,
+    ApiError,
+    Parameters<typeof deleteInvite>[0]
+  >({
     mutationFn: (inviteId) => deleteInvite(inviteId),
     ...options,
   })
@@ -5930,7 +6185,7 @@ export function useModifyProject(
     UseMutationOptions<
       Awaited<ReturnType<typeof modifyProject>>,
       ApiError,
-      { projectId: string; body: Parameters<typeof modifyProject>[1] }
+      { projectId: Parameters<typeof modifyProject>[0]; body: Parameters<typeof modifyProject>[1] }
     >,
     'mutationFn'
   >
@@ -5938,7 +6193,7 @@ export function useModifyProject(
   return useMutation<
     Awaited<ReturnType<typeof modifyProject>>,
     ApiError,
-    { projectId: string; body: Parameters<typeof modifyProject>[1] }
+    { projectId: Parameters<typeof modifyProject>[0]; body: Parameters<typeof modifyProject>[1] }
   >({
     mutationFn: ({ projectId, body }) => modifyProject(projectId, body),
     ...options,
@@ -5950,7 +6205,10 @@ export function useDeleteProjectApiKey(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectApiKey>>,
       ApiError,
-      { projectId: string; apiKeyId: string }
+      {
+        projectId: Parameters<typeof deleteProjectApiKey>[0]
+        apiKeyId: Parameters<typeof deleteProjectApiKey>[1]
+      }
     >,
     'mutationFn'
   >
@@ -5958,7 +6216,10 @@ export function useDeleteProjectApiKey(
   return useMutation<
     Awaited<ReturnType<typeof deleteProjectApiKey>>,
     ApiError,
-    { projectId: string; apiKeyId: string }
+    {
+      projectId: Parameters<typeof deleteProjectApiKey>[0]
+      apiKeyId: Parameters<typeof deleteProjectApiKey>[1]
+    }
   >({
     mutationFn: ({ projectId, apiKeyId }) => deleteProjectApiKey(projectId, apiKeyId),
     ...options,
@@ -5967,11 +6228,19 @@ export function useDeleteProjectApiKey(
 
 export function useArchiveProject(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof archiveProject>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof archiveProject>>,
+      ApiError,
+      Parameters<typeof archiveProject>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof archiveProject>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof archiveProject>>,
+    ApiError,
+    Parameters<typeof archiveProject>[0]
+  >({
     mutationFn: (projectId) => archiveProject(projectId),
     ...options,
   })
@@ -5982,7 +6251,10 @@ export function useActivateProjectCertificates(
     UseMutationOptions<
       Awaited<ReturnType<typeof activateProjectCertificates>>,
       ApiError,
-      { projectId: string; body: Parameters<typeof activateProjectCertificates>[1] }
+      {
+        projectId: Parameters<typeof activateProjectCertificates>[0]
+        body: Parameters<typeof activateProjectCertificates>[1]
+      }
     >,
     'mutationFn'
   >
@@ -5990,7 +6262,10 @@ export function useActivateProjectCertificates(
   return useMutation<
     Awaited<ReturnType<typeof activateProjectCertificates>>,
     ApiError,
-    { projectId: string; body: Parameters<typeof activateProjectCertificates>[1] }
+    {
+      projectId: Parameters<typeof activateProjectCertificates>[0]
+      body: Parameters<typeof activateProjectCertificates>[1]
+    }
   >({
     mutationFn: ({ projectId, body }) => activateProjectCertificates(projectId, body),
     ...options,
@@ -6002,7 +6277,10 @@ export function useDeactivateProjectCertificates(
     UseMutationOptions<
       Awaited<ReturnType<typeof deactivateProjectCertificates>>,
       ApiError,
-      { projectId: string; body: Parameters<typeof deactivateProjectCertificates>[1] }
+      {
+        projectId: Parameters<typeof deactivateProjectCertificates>[0]
+        body: Parameters<typeof deactivateProjectCertificates>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6010,7 +6288,10 @@ export function useDeactivateProjectCertificates(
   return useMutation<
     Awaited<ReturnType<typeof deactivateProjectCertificates>>,
     ApiError,
-    { projectId: string; body: Parameters<typeof deactivateProjectCertificates>[1] }
+    {
+      projectId: Parameters<typeof deactivateProjectCertificates>[0]
+      body: Parameters<typeof deactivateProjectCertificates>[1]
+    }
   >({
     mutationFn: ({ projectId, body }) => deactivateProjectCertificates(projectId, body),
     ...options,
@@ -6022,7 +6303,10 @@ export function useAddProjectGroup(
     UseMutationOptions<
       Awaited<ReturnType<typeof addProjectGroup>>,
       ApiError,
-      { projectId: string; body: Parameters<typeof addProjectGroup>[1] }
+      {
+        projectId: Parameters<typeof addProjectGroup>[0]
+        body: Parameters<typeof addProjectGroup>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6030,7 +6314,10 @@ export function useAddProjectGroup(
   return useMutation<
     Awaited<ReturnType<typeof addProjectGroup>>,
     ApiError,
-    { projectId: string; body: Parameters<typeof addProjectGroup>[1] }
+    {
+      projectId: Parameters<typeof addProjectGroup>[0]
+      body: Parameters<typeof addProjectGroup>[1]
+    }
   >({
     mutationFn: ({ projectId, body }) => addProjectGroup(projectId, body),
     ...options,
@@ -6042,7 +6329,10 @@ export function useRemoveProjectGroup(
     UseMutationOptions<
       Awaited<ReturnType<typeof removeProjectGroup>>,
       ApiError,
-      { projectId: string; groupId: string }
+      {
+        projectId: Parameters<typeof removeProjectGroup>[0]
+        groupId: Parameters<typeof removeProjectGroup>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6050,7 +6340,10 @@ export function useRemoveProjectGroup(
   return useMutation<
     Awaited<ReturnType<typeof removeProjectGroup>>,
     ApiError,
-    { projectId: string; groupId: string }
+    {
+      projectId: Parameters<typeof removeProjectGroup>[0]
+      groupId: Parameters<typeof removeProjectGroup>[1]
+    }
   >({
     mutationFn: ({ projectId, groupId }) => removeProjectGroup(projectId, groupId),
     ...options,
@@ -6063,8 +6356,8 @@ export function useUpdateProjectRateLimits(
       Awaited<ReturnType<typeof updateProjectRateLimits>>,
       ApiError,
       {
-        projectId: string
-        rateLimitId: string
+        projectId: Parameters<typeof updateProjectRateLimits>[0]
+        rateLimitId: Parameters<typeof updateProjectRateLimits>[1]
         body: Parameters<typeof updateProjectRateLimits>[2]
       }
     >,
@@ -6074,7 +6367,11 @@ export function useUpdateProjectRateLimits(
   return useMutation<
     Awaited<ReturnType<typeof updateProjectRateLimits>>,
     ApiError,
-    { projectId: string; rateLimitId: string; body: Parameters<typeof updateProjectRateLimits>[2] }
+    {
+      projectId: Parameters<typeof updateProjectRateLimits>[0]
+      rateLimitId: Parameters<typeof updateProjectRateLimits>[1]
+      body: Parameters<typeof updateProjectRateLimits>[2]
+    }
   >({
     mutationFn: ({ projectId, rateLimitId, body }) =>
       updateProjectRateLimits(projectId, rateLimitId, body),
@@ -6087,7 +6384,10 @@ export function useCreateProjectServiceAccount(
     UseMutationOptions<
       Awaited<ReturnType<typeof createProjectServiceAccount>>,
       ApiError,
-      { projectId: string; body: Parameters<typeof createProjectServiceAccount>[1] }
+      {
+        projectId: Parameters<typeof createProjectServiceAccount>[0]
+        body: Parameters<typeof createProjectServiceAccount>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6095,7 +6395,10 @@ export function useCreateProjectServiceAccount(
   return useMutation<
     Awaited<ReturnType<typeof createProjectServiceAccount>>,
     ApiError,
-    { projectId: string; body: Parameters<typeof createProjectServiceAccount>[1] }
+    {
+      projectId: Parameters<typeof createProjectServiceAccount>[0]
+      body: Parameters<typeof createProjectServiceAccount>[1]
+    }
   >({
     mutationFn: ({ projectId, body }) => createProjectServiceAccount(projectId, body),
     ...options,
@@ -6107,7 +6410,10 @@ export function useDeleteProjectServiceAccount(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectServiceAccount>>,
       ApiError,
-      { projectId: string; serviceAccountId: string }
+      {
+        projectId: Parameters<typeof deleteProjectServiceAccount>[0]
+        serviceAccountId: Parameters<typeof deleteProjectServiceAccount>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6115,7 +6421,10 @@ export function useDeleteProjectServiceAccount(
   return useMutation<
     Awaited<ReturnType<typeof deleteProjectServiceAccount>>,
     ApiError,
-    { projectId: string; serviceAccountId: string }
+    {
+      projectId: Parameters<typeof deleteProjectServiceAccount>[0]
+      serviceAccountId: Parameters<typeof deleteProjectServiceAccount>[1]
+    }
   >({
     mutationFn: ({ projectId, serviceAccountId }) =>
       deleteProjectServiceAccount(projectId, serviceAccountId),
@@ -6128,7 +6437,10 @@ export function useCreateProjectUser(
     UseMutationOptions<
       Awaited<ReturnType<typeof createProjectUser>>,
       ApiError,
-      { projectId: string; body: Parameters<typeof createProjectUser>[1] }
+      {
+        projectId: Parameters<typeof createProjectUser>[0]
+        body: Parameters<typeof createProjectUser>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6136,7 +6448,10 @@ export function useCreateProjectUser(
   return useMutation<
     Awaited<ReturnType<typeof createProjectUser>>,
     ApiError,
-    { projectId: string; body: Parameters<typeof createProjectUser>[1] }
+    {
+      projectId: Parameters<typeof createProjectUser>[0]
+      body: Parameters<typeof createProjectUser>[1]
+    }
   >({
     mutationFn: ({ projectId, body }) => createProjectUser(projectId, body),
     ...options,
@@ -6148,7 +6463,11 @@ export function useModifyProjectUser(
     UseMutationOptions<
       Awaited<ReturnType<typeof modifyProjectUser>>,
       ApiError,
-      { projectId: string; userId: string; body: Parameters<typeof modifyProjectUser>[2] }
+      {
+        projectId: Parameters<typeof modifyProjectUser>[0]
+        userId: Parameters<typeof modifyProjectUser>[1]
+        body: Parameters<typeof modifyProjectUser>[2]
+      }
     >,
     'mutationFn'
   >
@@ -6156,7 +6475,11 @@ export function useModifyProjectUser(
   return useMutation<
     Awaited<ReturnType<typeof modifyProjectUser>>,
     ApiError,
-    { projectId: string; userId: string; body: Parameters<typeof modifyProjectUser>[2] }
+    {
+      projectId: Parameters<typeof modifyProjectUser>[0]
+      userId: Parameters<typeof modifyProjectUser>[1]
+      body: Parameters<typeof modifyProjectUser>[2]
+    }
   >({
     mutationFn: ({ projectId, userId, body }) => modifyProjectUser(projectId, userId, body),
     ...options,
@@ -6168,7 +6491,10 @@ export function useDeleteProjectUser(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectUser>>,
       ApiError,
-      { projectId: string; userId: string }
+      {
+        projectId: Parameters<typeof deleteProjectUser>[0]
+        userId: Parameters<typeof deleteProjectUser>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6176,7 +6502,10 @@ export function useDeleteProjectUser(
   return useMutation<
     Awaited<ReturnType<typeof deleteProjectUser>>,
     ApiError,
-    { projectId: string; userId: string }
+    {
+      projectId: Parameters<typeof deleteProjectUser>[0]
+      userId: Parameters<typeof deleteProjectUser>[1]
+    }
   >({
     mutationFn: ({ projectId, userId }) => deleteProjectUser(projectId, userId),
     ...options,
@@ -6208,7 +6537,7 @@ export function useUpdateRole(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateRole>>,
       ApiError,
-      { roleId: string; body: Parameters<typeof updateRole>[1] }
+      { roleId: Parameters<typeof updateRole>[0]; body: Parameters<typeof updateRole>[1] }
     >,
     'mutationFn'
   >
@@ -6216,7 +6545,7 @@ export function useUpdateRole(
   return useMutation<
     Awaited<ReturnType<typeof updateRole>>,
     ApiError,
-    { roleId: string; body: Parameters<typeof updateRole>[1] }
+    { roleId: Parameters<typeof updateRole>[0]; body: Parameters<typeof updateRole>[1] }
   >({
     mutationFn: ({ roleId, body }) => updateRole(roleId, body),
     ...options,
@@ -6225,11 +6554,19 @@ export function useUpdateRole(
 
 export function useDeleteRole(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteRole>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteRole>>,
+      ApiError,
+      Parameters<typeof deleteRole>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteRole>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteRole>>,
+    ApiError,
+    Parameters<typeof deleteRole>[0]
+  >({
     mutationFn: (roleId) => deleteRole(roleId),
     ...options,
   })
@@ -6240,7 +6577,7 @@ export function useModifyUser(
     UseMutationOptions<
       Awaited<ReturnType<typeof modifyUser>>,
       ApiError,
-      { userId: string; body: Parameters<typeof modifyUser>[1] }
+      { userId: Parameters<typeof modifyUser>[0]; body: Parameters<typeof modifyUser>[1] }
     >,
     'mutationFn'
   >
@@ -6248,7 +6585,7 @@ export function useModifyUser(
   return useMutation<
     Awaited<ReturnType<typeof modifyUser>>,
     ApiError,
-    { userId: string; body: Parameters<typeof modifyUser>[1] }
+    { userId: Parameters<typeof modifyUser>[0]; body: Parameters<typeof modifyUser>[1] }
   >({
     mutationFn: ({ userId, body }) => modifyUser(userId, body),
     ...options,
@@ -6257,11 +6594,19 @@ export function useModifyUser(
 
 export function useDeleteUser(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteUser>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteUser>>,
+      ApiError,
+      Parameters<typeof deleteUser>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteUser>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteUser>>,
+    ApiError,
+    Parameters<typeof deleteUser>[0]
+  >({
     mutationFn: (userId) => deleteUser(userId),
     ...options,
   })
@@ -6272,7 +6617,7 @@ export function useAssignUserRole(
     UseMutationOptions<
       Awaited<ReturnType<typeof assignUserRole>>,
       ApiError,
-      { userId: string; body: Parameters<typeof assignUserRole>[1] }
+      { userId: Parameters<typeof assignUserRole>[0]; body: Parameters<typeof assignUserRole>[1] }
     >,
     'mutationFn'
   >
@@ -6280,7 +6625,7 @@ export function useAssignUserRole(
   return useMutation<
     Awaited<ReturnType<typeof assignUserRole>>,
     ApiError,
-    { userId: string; body: Parameters<typeof assignUserRole>[1] }
+    { userId: Parameters<typeof assignUserRole>[0]; body: Parameters<typeof assignUserRole>[1] }
   >({
     mutationFn: ({ userId, body }) => assignUserRole(userId, body),
     ...options,
@@ -6292,7 +6637,10 @@ export function useUnassignUserRole(
     UseMutationOptions<
       Awaited<ReturnType<typeof unassignUserRole>>,
       ApiError,
-      { userId: string; roleId: string }
+      {
+        userId: Parameters<typeof unassignUserRole>[0]
+        roleId: Parameters<typeof unassignUserRole>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6300,7 +6648,10 @@ export function useUnassignUserRole(
   return useMutation<
     Awaited<ReturnType<typeof unassignUserRole>>,
     ApiError,
-    { userId: string; roleId: string }
+    {
+      userId: Parameters<typeof unassignUserRole>[0]
+      roleId: Parameters<typeof unassignUserRole>[1]
+    }
   >({
     mutationFn: ({ userId, roleId }) => unassignUserRole(userId, roleId),
     ...options,
@@ -6312,7 +6663,11 @@ export function useAssignProjectGroupRole(
     UseMutationOptions<
       Awaited<ReturnType<typeof assignProjectGroupRole>>,
       ApiError,
-      { projectId: string; groupId: string; body: Parameters<typeof assignProjectGroupRole>[2] }
+      {
+        projectId: Parameters<typeof assignProjectGroupRole>[0]
+        groupId: Parameters<typeof assignProjectGroupRole>[1]
+        body: Parameters<typeof assignProjectGroupRole>[2]
+      }
     >,
     'mutationFn'
   >
@@ -6320,7 +6675,11 @@ export function useAssignProjectGroupRole(
   return useMutation<
     Awaited<ReturnType<typeof assignProjectGroupRole>>,
     ApiError,
-    { projectId: string; groupId: string; body: Parameters<typeof assignProjectGroupRole>[2] }
+    {
+      projectId: Parameters<typeof assignProjectGroupRole>[0]
+      groupId: Parameters<typeof assignProjectGroupRole>[1]
+      body: Parameters<typeof assignProjectGroupRole>[2]
+    }
   >({
     mutationFn: ({ projectId, groupId, body }) => assignProjectGroupRole(projectId, groupId, body),
     ...options,
@@ -6332,7 +6691,11 @@ export function useUnassignProjectGroupRole(
     UseMutationOptions<
       Awaited<ReturnType<typeof unassignProjectGroupRole>>,
       ApiError,
-      { projectId: string; groupId: string; roleId: string }
+      {
+        projectId: Parameters<typeof unassignProjectGroupRole>[0]
+        groupId: Parameters<typeof unassignProjectGroupRole>[1]
+        roleId: Parameters<typeof unassignProjectGroupRole>[2]
+      }
     >,
     'mutationFn'
   >
@@ -6340,7 +6703,11 @@ export function useUnassignProjectGroupRole(
   return useMutation<
     Awaited<ReturnType<typeof unassignProjectGroupRole>>,
     ApiError,
-    { projectId: string; groupId: string; roleId: string }
+    {
+      projectId: Parameters<typeof unassignProjectGroupRole>[0]
+      groupId: Parameters<typeof unassignProjectGroupRole>[1]
+      roleId: Parameters<typeof unassignProjectGroupRole>[2]
+    }
   >({
     mutationFn: ({ projectId, groupId, roleId }) =>
       unassignProjectGroupRole(projectId, groupId, roleId),
@@ -6353,7 +6720,10 @@ export function useCreateProjectRole(
     UseMutationOptions<
       Awaited<ReturnType<typeof createProjectRole>>,
       ApiError,
-      { projectId: string; body: Parameters<typeof createProjectRole>[1] }
+      {
+        projectId: Parameters<typeof createProjectRole>[0]
+        body: Parameters<typeof createProjectRole>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6361,7 +6731,10 @@ export function useCreateProjectRole(
   return useMutation<
     Awaited<ReturnType<typeof createProjectRole>>,
     ApiError,
-    { projectId: string; body: Parameters<typeof createProjectRole>[1] }
+    {
+      projectId: Parameters<typeof createProjectRole>[0]
+      body: Parameters<typeof createProjectRole>[1]
+    }
   >({
     mutationFn: ({ projectId, body }) => createProjectRole(projectId, body),
     ...options,
@@ -6373,7 +6746,11 @@ export function useUpdateProjectRole(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateProjectRole>>,
       ApiError,
-      { projectId: string; roleId: string; body: Parameters<typeof updateProjectRole>[2] }
+      {
+        projectId: Parameters<typeof updateProjectRole>[0]
+        roleId: Parameters<typeof updateProjectRole>[1]
+        body: Parameters<typeof updateProjectRole>[2]
+      }
     >,
     'mutationFn'
   >
@@ -6381,7 +6758,11 @@ export function useUpdateProjectRole(
   return useMutation<
     Awaited<ReturnType<typeof updateProjectRole>>,
     ApiError,
-    { projectId: string; roleId: string; body: Parameters<typeof updateProjectRole>[2] }
+    {
+      projectId: Parameters<typeof updateProjectRole>[0]
+      roleId: Parameters<typeof updateProjectRole>[1]
+      body: Parameters<typeof updateProjectRole>[2]
+    }
   >({
     mutationFn: ({ projectId, roleId, body }) => updateProjectRole(projectId, roleId, body),
     ...options,
@@ -6393,7 +6774,10 @@ export function useDeleteProjectRole(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteProjectRole>>,
       ApiError,
-      { projectId: string; roleId: string }
+      {
+        projectId: Parameters<typeof deleteProjectRole>[0]
+        roleId: Parameters<typeof deleteProjectRole>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6401,7 +6785,10 @@ export function useDeleteProjectRole(
   return useMutation<
     Awaited<ReturnType<typeof deleteProjectRole>>,
     ApiError,
-    { projectId: string; roleId: string }
+    {
+      projectId: Parameters<typeof deleteProjectRole>[0]
+      roleId: Parameters<typeof deleteProjectRole>[1]
+    }
   >({
     mutationFn: ({ projectId, roleId }) => deleteProjectRole(projectId, roleId),
     ...options,
@@ -6413,7 +6800,11 @@ export function useAssignProjectUserRole(
     UseMutationOptions<
       Awaited<ReturnType<typeof assignProjectUserRole>>,
       ApiError,
-      { projectId: string; userId: string; body: Parameters<typeof assignProjectUserRole>[2] }
+      {
+        projectId: Parameters<typeof assignProjectUserRole>[0]
+        userId: Parameters<typeof assignProjectUserRole>[1]
+        body: Parameters<typeof assignProjectUserRole>[2]
+      }
     >,
     'mutationFn'
   >
@@ -6421,7 +6812,11 @@ export function useAssignProjectUserRole(
   return useMutation<
     Awaited<ReturnType<typeof assignProjectUserRole>>,
     ApiError,
-    { projectId: string; userId: string; body: Parameters<typeof assignProjectUserRole>[2] }
+    {
+      projectId: Parameters<typeof assignProjectUserRole>[0]
+      userId: Parameters<typeof assignProjectUserRole>[1]
+      body: Parameters<typeof assignProjectUserRole>[2]
+    }
   >({
     mutationFn: ({ projectId, userId, body }) => assignProjectUserRole(projectId, userId, body),
     ...options,
@@ -6433,7 +6828,11 @@ export function useUnassignProjectUserRole(
     UseMutationOptions<
       Awaited<ReturnType<typeof unassignProjectUserRole>>,
       ApiError,
-      { projectId: string; userId: string; roleId: string }
+      {
+        projectId: Parameters<typeof unassignProjectUserRole>[0]
+        userId: Parameters<typeof unassignProjectUserRole>[1]
+        roleId: Parameters<typeof unassignProjectUserRole>[2]
+      }
     >,
     'mutationFn'
   >
@@ -6441,7 +6840,11 @@ export function useUnassignProjectUserRole(
   return useMutation<
     Awaited<ReturnType<typeof unassignProjectUserRole>>,
     ApiError,
-    { projectId: string; userId: string; roleId: string }
+    {
+      projectId: Parameters<typeof unassignProjectUserRole>[0]
+      userId: Parameters<typeof unassignProjectUserRole>[1]
+      roleId: Parameters<typeof unassignProjectUserRole>[2]
+    }
   >({
     mutationFn: ({ projectId, userId, roleId }) =>
       unassignProjectUserRole(projectId, userId, roleId),
@@ -6474,7 +6877,10 @@ export function useAcceptRealtimeCall(
     UseMutationOptions<
       Awaited<ReturnType<typeof acceptRealtimeCall>>,
       ApiError,
-      { callId: string; body: Parameters<typeof acceptRealtimeCall>[1] }
+      {
+        callId: Parameters<typeof acceptRealtimeCall>[0]
+        body: Parameters<typeof acceptRealtimeCall>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6482,7 +6888,10 @@ export function useAcceptRealtimeCall(
   return useMutation<
     Awaited<ReturnType<typeof acceptRealtimeCall>>,
     ApiError,
-    { callId: string; body: Parameters<typeof acceptRealtimeCall>[1] }
+    {
+      callId: Parameters<typeof acceptRealtimeCall>[0]
+      body: Parameters<typeof acceptRealtimeCall>[1]
+    }
   >({
     mutationFn: ({ callId, body }) => acceptRealtimeCall(callId, body),
     ...options,
@@ -6491,11 +6900,19 @@ export function useAcceptRealtimeCall(
 
 export function useHangupRealtimeCall(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof hangupRealtimeCall>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof hangupRealtimeCall>>,
+      ApiError,
+      Parameters<typeof hangupRealtimeCall>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof hangupRealtimeCall>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof hangupRealtimeCall>>,
+    ApiError,
+    Parameters<typeof hangupRealtimeCall>[0]
+  >({
     mutationFn: (callId) => hangupRealtimeCall(callId),
     ...options,
   })
@@ -6506,7 +6923,10 @@ export function useReferRealtimeCall(
     UseMutationOptions<
       Awaited<ReturnType<typeof referRealtimeCall>>,
       ApiError,
-      { callId: string; body: Parameters<typeof referRealtimeCall>[1] }
+      {
+        callId: Parameters<typeof referRealtimeCall>[0]
+        body: Parameters<typeof referRealtimeCall>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6514,7 +6934,10 @@ export function useReferRealtimeCall(
   return useMutation<
     Awaited<ReturnType<typeof referRealtimeCall>>,
     ApiError,
-    { callId: string; body: Parameters<typeof referRealtimeCall>[1] }
+    {
+      callId: Parameters<typeof referRealtimeCall>[0]
+      body: Parameters<typeof referRealtimeCall>[1]
+    }
   >({
     mutationFn: ({ callId, body }) => referRealtimeCall(callId, body),
     ...options,
@@ -6526,7 +6949,10 @@ export function useRejectRealtimeCall(
     UseMutationOptions<
       Awaited<ReturnType<typeof rejectRealtimeCall>>,
       ApiError,
-      { callId: string; body: Parameters<typeof rejectRealtimeCall>[1] }
+      {
+        callId: Parameters<typeof rejectRealtimeCall>[0]
+        body: Parameters<typeof rejectRealtimeCall>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6534,7 +6960,10 @@ export function useRejectRealtimeCall(
   return useMutation<
     Awaited<ReturnType<typeof rejectRealtimeCall>>,
     ApiError,
-    { callId: string; body: Parameters<typeof rejectRealtimeCall>[1] }
+    {
+      callId: Parameters<typeof rejectRealtimeCall>[0]
+      body: Parameters<typeof rejectRealtimeCall>[1]
+    }
   >({
     mutationFn: ({ callId, body }) => rejectRealtimeCall(callId, body),
     ...options,
@@ -6643,11 +7072,19 @@ export function useCreateResponse(
 
 export function useDeleteResponse(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteResponse>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteResponse>>,
+      ApiError,
+      Parameters<typeof deleteResponse>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteResponse>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteResponse>>,
+    ApiError,
+    Parameters<typeof deleteResponse>[0]
+  >({
     mutationFn: (responseId) => deleteResponse(responseId),
     ...options,
   })
@@ -6655,11 +7092,19 @@ export function useDeleteResponse(
 
 export function useCancelResponse(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof cancelResponse>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof cancelResponse>>,
+      ApiError,
+      Parameters<typeof cancelResponse>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof cancelResponse>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof cancelResponse>>,
+    ApiError,
+    Parameters<typeof cancelResponse>[0]
+  >({
     mutationFn: (responseId) => cancelResponse(responseId),
     ...options,
   })
@@ -6710,7 +7155,7 @@ export function useModifyThread(
     UseMutationOptions<
       Awaited<ReturnType<typeof modifyThread>>,
       ApiError,
-      { threadId: string; body: Parameters<typeof modifyThread>[1] }
+      { threadId: Parameters<typeof modifyThread>[0]; body: Parameters<typeof modifyThread>[1] }
     >,
     'mutationFn'
   >
@@ -6718,7 +7163,7 @@ export function useModifyThread(
   return useMutation<
     Awaited<ReturnType<typeof modifyThread>>,
     ApiError,
-    { threadId: string; body: Parameters<typeof modifyThread>[1] }
+    { threadId: Parameters<typeof modifyThread>[0]; body: Parameters<typeof modifyThread>[1] }
   >({
     mutationFn: ({ threadId, body }) => modifyThread(threadId, body),
     ...options,
@@ -6727,11 +7172,19 @@ export function useModifyThread(
 
 export function useDeleteThread(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteThread>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteThread>>,
+      ApiError,
+      Parameters<typeof deleteThread>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteThread>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteThread>>,
+    ApiError,
+    Parameters<typeof deleteThread>[0]
+  >({
     mutationFn: (threadId) => deleteThread(threadId),
     ...options,
   })
@@ -6742,7 +7195,7 @@ export function useCreateMessage(
     UseMutationOptions<
       Awaited<ReturnType<typeof createMessage>>,
       ApiError,
-      { threadId: string; body: Parameters<typeof createMessage>[1] }
+      { threadId: Parameters<typeof createMessage>[0]; body: Parameters<typeof createMessage>[1] }
     >,
     'mutationFn'
   >
@@ -6750,7 +7203,7 @@ export function useCreateMessage(
   return useMutation<
     Awaited<ReturnType<typeof createMessage>>,
     ApiError,
-    { threadId: string; body: Parameters<typeof createMessage>[1] }
+    { threadId: Parameters<typeof createMessage>[0]; body: Parameters<typeof createMessage>[1] }
   >({
     mutationFn: ({ threadId, body }) => createMessage(threadId, body),
     ...options,
@@ -6762,7 +7215,11 @@ export function useModifyMessage(
     UseMutationOptions<
       Awaited<ReturnType<typeof modifyMessage>>,
       ApiError,
-      { threadId: string; messageId: string; body: Parameters<typeof modifyMessage>[2] }
+      {
+        threadId: Parameters<typeof modifyMessage>[0]
+        messageId: Parameters<typeof modifyMessage>[1]
+        body: Parameters<typeof modifyMessage>[2]
+      }
     >,
     'mutationFn'
   >
@@ -6770,7 +7227,11 @@ export function useModifyMessage(
   return useMutation<
     Awaited<ReturnType<typeof modifyMessage>>,
     ApiError,
-    { threadId: string; messageId: string; body: Parameters<typeof modifyMessage>[2] }
+    {
+      threadId: Parameters<typeof modifyMessage>[0]
+      messageId: Parameters<typeof modifyMessage>[1]
+      body: Parameters<typeof modifyMessage>[2]
+    }
   >({
     mutationFn: ({ threadId, messageId, body }) => modifyMessage(threadId, messageId, body),
     ...options,
@@ -6782,7 +7243,10 @@ export function useDeleteMessage(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteMessage>>,
       ApiError,
-      { threadId: string; messageId: string }
+      {
+        threadId: Parameters<typeof deleteMessage>[0]
+        messageId: Parameters<typeof deleteMessage>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6790,7 +7254,10 @@ export function useDeleteMessage(
   return useMutation<
     Awaited<ReturnType<typeof deleteMessage>>,
     ApiError,
-    { threadId: string; messageId: string }
+    {
+      threadId: Parameters<typeof deleteMessage>[0]
+      messageId: Parameters<typeof deleteMessage>[1]
+    }
   >({
     mutationFn: ({ threadId, messageId }) => deleteMessage(threadId, messageId),
     ...options,
@@ -6803,7 +7270,7 @@ export function useCreateRun(
       Awaited<ReturnType<typeof createRun>>,
       ApiError,
       {
-        threadId: string
+        threadId: Parameters<typeof createRun>[0]
         body: Parameters<typeof createRun>[1]
         params: Parameters<typeof createRun>[2]
       }
@@ -6815,7 +7282,7 @@ export function useCreateRun(
     Awaited<ReturnType<typeof createRun>>,
     ApiError,
     {
-      threadId: string
+      threadId: Parameters<typeof createRun>[0]
       body: Parameters<typeof createRun>[1]
       params: Parameters<typeof createRun>[2]
     }
@@ -6830,7 +7297,11 @@ export function useModifyRun(
     UseMutationOptions<
       Awaited<ReturnType<typeof modifyRun>>,
       ApiError,
-      { threadId: string; runId: string; body: Parameters<typeof modifyRun>[2] }
+      {
+        threadId: Parameters<typeof modifyRun>[0]
+        runId: Parameters<typeof modifyRun>[1]
+        body: Parameters<typeof modifyRun>[2]
+      }
     >,
     'mutationFn'
   >
@@ -6838,7 +7309,11 @@ export function useModifyRun(
   return useMutation<
     Awaited<ReturnType<typeof modifyRun>>,
     ApiError,
-    { threadId: string; runId: string; body: Parameters<typeof modifyRun>[2] }
+    {
+      threadId: Parameters<typeof modifyRun>[0]
+      runId: Parameters<typeof modifyRun>[1]
+      body: Parameters<typeof modifyRun>[2]
+    }
   >({
     mutationFn: ({ threadId, runId, body }) => modifyRun(threadId, runId, body),
     ...options,
@@ -6850,7 +7325,7 @@ export function useCancelRun(
     UseMutationOptions<
       Awaited<ReturnType<typeof cancelRun>>,
       ApiError,
-      { threadId: string; runId: string }
+      { threadId: Parameters<typeof cancelRun>[0]; runId: Parameters<typeof cancelRun>[1] }
     >,
     'mutationFn'
   >
@@ -6858,7 +7333,7 @@ export function useCancelRun(
   return useMutation<
     Awaited<ReturnType<typeof cancelRun>>,
     ApiError,
-    { threadId: string; runId: string }
+    { threadId: Parameters<typeof cancelRun>[0]; runId: Parameters<typeof cancelRun>[1] }
   >({
     mutationFn: ({ threadId, runId }) => cancelRun(threadId, runId),
     ...options,
@@ -6870,7 +7345,11 @@ export function useSubmitToolOuputsToRun(
     UseMutationOptions<
       Awaited<ReturnType<typeof submitToolOuputsToRun>>,
       ApiError,
-      { threadId: string; runId: string; body: Parameters<typeof submitToolOuputsToRun>[2] }
+      {
+        threadId: Parameters<typeof submitToolOuputsToRun>[0]
+        runId: Parameters<typeof submitToolOuputsToRun>[1]
+        body: Parameters<typeof submitToolOuputsToRun>[2]
+      }
     >,
     'mutationFn'
   >
@@ -6878,7 +7357,11 @@ export function useSubmitToolOuputsToRun(
   return useMutation<
     Awaited<ReturnType<typeof submitToolOuputsToRun>>,
     ApiError,
-    { threadId: string; runId: string; body: Parameters<typeof submitToolOuputsToRun>[2] }
+    {
+      threadId: Parameters<typeof submitToolOuputsToRun>[0]
+      runId: Parameters<typeof submitToolOuputsToRun>[1]
+      body: Parameters<typeof submitToolOuputsToRun>[2]
+    }
   >({
     mutationFn: ({ threadId, runId, body }) => submitToolOuputsToRun(threadId, runId, body),
     ...options,
@@ -6907,11 +7390,19 @@ export function useCreateUpload(
 
 export function useCancelUpload(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof cancelUpload>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof cancelUpload>>,
+      ApiError,
+      Parameters<typeof cancelUpload>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof cancelUpload>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof cancelUpload>>,
+    ApiError,
+    Parameters<typeof cancelUpload>[0]
+  >({
     mutationFn: (uploadId) => cancelUpload(uploadId),
     ...options,
   })
@@ -6922,7 +7413,7 @@ export function useCompleteUpload(
     UseMutationOptions<
       Awaited<ReturnType<typeof completeUpload>>,
       ApiError,
-      { uploadId: string; body: Parameters<typeof completeUpload>[1] }
+      { uploadId: Parameters<typeof completeUpload>[0]; body: Parameters<typeof completeUpload>[1] }
     >,
     'mutationFn'
   >
@@ -6930,7 +7421,7 @@ export function useCompleteUpload(
   return useMutation<
     Awaited<ReturnType<typeof completeUpload>>,
     ApiError,
-    { uploadId: string; body: Parameters<typeof completeUpload>[1] }
+    { uploadId: Parameters<typeof completeUpload>[0]; body: Parameters<typeof completeUpload>[1] }
   >({
     mutationFn: ({ uploadId, body }) => completeUpload(uploadId, body),
     ...options,
@@ -6942,7 +7433,7 @@ export function useAddUploadPart(
     UseMutationOptions<
       Awaited<ReturnType<typeof addUploadPart>>,
       ApiError,
-      { uploadId: string; body: Parameters<typeof addUploadPart>[1] }
+      { uploadId: Parameters<typeof addUploadPart>[0]; body: Parameters<typeof addUploadPart>[1] }
     >,
     'mutationFn'
   >
@@ -6950,7 +7441,7 @@ export function useAddUploadPart(
   return useMutation<
     Awaited<ReturnType<typeof addUploadPart>>,
     ApiError,
-    { uploadId: string; body: Parameters<typeof addUploadPart>[1] }
+    { uploadId: Parameters<typeof addUploadPart>[0]; body: Parameters<typeof addUploadPart>[1] }
   >({
     mutationFn: ({ uploadId, body }) => addUploadPart(uploadId, body),
     ...options,
@@ -6982,7 +7473,10 @@ export function useModifyVectorStore(
     UseMutationOptions<
       Awaited<ReturnType<typeof modifyVectorStore>>,
       ApiError,
-      { vectorStoreId: string; body: Parameters<typeof modifyVectorStore>[1] }
+      {
+        vectorStoreId: Parameters<typeof modifyVectorStore>[0]
+        body: Parameters<typeof modifyVectorStore>[1]
+      }
     >,
     'mutationFn'
   >
@@ -6990,7 +7484,10 @@ export function useModifyVectorStore(
   return useMutation<
     Awaited<ReturnType<typeof modifyVectorStore>>,
     ApiError,
-    { vectorStoreId: string; body: Parameters<typeof modifyVectorStore>[1] }
+    {
+      vectorStoreId: Parameters<typeof modifyVectorStore>[0]
+      body: Parameters<typeof modifyVectorStore>[1]
+    }
   >({
     mutationFn: ({ vectorStoreId, body }) => modifyVectorStore(vectorStoreId, body),
     ...options,
@@ -6999,11 +7496,19 @@ export function useModifyVectorStore(
 
 export function useDeleteVectorStore(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteVectorStore>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteVectorStore>>,
+      ApiError,
+      Parameters<typeof deleteVectorStore>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteVectorStore>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteVectorStore>>,
+    ApiError,
+    Parameters<typeof deleteVectorStore>[0]
+  >({
     mutationFn: (vectorStoreId) => deleteVectorStore(vectorStoreId),
     ...options,
   })
@@ -7014,7 +7519,10 @@ export function useCreateVectorStoreFileBatch(
     UseMutationOptions<
       Awaited<ReturnType<typeof createVectorStoreFileBatch>>,
       ApiError,
-      { vectorStoreId: string; body: Parameters<typeof createVectorStoreFileBatch>[1] }
+      {
+        vectorStoreId: Parameters<typeof createVectorStoreFileBatch>[0]
+        body: Parameters<typeof createVectorStoreFileBatch>[1]
+      }
     >,
     'mutationFn'
   >
@@ -7022,7 +7530,10 @@ export function useCreateVectorStoreFileBatch(
   return useMutation<
     Awaited<ReturnType<typeof createVectorStoreFileBatch>>,
     ApiError,
-    { vectorStoreId: string; body: Parameters<typeof createVectorStoreFileBatch>[1] }
+    {
+      vectorStoreId: Parameters<typeof createVectorStoreFileBatch>[0]
+      body: Parameters<typeof createVectorStoreFileBatch>[1]
+    }
   >({
     mutationFn: ({ vectorStoreId, body }) => createVectorStoreFileBatch(vectorStoreId, body),
     ...options,
@@ -7034,7 +7545,10 @@ export function useCancelVectorStoreFileBatch(
     UseMutationOptions<
       Awaited<ReturnType<typeof cancelVectorStoreFileBatch>>,
       ApiError,
-      { vectorStoreId: string; batchId: string }
+      {
+        vectorStoreId: Parameters<typeof cancelVectorStoreFileBatch>[0]
+        batchId: Parameters<typeof cancelVectorStoreFileBatch>[1]
+      }
     >,
     'mutationFn'
   >
@@ -7042,7 +7556,10 @@ export function useCancelVectorStoreFileBatch(
   return useMutation<
     Awaited<ReturnType<typeof cancelVectorStoreFileBatch>>,
     ApiError,
-    { vectorStoreId: string; batchId: string }
+    {
+      vectorStoreId: Parameters<typeof cancelVectorStoreFileBatch>[0]
+      batchId: Parameters<typeof cancelVectorStoreFileBatch>[1]
+    }
   >({
     mutationFn: ({ vectorStoreId, batchId }) => cancelVectorStoreFileBatch(vectorStoreId, batchId),
     ...options,
@@ -7054,7 +7571,10 @@ export function useCreateVectorStoreFile(
     UseMutationOptions<
       Awaited<ReturnType<typeof createVectorStoreFile>>,
       ApiError,
-      { vectorStoreId: string; body: Parameters<typeof createVectorStoreFile>[1] }
+      {
+        vectorStoreId: Parameters<typeof createVectorStoreFile>[0]
+        body: Parameters<typeof createVectorStoreFile>[1]
+      }
     >,
     'mutationFn'
   >
@@ -7062,7 +7582,10 @@ export function useCreateVectorStoreFile(
   return useMutation<
     Awaited<ReturnType<typeof createVectorStoreFile>>,
     ApiError,
-    { vectorStoreId: string; body: Parameters<typeof createVectorStoreFile>[1] }
+    {
+      vectorStoreId: Parameters<typeof createVectorStoreFile>[0]
+      body: Parameters<typeof createVectorStoreFile>[1]
+    }
   >({
     mutationFn: ({ vectorStoreId, body }) => createVectorStoreFile(vectorStoreId, body),
     ...options,
@@ -7075,8 +7598,8 @@ export function useUpdateVectorStoreFileAttributes(
       Awaited<ReturnType<typeof updateVectorStoreFileAttributes>>,
       ApiError,
       {
-        vectorStoreId: string
-        fileId: string
+        vectorStoreId: Parameters<typeof updateVectorStoreFileAttributes>[0]
+        fileId: Parameters<typeof updateVectorStoreFileAttributes>[1]
         body: Parameters<typeof updateVectorStoreFileAttributes>[2]
       }
     >,
@@ -7087,8 +7610,8 @@ export function useUpdateVectorStoreFileAttributes(
     Awaited<ReturnType<typeof updateVectorStoreFileAttributes>>,
     ApiError,
     {
-      vectorStoreId: string
-      fileId: string
+      vectorStoreId: Parameters<typeof updateVectorStoreFileAttributes>[0]
+      fileId: Parameters<typeof updateVectorStoreFileAttributes>[1]
       body: Parameters<typeof updateVectorStoreFileAttributes>[2]
     }
   >({
@@ -7103,7 +7626,10 @@ export function useDeleteVectorStoreFile(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteVectorStoreFile>>,
       ApiError,
-      { vectorStoreId: string; fileId: string }
+      {
+        vectorStoreId: Parameters<typeof deleteVectorStoreFile>[0]
+        fileId: Parameters<typeof deleteVectorStoreFile>[1]
+      }
     >,
     'mutationFn'
   >
@@ -7111,7 +7637,10 @@ export function useDeleteVectorStoreFile(
   return useMutation<
     Awaited<ReturnType<typeof deleteVectorStoreFile>>,
     ApiError,
-    { vectorStoreId: string; fileId: string }
+    {
+      vectorStoreId: Parameters<typeof deleteVectorStoreFile>[0]
+      fileId: Parameters<typeof deleteVectorStoreFile>[1]
+    }
   >({
     mutationFn: ({ vectorStoreId, fileId }) => deleteVectorStoreFile(vectorStoreId, fileId),
     ...options,
@@ -7123,7 +7652,10 @@ export function useSearchVectorStore(
     UseMutationOptions<
       Awaited<ReturnType<typeof searchVectorStore>>,
       ApiError,
-      { vectorStoreId: string; body: Parameters<typeof searchVectorStore>[1] }
+      {
+        vectorStoreId: Parameters<typeof searchVectorStore>[0]
+        body: Parameters<typeof searchVectorStore>[1]
+      }
     >,
     'mutationFn'
   >
@@ -7131,7 +7663,10 @@ export function useSearchVectorStore(
   return useMutation<
     Awaited<ReturnType<typeof searchVectorStore>>,
     ApiError,
-    { vectorStoreId: string; body: Parameters<typeof searchVectorStore>[1] }
+    {
+      vectorStoreId: Parameters<typeof searchVectorStore>[0]
+      body: Parameters<typeof searchVectorStore>[1]
+    }
   >({
     mutationFn: ({ vectorStoreId, body }) => searchVectorStore(vectorStoreId, body),
     ...options,
@@ -7163,7 +7698,10 @@ export function useUpdateConversation(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateConversation>>,
       ApiError,
-      { conversationId: string; body: Parameters<typeof updateConversation>[1] }
+      {
+        conversationId: Parameters<typeof updateConversation>[0]
+        body: Parameters<typeof updateConversation>[1]
+      }
     >,
     'mutationFn'
   >
@@ -7171,7 +7709,10 @@ export function useUpdateConversation(
   return useMutation<
     Awaited<ReturnType<typeof updateConversation>>,
     ApiError,
-    { conversationId: string; body: Parameters<typeof updateConversation>[1] }
+    {
+      conversationId: Parameters<typeof updateConversation>[0]
+      body: Parameters<typeof updateConversation>[1]
+    }
   >({
     mutationFn: ({ conversationId, body }) => updateConversation(conversationId, body),
     ...options,
@@ -7180,11 +7721,19 @@ export function useUpdateConversation(
 
 export function useDeleteConversation(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteConversation>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteConversation>>,
+      ApiError,
+      Parameters<typeof deleteConversation>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteConversation>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteConversation>>,
+    ApiError,
+    Parameters<typeof deleteConversation>[0]
+  >({
     mutationFn: (conversationId) => deleteConversation(conversationId),
     ...options,
   })
@@ -7272,11 +7821,19 @@ export function useCreateVideoExtend(
 
 export function useDeleteVideo(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteVideo>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteVideo>>,
+      ApiError,
+      Parameters<typeof deleteVideo>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteVideo>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteVideo>>,
+    ApiError,
+    Parameters<typeof deleteVideo>[0]
+  >({
     mutationFn: (videoId) => deleteVideo(videoId),
     ...options,
   })
@@ -7287,7 +7844,10 @@ export function useCreateVideoRemix(
     UseMutationOptions<
       Awaited<ReturnType<typeof createVideoRemix>>,
       ApiError,
-      { videoId: string; body: Parameters<typeof createVideoRemix>[1] }
+      {
+        videoId: Parameters<typeof createVideoRemix>[0]
+        body: Parameters<typeof createVideoRemix>[1]
+      }
     >,
     'mutationFn'
   >
@@ -7295,7 +7855,10 @@ export function useCreateVideoRemix(
   return useMutation<
     Awaited<ReturnType<typeof createVideoRemix>>,
     ApiError,
-    { videoId: string; body: Parameters<typeof createVideoRemix>[1] }
+    {
+      videoId: Parameters<typeof createVideoRemix>[0]
+      body: Parameters<typeof createVideoRemix>[1]
+    }
   >({
     mutationFn: ({ videoId, body }) => createVideoRemix(videoId, body),
     ...options,
@@ -7367,7 +7930,10 @@ export function useUpdateSkillDefaultVersion(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateSkillDefaultVersion>>,
       ApiError,
-      { skillId: string; body: Parameters<typeof updateSkillDefaultVersion>[1] }
+      {
+        skillId: Parameters<typeof updateSkillDefaultVersion>[0]
+        body: Parameters<typeof updateSkillDefaultVersion>[1]
+      }
     >,
     'mutationFn'
   >
@@ -7375,7 +7941,10 @@ export function useUpdateSkillDefaultVersion(
   return useMutation<
     Awaited<ReturnType<typeof updateSkillDefaultVersion>>,
     ApiError,
-    { skillId: string; body: Parameters<typeof updateSkillDefaultVersion>[1] }
+    {
+      skillId: Parameters<typeof updateSkillDefaultVersion>[0]
+      body: Parameters<typeof updateSkillDefaultVersion>[1]
+    }
   >({
     mutationFn: ({ skillId, body }) => updateSkillDefaultVersion(skillId, body),
     ...options,
@@ -7384,11 +7953,19 @@ export function useUpdateSkillDefaultVersion(
 
 export function useDeleteSkill(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteSkill>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteSkill>>,
+      ApiError,
+      Parameters<typeof deleteSkill>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteSkill>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteSkill>>,
+    ApiError,
+    Parameters<typeof deleteSkill>[0]
+  >({
     mutationFn: (skillId) => deleteSkill(skillId),
     ...options,
   })
@@ -7399,7 +7976,10 @@ export function useCreateSkillVersion(
     UseMutationOptions<
       Awaited<ReturnType<typeof createSkillVersion>>,
       ApiError,
-      { skillId: string; body: Parameters<typeof createSkillVersion>[1] }
+      {
+        skillId: Parameters<typeof createSkillVersion>[0]
+        body: Parameters<typeof createSkillVersion>[1]
+      }
     >,
     'mutationFn'
   >
@@ -7407,7 +7987,10 @@ export function useCreateSkillVersion(
   return useMutation<
     Awaited<ReturnType<typeof createSkillVersion>>,
     ApiError,
-    { skillId: string; body: Parameters<typeof createSkillVersion>[1] }
+    {
+      skillId: Parameters<typeof createSkillVersion>[0]
+      body: Parameters<typeof createSkillVersion>[1]
+    }
   >({
     mutationFn: ({ skillId, body }) => createSkillVersion(skillId, body),
     ...options,
@@ -7419,7 +8002,10 @@ export function useDeleteSkillVersion(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteSkillVersion>>,
       ApiError,
-      { skillId: string; version: string }
+      {
+        skillId: Parameters<typeof deleteSkillVersion>[0]
+        version: Parameters<typeof deleteSkillVersion>[1]
+      }
     >,
     'mutationFn'
   >
@@ -7427,7 +8013,10 @@ export function useDeleteSkillVersion(
   return useMutation<
     Awaited<ReturnType<typeof deleteSkillVersion>>,
     ApiError,
-    { skillId: string; version: string }
+    {
+      skillId: Parameters<typeof deleteSkillVersion>[0]
+      version: Parameters<typeof deleteSkillVersion>[1]
+    }
   >({
     mutationFn: ({ skillId, version }) => deleteSkillVersion(skillId, version),
     ...options,
@@ -7436,11 +8025,19 @@ export function useDeleteSkillVersion(
 
 export function useCancelChatSessionMethod(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof cancelChatSessionMethod>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof cancelChatSessionMethod>>,
+      ApiError,
+      Parameters<typeof cancelChatSessionMethod>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof cancelChatSessionMethod>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof cancelChatSessionMethod>>,
+    ApiError,
+    Parameters<typeof cancelChatSessionMethod>[0]
+  >({
     mutationFn: (sessionId) => cancelChatSessionMethod(sessionId),
     ...options,
   })
@@ -7468,11 +8065,19 @@ export function useCreateChatSessionMethod(
 
 export function useDeleteThreadMethod(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteThreadMethod>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteThreadMethod>>,
+      ApiError,
+      Parameters<typeof deleteThreadMethod>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteThreadMethod>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteThreadMethod>>,
+    ApiError,
+    Parameters<typeof deleteThreadMethod>[0]
+  >({
     mutationFn: (threadId) => deleteThreadMethod(threadId),
     ...options,
   })

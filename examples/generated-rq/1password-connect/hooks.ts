@@ -40,24 +40,32 @@ export const activityKeys = {
 export const vaultKeys = {
   all: () => ['vaults'] as const,
   list: (params?: Parameters<typeof getVaults>[0]) => ['vaults', 'list', params] as const,
-  getVaultById: (vaultUuid: string) => ['vaults', 'getVaultById', vaultUuid] as const,
-  getVaultItems: (vaultUuid: string, params?: Parameters<typeof getVaultItems>[1]) =>
-    ['vaults', 'getVaultItems', vaultUuid, params] as const,
-  getVaultItemById: (vaultUuid: string, itemUuid: string) =>
-    ['vaults', 'getVaultItemById', vaultUuid, itemUuid] as const,
+  getVaultById: (vaultUuid: Parameters<typeof getVaultById>[0]) =>
+    ['vaults', 'getVaultById', vaultUuid] as const,
+  getVaultItems: (
+    vaultUuid: Parameters<typeof getVaultItems>[0],
+    params?: Parameters<typeof getVaultItems>[1]
+  ) => ['vaults', 'getVaultItems', vaultUuid, params] as const,
+  getVaultItemById: (
+    vaultUuid: Parameters<typeof getVaultItemById>[0],
+    itemUuid: Parameters<typeof getVaultItemById>[1]
+  ) => ['vaults', 'getVaultItemById', vaultUuid, itemUuid] as const,
   getItemFiles: (
-    vaultUuid: string,
-    itemUuid: string,
+    vaultUuid: Parameters<typeof getItemFiles>[0],
+    itemUuid: Parameters<typeof getItemFiles>[1],
     params?: Parameters<typeof getItemFiles>[2]
   ) => ['vaults', 'getItemFiles', vaultUuid, itemUuid, params] as const,
   getDetailsOfFileById: (
-    vaultUuid: string,
-    itemUuid: string,
-    fileUuid: string,
+    vaultUuid: Parameters<typeof getDetailsOfFileById>[0],
+    itemUuid: Parameters<typeof getDetailsOfFileById>[1],
+    fileUuid: Parameters<typeof getDetailsOfFileById>[2],
     params?: Parameters<typeof getDetailsOfFileById>[3]
   ) => ['vaults', 'getDetailsOfFileById', vaultUuid, itemUuid, fileUuid, params] as const,
-  downloadFileByID: (vaultUuid: string, itemUuid: string, fileUuid: string) =>
-    ['vaults', 'downloadFileByID', vaultUuid, itemUuid, fileUuid] as const,
+  downloadFileByID: (
+    vaultUuid: Parameters<typeof downloadFileByID>[0],
+    itemUuid: Parameters<typeof downloadFileByID>[1],
+    fileUuid: Parameters<typeof downloadFileByID>[2]
+  ) => ['vaults', 'downloadFileByID', vaultUuid, itemUuid, fileUuid] as const,
 }
 
 export const heartbeatKeys = {
@@ -110,7 +118,7 @@ export function getVaultsQueryOptions(
 }
 
 export function getVaultByIdQueryOptions(
-  vaultUuid: string,
+  vaultUuid: Parameters<typeof getVaultById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVaultById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -126,7 +134,7 @@ export function getVaultByIdQueryOptions(
 }
 
 export function getVaultItemsQueryOptions(
-  vaultUuid: string,
+  vaultUuid: Parameters<typeof getVaultItems>[0],
   params?: Parameters<typeof getVaultItems>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVaultItems>>, ApiError>,
@@ -143,8 +151,8 @@ export function getVaultItemsQueryOptions(
 }
 
 export function getVaultItemByIdQueryOptions(
-  vaultUuid: string,
-  itemUuid: string,
+  vaultUuid: Parameters<typeof getVaultItemById>[0],
+  itemUuid: Parameters<typeof getVaultItemById>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVaultItemById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -160,8 +168,8 @@ export function getVaultItemByIdQueryOptions(
 }
 
 export function getItemFilesQueryOptions(
-  vaultUuid: string,
-  itemUuid: string,
+  vaultUuid: Parameters<typeof getItemFiles>[0],
+  itemUuid: Parameters<typeof getItemFiles>[1],
   params?: Parameters<typeof getItemFiles>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getItemFiles>>, ApiError>,
@@ -178,9 +186,9 @@ export function getItemFilesQueryOptions(
 }
 
 export function getDetailsOfFileByIdQueryOptions(
-  vaultUuid: string,
-  itemUuid: string,
-  fileUuid: string,
+  vaultUuid: Parameters<typeof getDetailsOfFileById>[0],
+  itemUuid: Parameters<typeof getDetailsOfFileById>[1],
+  fileUuid: Parameters<typeof getDetailsOfFileById>[2],
   params?: Parameters<typeof getDetailsOfFileById>[3],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getDetailsOfFileById>>, ApiError>,
@@ -197,9 +205,9 @@ export function getDetailsOfFileByIdQueryOptions(
 }
 
 export function downloadFileByIDQueryOptions(
-  vaultUuid: string,
-  itemUuid: string,
-  fileUuid: string,
+  vaultUuid: Parameters<typeof downloadFileByID>[0],
+  itemUuid: Parameters<typeof downloadFileByID>[1],
+  fileUuid: Parameters<typeof downloadFileByID>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof downloadFileByID>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -325,7 +333,7 @@ export function useGetVaults(
 }
 
 export function useGetVaultById(
-  vaultUuid: string | undefined | null,
+  vaultUuid: Parameters<typeof getVaultById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVaultById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -342,7 +350,7 @@ export function useGetVaultById(
 }
 
 export function useGetVaultItems(
-  vaultUuid: string | undefined | null,
+  vaultUuid: Parameters<typeof getVaultItems>[0] | undefined | null,
   params?: Parameters<typeof getVaultItems>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVaultItems>>, ApiError>,
@@ -360,8 +368,8 @@ export function useGetVaultItems(
 }
 
 export function useGetVaultItemById(
-  vaultUuid: string | undefined | null,
-  itemUuid: string | undefined | null,
+  vaultUuid: Parameters<typeof getVaultItemById>[0] | undefined | null,
+  itemUuid: Parameters<typeof getVaultItemById>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getVaultItemById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -378,8 +386,8 @@ export function useGetVaultItemById(
 }
 
 export function useGetItemFiles(
-  vaultUuid: string | undefined | null,
-  itemUuid: string | undefined | null,
+  vaultUuid: Parameters<typeof getItemFiles>[0] | undefined | null,
+  itemUuid: Parameters<typeof getItemFiles>[1] | undefined | null,
   params?: Parameters<typeof getItemFiles>[2],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getItemFiles>>, ApiError>,
@@ -397,9 +405,9 @@ export function useGetItemFiles(
 }
 
 export function useGetDetailsOfFileById(
-  vaultUuid: string | undefined | null,
-  itemUuid: string | undefined | null,
-  fileUuid: string | undefined | null,
+  vaultUuid: Parameters<typeof getDetailsOfFileById>[0] | undefined | null,
+  itemUuid: Parameters<typeof getDetailsOfFileById>[1] | undefined | null,
+  fileUuid: Parameters<typeof getDetailsOfFileById>[2] | undefined | null,
   params?: Parameters<typeof getDetailsOfFileById>[3],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getDetailsOfFileById>>, ApiError>,
@@ -418,9 +426,9 @@ export function useGetDetailsOfFileById(
 }
 
 export function useDownloadFileByID(
-  vaultUuid: string | undefined | null,
-  itemUuid: string | undefined | null,
-  fileUuid: string | undefined | null,
+  vaultUuid: Parameters<typeof downloadFileByID>[0] | undefined | null,
+  itemUuid: Parameters<typeof downloadFileByID>[1] | undefined | null,
+  fileUuid: Parameters<typeof downloadFileByID>[2] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof downloadFileByID>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -489,7 +497,10 @@ export function useCreateVaultItem(
     UseMutationOptions<
       Awaited<ReturnType<typeof createVaultItem>>,
       ApiError,
-      { vaultUuid: string; body: Parameters<typeof createVaultItem>[1] }
+      {
+        vaultUuid: Parameters<typeof createVaultItem>[0]
+        body: Parameters<typeof createVaultItem>[1]
+      }
     >,
     'mutationFn'
   >
@@ -497,7 +508,10 @@ export function useCreateVaultItem(
   return useMutation<
     Awaited<ReturnType<typeof createVaultItem>>,
     ApiError,
-    { vaultUuid: string; body: Parameters<typeof createVaultItem>[1] }
+    {
+      vaultUuid: Parameters<typeof createVaultItem>[0]
+      body: Parameters<typeof createVaultItem>[1]
+    }
   >({
     mutationFn: ({ vaultUuid, body }) => createVaultItem(vaultUuid, body),
     ...options,
@@ -509,7 +523,11 @@ export function useUpdateVaultItem(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateVaultItem>>,
       ApiError,
-      { vaultUuid: string; itemUuid: string; body: Parameters<typeof updateVaultItem>[2] }
+      {
+        vaultUuid: Parameters<typeof updateVaultItem>[0]
+        itemUuid: Parameters<typeof updateVaultItem>[1]
+        body: Parameters<typeof updateVaultItem>[2]
+      }
     >,
     'mutationFn'
   >
@@ -517,7 +535,11 @@ export function useUpdateVaultItem(
   return useMutation<
     Awaited<ReturnType<typeof updateVaultItem>>,
     ApiError,
-    { vaultUuid: string; itemUuid: string; body: Parameters<typeof updateVaultItem>[2] }
+    {
+      vaultUuid: Parameters<typeof updateVaultItem>[0]
+      itemUuid: Parameters<typeof updateVaultItem>[1]
+      body: Parameters<typeof updateVaultItem>[2]
+    }
   >({
     mutationFn: ({ vaultUuid, itemUuid, body }) => updateVaultItem(vaultUuid, itemUuid, body),
     ...options,
@@ -529,7 +551,11 @@ export function usePatchVaultItem(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchVaultItem>>,
       ApiError,
-      { vaultUuid: string; itemUuid: string; body: Parameters<typeof patchVaultItem>[2] }
+      {
+        vaultUuid: Parameters<typeof patchVaultItem>[0]
+        itemUuid: Parameters<typeof patchVaultItem>[1]
+        body: Parameters<typeof patchVaultItem>[2]
+      }
     >,
     'mutationFn'
   >
@@ -537,7 +563,11 @@ export function usePatchVaultItem(
   return useMutation<
     Awaited<ReturnType<typeof patchVaultItem>>,
     ApiError,
-    { vaultUuid: string; itemUuid: string; body: Parameters<typeof patchVaultItem>[2] }
+    {
+      vaultUuid: Parameters<typeof patchVaultItem>[0]
+      itemUuid: Parameters<typeof patchVaultItem>[1]
+      body: Parameters<typeof patchVaultItem>[2]
+    }
   >({
     mutationFn: ({ vaultUuid, itemUuid, body }) => patchVaultItem(vaultUuid, itemUuid, body),
     ...options,
@@ -549,7 +579,10 @@ export function useDeleteVaultItem(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteVaultItem>>,
       ApiError,
-      { vaultUuid: string; itemUuid: string }
+      {
+        vaultUuid: Parameters<typeof deleteVaultItem>[0]
+        itemUuid: Parameters<typeof deleteVaultItem>[1]
+      }
     >,
     'mutationFn'
   >
@@ -557,7 +590,10 @@ export function useDeleteVaultItem(
   return useMutation<
     Awaited<ReturnType<typeof deleteVaultItem>>,
     ApiError,
-    { vaultUuid: string; itemUuid: string }
+    {
+      vaultUuid: Parameters<typeof deleteVaultItem>[0]
+      itemUuid: Parameters<typeof deleteVaultItem>[1]
+    }
   >({
     mutationFn: ({ vaultUuid, itemUuid }) => deleteVaultItem(vaultUuid, itemUuid),
     ...options,

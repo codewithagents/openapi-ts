@@ -38,20 +38,20 @@ export const petKeys = {
     ['pet', 'findPetsByStatus', params] as const,
   findPetsByTags: (params: Parameters<typeof findPetsByTags>[0]) =>
     ['pet', 'findPetsByTags', params] as const,
-  detail: (petId: string) => ['pet', petId] as const,
+  detail: (petId: Parameters<typeof getPetById>[0]) => ['pet', petId] as const,
 }
 
 export const storeKeys = {
   all: () => ['store'] as const,
   list: () => ['store', 'list'] as const,
-  detail: (orderId: string) => ['store', orderId] as const,
+  detail: (orderId: Parameters<typeof getOrderById>[0]) => ['store', orderId] as const,
 }
 
 export const userKeys = {
   all: () => ['user'] as const,
   loginUser: (params?: Parameters<typeof loginUser>[0]) => ['user', 'loginUser', params] as const,
   logoutUser: () => ['user', 'logoutUser'] as const,
-  detail: (username: string) => ['user', username] as const,
+  detail: (username: Parameters<typeof getUserByName>[0]) => ['user', username] as const,
 }
 
 // ── Query options factories ──────────────────────────────────
@@ -89,7 +89,7 @@ export function findPetsByTagsQueryOptions(
 }
 
 export function getPetByIdQueryOptions(
-  petId: string,
+  petId: Parameters<typeof getPetById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getPetById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -120,7 +120,7 @@ export function getInventoryQueryOptions(
 }
 
 export function getOrderByIdQueryOptions(
-  orderId: string,
+  orderId: Parameters<typeof getOrderById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getOrderById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -167,7 +167,7 @@ export function logoutUserQueryOptions(
 }
 
 export function getUserByNameQueryOptions(
-  username: string,
+  username: Parameters<typeof getUserByName>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUserByName>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -217,7 +217,7 @@ export function useFindPetsByTags(
 }
 
 export function useGetPetById(
-  petId: string | undefined | null,
+  petId: Parameters<typeof getPetById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getPetById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -249,7 +249,7 @@ export function useGetInventory(
 }
 
 export function useGetOrderById(
-  orderId: string | undefined | null,
+  orderId: Parameters<typeof getOrderById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getOrderById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -297,7 +297,7 @@ export function useLogoutUser(
 }
 
 export function useGetUserByName(
-  username: string | undefined | null,
+  username: Parameters<typeof getUserByName>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUserByName>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -352,7 +352,10 @@ export function useUpdatePetWithForm(
     UseMutationOptions<
       Awaited<ReturnType<typeof updatePetWithForm>>,
       ApiError,
-      { petId: string; params: Parameters<typeof updatePetWithForm>[1] }
+      {
+        petId: Parameters<typeof updatePetWithForm>[0]
+        params: Parameters<typeof updatePetWithForm>[1]
+      }
     >,
     'mutationFn'
   >
@@ -360,7 +363,10 @@ export function useUpdatePetWithForm(
   return useMutation<
     Awaited<ReturnType<typeof updatePetWithForm>>,
     ApiError,
-    { petId: string; params: Parameters<typeof updatePetWithForm>[1] }
+    {
+      petId: Parameters<typeof updatePetWithForm>[0]
+      params: Parameters<typeof updatePetWithForm>[1]
+    }
   >({
     mutationFn: ({ petId, params }) => updatePetWithForm(petId, params),
     ...options,
@@ -372,7 +378,7 @@ export function useDeletePet(
     UseMutationOptions<
       Awaited<ReturnType<typeof deletePet>>,
       ApiError,
-      { petId: string; params: Parameters<typeof deletePet>[1] }
+      { petId: Parameters<typeof deletePet>[0]; params: Parameters<typeof deletePet>[1] }
     >,
     'mutationFn'
   >
@@ -380,7 +386,7 @@ export function useDeletePet(
   return useMutation<
     Awaited<ReturnType<typeof deletePet>>,
     ApiError,
-    { petId: string; params: Parameters<typeof deletePet>[1] }
+    { petId: Parameters<typeof deletePet>[0]; params: Parameters<typeof deletePet>[1] }
   >({
     mutationFn: ({ petId, params }) => deletePet(petId, params),
     ...options,
@@ -393,7 +399,7 @@ export function useUploadFile(
       Awaited<ReturnType<typeof uploadFile>>,
       ApiError,
       {
-        petId: string
+        petId: Parameters<typeof uploadFile>[0]
         body: Parameters<typeof uploadFile>[1]
         params: Parameters<typeof uploadFile>[2]
       }
@@ -405,7 +411,7 @@ export function useUploadFile(
     Awaited<ReturnType<typeof uploadFile>>,
     ApiError,
     {
-      petId: string
+      petId: Parameters<typeof uploadFile>[0]
       body: Parameters<typeof uploadFile>[1]
       params: Parameters<typeof uploadFile>[2]
     }
@@ -437,11 +443,19 @@ export function usePlaceOrder(
 
 export function useDeleteOrder(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteOrder>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteOrder>>,
+      ApiError,
+      Parameters<typeof deleteOrder>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteOrder>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteOrder>>,
+    ApiError,
+    Parameters<typeof deleteOrder>[0]
+  >({
     mutationFn: (orderId) => deleteOrder(orderId),
     ...options,
   })
@@ -492,7 +506,7 @@ export function useUpdateUser(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateUser>>,
       ApiError,
-      { username: string; body: Parameters<typeof updateUser>[1] }
+      { username: Parameters<typeof updateUser>[0]; body: Parameters<typeof updateUser>[1] }
     >,
     'mutationFn'
   >
@@ -500,7 +514,7 @@ export function useUpdateUser(
   return useMutation<
     Awaited<ReturnType<typeof updateUser>>,
     ApiError,
-    { username: string; body: Parameters<typeof updateUser>[1] }
+    { username: Parameters<typeof updateUser>[0]; body: Parameters<typeof updateUser>[1] }
   >({
     mutationFn: ({ username, body }) => updateUser(username, body),
     ...options,
@@ -509,11 +523,19 @@ export function useUpdateUser(
 
 export function useDeleteUser(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteUser>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteUser>>,
+      ApiError,
+      Parameters<typeof deleteUser>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteUser>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteUser>>,
+    ApiError,
+    Parameters<typeof deleteUser>[0]
+  >({
     mutationFn: (username) => deleteUser(username),
     ...options,
   })

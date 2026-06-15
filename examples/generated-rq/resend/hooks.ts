@@ -105,20 +105,26 @@ export const emailKeys = {
   getEmails: (params?: Parameters<typeof getEmails>[0]) => ['emails', 'getEmails', params] as const,
   getEmailsReceiving: (params?: Parameters<typeof getEmailsReceiving>[0]) =>
     ['emails', 'getEmailsReceiving', params] as const,
-  getEmailsByEmailId: (emailId: string) => ['emails', 'getEmailsByEmailId', emailId] as const,
+  getEmailsByEmailId: (emailId: Parameters<typeof getEmailsByEmailId>[0]) =>
+    ['emails', 'getEmailsByEmailId', emailId] as const,
   getEmailsByEmailIdAttachments: (
-    emailId: string,
+    emailId: Parameters<typeof getEmailsByEmailIdAttachments>[0],
     params?: Parameters<typeof getEmailsByEmailIdAttachments>[1]
   ) => ['emails', 'getEmailsByEmailIdAttachments', emailId, params] as const,
-  getEmailsByEmailIdAttachmentsByAttachmentId: (emailId: string, attachmentId: string) =>
-    ['emails', 'getEmailsByEmailIdAttachmentsByAttachmentId', emailId, attachmentId] as const,
-  getEmailsReceivingByEmailId: (emailId: string) =>
+  getEmailsByEmailIdAttachmentsByAttachmentId: (
+    emailId: Parameters<typeof getEmailsByEmailIdAttachmentsByAttachmentId>[0],
+    attachmentId: Parameters<typeof getEmailsByEmailIdAttachmentsByAttachmentId>[1]
+  ) => ['emails', 'getEmailsByEmailIdAttachmentsByAttachmentId', emailId, attachmentId] as const,
+  getEmailsReceivingByEmailId: (emailId: Parameters<typeof getEmailsReceivingByEmailId>[0]) =>
     ['emails', 'getEmailsReceivingByEmailId', emailId] as const,
   getEmailsReceivingByEmailIdAttachments: (
-    emailId: string,
+    emailId: Parameters<typeof getEmailsReceivingByEmailIdAttachments>[0],
     params?: Parameters<typeof getEmailsReceivingByEmailIdAttachments>[1]
   ) => ['emails', 'getEmailsReceivingByEmailIdAttachments', emailId, params] as const,
-  getEmailsReceivingByEmailIdAttachmentsByAttachmentId: (emailId: string, attachmentId: string) =>
+  getEmailsReceivingByEmailIdAttachmentsByAttachmentId: (
+    emailId: Parameters<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>[0],
+    attachmentId: Parameters<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>[1]
+  ) =>
     [
       'emails',
       'getEmailsReceivingByEmailIdAttachmentsByAttachmentId',
@@ -130,7 +136,7 @@ export const emailKeys = {
 export const domainKeys = {
   all: () => ['domains'] as const,
   list: (params?: Parameters<typeof getDomains>[0]) => ['domains', 'list', params] as const,
-  detail: (domainId: string) => ['domains', domainId] as const,
+  detail: (domainId: Parameters<typeof getDomainsByDomainId>[0]) => ['domains', domainId] as const,
 }
 
 export const apiKeyKeys = {
@@ -141,25 +147,26 @@ export const apiKeyKeys = {
 export const templateKeys = {
   all: () => ['templates'] as const,
   list: (params?: Parameters<typeof getTemplates>[0]) => ['templates', 'list', params] as const,
-  detail: (id: string) => ['templates', id] as const,
+  detail: (id: Parameters<typeof getTemplatesById>[0]) => ['templates', id] as const,
 }
 
 export const audienceKeys = {
   all: () => ['audiences'] as const,
   list: () => ['audiences', 'list'] as const,
-  detail: (id: string) => ['audiences', id] as const,
+  detail: (id: Parameters<typeof getAudiencesById>[0]) => ['audiences', id] as const,
 }
 
 export const contactKeys = {
   all: () => ['contacts'] as const,
   list: (params?: Parameters<typeof getContacts>[0]) => ['contacts', 'list', params] as const,
-  getContactsById: (id: string) => ['contacts', 'getContactsById', id] as const,
+  getContactsById: (id: Parameters<typeof getContactsById>[0]) =>
+    ['contacts', 'getContactsById', id] as const,
   getContactsByContactIdSegments: (
-    contactId: string,
+    contactId: Parameters<typeof getContactsByContactIdSegments>[0],
     params?: Parameters<typeof getContactsByContactIdSegments>[1]
   ) => ['contacts', 'getContactsByContactIdSegments', contactId, params] as const,
   getContactsByContactIdTopics: (
-    contactId: string,
+    contactId: Parameters<typeof getContactsByContactIdTopics>[0],
     params?: Parameters<typeof getContactsByContactIdTopics>[1]
   ) => ['contacts', 'getContactsByContactIdTopics', contactId, params] as const,
 }
@@ -167,57 +174,63 @@ export const contactKeys = {
 export const broadcastKeys = {
   all: () => ['broadcasts'] as const,
   list: (params?: Parameters<typeof getBroadcasts>[0]) => ['broadcasts', 'list', params] as const,
-  detail: (id: string) => ['broadcasts', id] as const,
+  detail: (id: Parameters<typeof getBroadcastsById>[0]) => ['broadcasts', id] as const,
 }
 
 export const webhookKeys = {
   all: () => ['webhooks'] as const,
   list: (params?: Parameters<typeof getWebhooks>[0]) => ['webhooks', 'list', params] as const,
-  detail: (webhookId: string) => ['webhooks', webhookId] as const,
+  detail: (webhookId: Parameters<typeof getWebhooksByWebhookId>[0]) =>
+    ['webhooks', webhookId] as const,
 }
 
 export const segmentKeys = {
   all: () => ['segments'] as const,
   list: (params?: Parameters<typeof getSegments>[0]) => ['segments', 'list', params] as const,
-  detail: (id: string) => ['segments', id] as const,
+  detail: (id: Parameters<typeof getSegmentsById>[0]) => ['segments', id] as const,
 }
 
 export const topicKeys = {
   all: () => ['topics'] as const,
   list: (params?: Parameters<typeof getTopics>[0]) => ['topics', 'list', params] as const,
-  detail: (id: string) => ['topics', id] as const,
+  detail: (id: Parameters<typeof getTopicsById>[0]) => ['topics', id] as const,
 }
 
 export const contactPropertyKeys = {
   all: () => ['contact-properties'] as const,
   list: (params?: Parameters<typeof getContactProperties>[0]) =>
     ['contact-properties', 'list', params] as const,
-  detail: (id: string) => ['contact-properties', id] as const,
+  detail: (id: Parameters<typeof getContactPropertiesById>[0]) =>
+    ['contact-properties', id] as const,
 }
 
 export const logKeys = {
   all: () => ['logs'] as const,
   list: (params?: Parameters<typeof getLogs>[0]) => ['logs', 'list', params] as const,
-  detail: (logId: string) => ['logs', logId] as const,
+  detail: (logId: Parameters<typeof getLogsByLogId>[0]) => ['logs', logId] as const,
 }
 
 export const automationKeys = {
   all: () => ['automations'] as const,
   list: (params?: Parameters<typeof getAutomations>[0]) => ['automations', 'list', params] as const,
-  getAutomationsByAutomationId: (automationId: string) =>
-    ['automations', 'getAutomationsByAutomationId', automationId] as const,
+  getAutomationsByAutomationId: (
+    automationId: Parameters<typeof getAutomationsByAutomationId>[0]
+  ) => ['automations', 'getAutomationsByAutomationId', automationId] as const,
   getAutomationsByAutomationIdRuns: (
-    automationId: string,
+    automationId: Parameters<typeof getAutomationsByAutomationIdRuns>[0],
     params?: Parameters<typeof getAutomationsByAutomationIdRuns>[1]
   ) => ['automations', 'getAutomationsByAutomationIdRuns', automationId, params] as const,
-  getAutomationsByAutomationIdRunsByRunId: (automationId: string, runId: string) =>
-    ['automations', 'getAutomationsByAutomationIdRunsByRunId', automationId, runId] as const,
+  getAutomationsByAutomationIdRunsByRunId: (
+    automationId: Parameters<typeof getAutomationsByAutomationIdRunsByRunId>[0],
+    runId: Parameters<typeof getAutomationsByAutomationIdRunsByRunId>[1]
+  ) => ['automations', 'getAutomationsByAutomationIdRunsByRunId', automationId, runId] as const,
 }
 
 export const eventKeys = {
   all: () => ['events'] as const,
   list: (params?: Parameters<typeof getEvents>[0]) => ['events', 'list', params] as const,
-  detail: (identifier: string) => ['events', identifier] as const,
+  detail: (identifier: Parameters<typeof getEventsByIdentifier>[0]) =>
+    ['events', identifier] as const,
 }
 
 // ── Query options factories ──────────────────────────────────
@@ -239,7 +252,7 @@ export function getEmailsQueryOptions(
 }
 
 export function getEmailsByEmailIdQueryOptions(
-  emailId: string,
+  emailId: Parameters<typeof getEmailsByEmailId>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEmailsByEmailId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -255,7 +268,7 @@ export function getEmailsByEmailIdQueryOptions(
 }
 
 export function getEmailsByEmailIdAttachmentsQueryOptions(
-  emailId: string,
+  emailId: Parameters<typeof getEmailsByEmailIdAttachments>[0],
   params?: Parameters<typeof getEmailsByEmailIdAttachments>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEmailsByEmailIdAttachments>>, ApiError>,
@@ -272,8 +285,8 @@ export function getEmailsByEmailIdAttachmentsQueryOptions(
 }
 
 export function getEmailsByEmailIdAttachmentsByAttachmentIdQueryOptions(
-  emailId: string,
-  attachmentId: string,
+  emailId: Parameters<typeof getEmailsByEmailIdAttachmentsByAttachmentId>[0],
+  attachmentId: Parameters<typeof getEmailsByEmailIdAttachmentsByAttachmentId>[1],
   options?: Omit<
     UseQueryOptions<
       Awaited<ReturnType<typeof getEmailsByEmailIdAttachmentsByAttachmentId>>,
@@ -311,7 +324,7 @@ export function getEmailsReceivingQueryOptions(
 }
 
 export function getEmailsReceivingByEmailIdQueryOptions(
-  emailId: string,
+  emailId: Parameters<typeof getEmailsReceivingByEmailId>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEmailsReceivingByEmailId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -327,7 +340,7 @@ export function getEmailsReceivingByEmailIdQueryOptions(
 }
 
 export function getEmailsReceivingByEmailIdAttachmentsQueryOptions(
-  emailId: string,
+  emailId: Parameters<typeof getEmailsReceivingByEmailIdAttachments>[0],
   params?: Parameters<typeof getEmailsReceivingByEmailIdAttachments>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEmailsReceivingByEmailIdAttachments>>, ApiError>,
@@ -346,8 +359,8 @@ export function getEmailsReceivingByEmailIdAttachmentsQueryOptions(
 }
 
 export function getEmailsReceivingByEmailIdAttachmentsByAttachmentIdQueryOptions(
-  emailId: string,
-  attachmentId: string,
+  emailId: Parameters<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>[0],
+  attachmentId: Parameters<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>[1],
   options?: Omit<
     UseQueryOptions<
       Awaited<ReturnType<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>>,
@@ -385,7 +398,7 @@ export function getDomainsQueryOptions(
 }
 
 export function getDomainsByDomainIdQueryOptions(
-  domainId: string,
+  domainId: Parameters<typeof getDomainsByDomainId>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getDomainsByDomainId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -433,7 +446,7 @@ export function getTemplatesQueryOptions(
 }
 
 export function getTemplatesByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getTemplatesById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTemplatesById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -466,7 +479,7 @@ export function getAudiencesQueryOptions(
 
 /** @deprecated */
 export function getAudiencesByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getAudiencesById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAudiencesById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -498,7 +511,7 @@ export function getContactsQueryOptions(
 }
 
 export function getContactsByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getContactsById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getContactsById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -530,7 +543,7 @@ export function getBroadcastsQueryOptions(
 }
 
 export function getBroadcastsByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getBroadcastsById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getBroadcastsById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -562,7 +575,7 @@ export function getWebhooksQueryOptions(
 }
 
 export function getWebhooksByWebhookIdQueryOptions(
-  webhookId: string,
+  webhookId: Parameters<typeof getWebhooksByWebhookId>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getWebhooksByWebhookId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -594,7 +607,7 @@ export function getSegmentsQueryOptions(
 }
 
 export function getSegmentsByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getSegmentsById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSegmentsById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -626,7 +639,7 @@ export function getTopicsQueryOptions(
 }
 
 export function getTopicsByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getTopicsById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTopicsById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -658,7 +671,7 @@ export function getContactPropertiesQueryOptions(
 }
 
 export function getContactPropertiesByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getContactPropertiesById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getContactPropertiesById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -674,7 +687,7 @@ export function getContactPropertiesByIdQueryOptions(
 }
 
 export function getContactsByContactIdSegmentsQueryOptions(
-  contactId: string,
+  contactId: Parameters<typeof getContactsByContactIdSegments>[0],
   params?: Parameters<typeof getContactsByContactIdSegments>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getContactsByContactIdSegments>>, ApiError>,
@@ -691,7 +704,7 @@ export function getContactsByContactIdSegmentsQueryOptions(
 }
 
 export function getContactsByContactIdTopicsQueryOptions(
-  contactId: string,
+  contactId: Parameters<typeof getContactsByContactIdTopics>[0],
   params?: Parameters<typeof getContactsByContactIdTopics>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getContactsByContactIdTopics>>, ApiError>,
@@ -724,7 +737,7 @@ export function getLogsQueryOptions(
 }
 
 export function getLogsByLogIdQueryOptions(
-  logId: string,
+  logId: Parameters<typeof getLogsByLogId>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLogsByLogId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -756,7 +769,7 @@ export function getAutomationsQueryOptions(
 }
 
 export function getAutomationsByAutomationIdQueryOptions(
-  automationId: string,
+  automationId: Parameters<typeof getAutomationsByAutomationId>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAutomationsByAutomationId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -772,7 +785,7 @@ export function getAutomationsByAutomationIdQueryOptions(
 }
 
 export function getAutomationsByAutomationIdRunsQueryOptions(
-  automationId: string,
+  automationId: Parameters<typeof getAutomationsByAutomationIdRuns>[0],
   params?: Parameters<typeof getAutomationsByAutomationIdRuns>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAutomationsByAutomationIdRuns>>, ApiError>,
@@ -789,8 +802,8 @@ export function getAutomationsByAutomationIdRunsQueryOptions(
 }
 
 export function getAutomationsByAutomationIdRunsByRunIdQueryOptions(
-  automationId: string,
-  runId: string,
+  automationId: Parameters<typeof getAutomationsByAutomationIdRunsByRunId>[0],
+  runId: Parameters<typeof getAutomationsByAutomationIdRunsByRunId>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAutomationsByAutomationIdRunsByRunId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -825,7 +838,7 @@ export function getEventsQueryOptions(
 }
 
 export function getEventsByIdentifierQueryOptions(
-  identifier: string,
+  identifier: Parameters<typeof getEventsByIdentifier>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEventsByIdentifier>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -890,7 +903,7 @@ export function useGetEmailsInfinite(
 }
 
 export function useGetEmailsByEmailId(
-  emailId: string | undefined | null,
+  emailId: Parameters<typeof getEmailsByEmailId>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEmailsByEmailId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -907,7 +920,7 @@ export function useGetEmailsByEmailId(
 }
 
 export function useGetEmailsByEmailIdAttachments(
-  emailId: string | undefined | null,
+  emailId: Parameters<typeof getEmailsByEmailIdAttachments>[0] | undefined | null,
   params?: Parameters<typeof getEmailsByEmailIdAttachments>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEmailsByEmailIdAttachments>>, ApiError>,
@@ -925,8 +938,11 @@ export function useGetEmailsByEmailIdAttachments(
 }
 
 export function useGetEmailsByEmailIdAttachmentsByAttachmentId(
-  emailId: string | undefined | null,
-  attachmentId: string | undefined | null,
+  emailId: Parameters<typeof getEmailsByEmailIdAttachmentsByAttachmentId>[0] | undefined | null,
+  attachmentId:
+    | Parameters<typeof getEmailsByEmailIdAttachmentsByAttachmentId>[1]
+    | undefined
+    | null,
   options?: Omit<
     UseQueryOptions<
       Awaited<ReturnType<typeof getEmailsByEmailIdAttachmentsByAttachmentId>>,
@@ -996,7 +1012,7 @@ export function useGetEmailsReceivingInfinite(
 }
 
 export function useGetEmailsReceivingByEmailId(
-  emailId: string | undefined | null,
+  emailId: Parameters<typeof getEmailsReceivingByEmailId>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEmailsReceivingByEmailId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1013,7 +1029,7 @@ export function useGetEmailsReceivingByEmailId(
 }
 
 export function useGetEmailsReceivingByEmailIdAttachments(
-  emailId: string | undefined | null,
+  emailId: Parameters<typeof getEmailsReceivingByEmailIdAttachments>[0] | undefined | null,
   params?: Parameters<typeof getEmailsReceivingByEmailIdAttachments>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEmailsReceivingByEmailIdAttachments>>, ApiError>,
@@ -1031,8 +1047,14 @@ export function useGetEmailsReceivingByEmailIdAttachments(
 }
 
 export function useGetEmailsReceivingByEmailIdAttachmentsByAttachmentId(
-  emailId: string | undefined | null,
-  attachmentId: string | undefined | null,
+  emailId:
+    | Parameters<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>[0]
+    | undefined
+    | null,
+  attachmentId:
+    | Parameters<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>[1]
+    | undefined
+    | null,
   options?: Omit<
     UseQueryOptions<
       Awaited<ReturnType<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>>,
@@ -1105,7 +1127,7 @@ export function useGetDomainsInfinite(
 }
 
 export function useGetDomainsByDomainId(
-  domainId: string | undefined | null,
+  domainId: Parameters<typeof getDomainsByDomainId>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getDomainsByDomainId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1216,7 +1238,7 @@ export function useGetTemplatesInfinite(
 }
 
 export function useGetTemplatesById(
-  id: string | undefined | null,
+  id: Parameters<typeof getTemplatesById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTemplatesById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1250,7 +1272,7 @@ export function useGetAudiences(
 
 /** @deprecated */
 export function useGetAudiencesById(
-  id: string | undefined | null,
+  id: Parameters<typeof getAudiencesById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAudiencesById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1314,7 +1336,7 @@ export function useGetContactsInfinite(
 }
 
 export function useGetContactsById(
-  id: string | undefined | null,
+  id: Parameters<typeof getContactsById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getContactsById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1378,7 +1400,7 @@ export function useGetBroadcastsInfinite(
 }
 
 export function useGetBroadcastsById(
-  id: string | undefined | null,
+  id: Parameters<typeof getBroadcastsById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getBroadcastsById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1442,7 +1464,7 @@ export function useGetWebhooksInfinite(
 }
 
 export function useGetWebhooksByWebhookId(
-  webhookId: string | undefined | null,
+  webhookId: Parameters<typeof getWebhooksByWebhookId>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getWebhooksByWebhookId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1506,7 +1528,7 @@ export function useGetSegmentsInfinite(
 }
 
 export function useGetSegmentsById(
-  id: string | undefined | null,
+  id: Parameters<typeof getSegmentsById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSegmentsById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1570,7 +1592,7 @@ export function useGetTopicsInfinite(
 }
 
 export function useGetTopicsById(
-  id: string | undefined | null,
+  id: Parameters<typeof getTopicsById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTopicsById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1634,7 +1656,7 @@ export function useGetContactPropertiesInfinite(
 }
 
 export function useGetContactPropertiesById(
-  id: string | undefined | null,
+  id: Parameters<typeof getContactPropertiesById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getContactPropertiesById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1651,7 +1673,7 @@ export function useGetContactPropertiesById(
 }
 
 export function useGetContactsByContactIdSegments(
-  contactId: string | undefined | null,
+  contactId: Parameters<typeof getContactsByContactIdSegments>[0] | undefined | null,
   params?: Parameters<typeof getContactsByContactIdSegments>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getContactsByContactIdSegments>>, ApiError>,
@@ -1669,7 +1691,7 @@ export function useGetContactsByContactIdSegments(
 }
 
 export function useGetContactsByContactIdTopics(
-  contactId: string | undefined | null,
+  contactId: Parameters<typeof getContactsByContactIdTopics>[0] | undefined | null,
   params?: Parameters<typeof getContactsByContactIdTopics>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getContactsByContactIdTopics>>, ApiError>,
@@ -1734,7 +1756,7 @@ export function useGetLogsInfinite(
 }
 
 export function useGetLogsByLogId(
-  logId: string | undefined | null,
+  logId: Parameters<typeof getLogsByLogId>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLogsByLogId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1798,7 +1820,7 @@ export function useGetAutomationsInfinite(
 }
 
 export function useGetAutomationsByAutomationId(
-  automationId: string | undefined | null,
+  automationId: Parameters<typeof getAutomationsByAutomationId>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAutomationsByAutomationId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1815,7 +1837,7 @@ export function useGetAutomationsByAutomationId(
 }
 
 export function useGetAutomationsByAutomationIdRuns(
-  automationId: string | undefined | null,
+  automationId: Parameters<typeof getAutomationsByAutomationIdRuns>[0] | undefined | null,
   params?: Parameters<typeof getAutomationsByAutomationIdRuns>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAutomationsByAutomationIdRuns>>, ApiError>,
@@ -1833,8 +1855,8 @@ export function useGetAutomationsByAutomationIdRuns(
 }
 
 export function useGetAutomationsByAutomationIdRunsByRunId(
-  automationId: string | undefined | null,
-  runId: string | undefined | null,
+  automationId: Parameters<typeof getAutomationsByAutomationIdRunsByRunId>[0] | undefined | null,
+  runId: Parameters<typeof getAutomationsByAutomationIdRunsByRunId>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAutomationsByAutomationIdRunsByRunId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1898,7 +1920,7 @@ export function useGetEventsInfinite(
 }
 
 export function useGetEventsByIdentifier(
-  identifier: string | undefined | null,
+  identifier: Parameters<typeof getEventsByIdentifier>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getEventsByIdentifier>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1938,11 +1960,19 @@ export function useCreateEmails(
 
 export function usePatchEmailsByEmailId(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof patchEmailsByEmailId>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof patchEmailsByEmailId>>,
+      ApiError,
+      Parameters<typeof patchEmailsByEmailId>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof patchEmailsByEmailId>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof patchEmailsByEmailId>>,
+    ApiError,
+    Parameters<typeof patchEmailsByEmailId>[0]
+  >({
     mutationFn: (emailId) => patchEmailsByEmailId(emailId),
     ...options,
   })
@@ -1950,11 +1980,19 @@ export function usePatchEmailsByEmailId(
 
 export function useCreateEmailsByEmailIdCancel(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof createEmailsByEmailIdCancel>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof createEmailsByEmailIdCancel>>,
+      ApiError,
+      Parameters<typeof createEmailsByEmailIdCancel>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof createEmailsByEmailIdCancel>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof createEmailsByEmailIdCancel>>,
+    ApiError,
+    Parameters<typeof createEmailsByEmailIdCancel>[0]
+  >({
     mutationFn: (emailId) => createEmailsByEmailIdCancel(emailId),
     ...options,
   })
@@ -2011,7 +2049,10 @@ export function usePatchDomainsByDomainId(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchDomainsByDomainId>>,
       ApiError,
-      { domainId: string; body: Parameters<typeof patchDomainsByDomainId>[1] }
+      {
+        domainId: Parameters<typeof patchDomainsByDomainId>[0]
+        body: Parameters<typeof patchDomainsByDomainId>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2019,7 +2060,10 @@ export function usePatchDomainsByDomainId(
   return useMutation<
     Awaited<ReturnType<typeof patchDomainsByDomainId>>,
     ApiError,
-    { domainId: string; body: Parameters<typeof patchDomainsByDomainId>[1] }
+    {
+      domainId: Parameters<typeof patchDomainsByDomainId>[0]
+      body: Parameters<typeof patchDomainsByDomainId>[1]
+    }
   >({
     mutationFn: ({ domainId, body }) => patchDomainsByDomainId(domainId, body),
     ...options,
@@ -2028,11 +2072,19 @@ export function usePatchDomainsByDomainId(
 
 export function useDeleteDomainsByDomainId(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteDomainsByDomainId>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteDomainsByDomainId>>,
+      ApiError,
+      Parameters<typeof deleteDomainsByDomainId>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteDomainsByDomainId>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteDomainsByDomainId>>,
+    ApiError,
+    Parameters<typeof deleteDomainsByDomainId>[0]
+  >({
     mutationFn: (domainId) => deleteDomainsByDomainId(domainId),
     ...options,
   })
@@ -2040,11 +2092,19 @@ export function useDeleteDomainsByDomainId(
 
 export function useCreateDomainsByDomainIdVerify(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof createDomainsByDomainIdVerify>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof createDomainsByDomainIdVerify>>,
+      ApiError,
+      Parameters<typeof createDomainsByDomainIdVerify>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof createDomainsByDomainIdVerify>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof createDomainsByDomainIdVerify>>,
+    ApiError,
+    Parameters<typeof createDomainsByDomainIdVerify>[0]
+  >({
     mutationFn: (domainId) => createDomainsByDomainIdVerify(domainId),
     ...options,
   })
@@ -2072,11 +2132,19 @@ export function useCreateApiKeys(
 
 export function useDeleteApiKeysByApiKeyId(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteApiKeysByApiKeyId>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteApiKeysByApiKeyId>>,
+      ApiError,
+      Parameters<typeof deleteApiKeysByApiKeyId>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteApiKeysByApiKeyId>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteApiKeysByApiKeyId>>,
+    ApiError,
+    Parameters<typeof deleteApiKeysByApiKeyId>[0]
+  >({
     mutationFn: (apiKeyId) => deleteApiKeysByApiKeyId(apiKeyId),
     ...options,
   })
@@ -2107,7 +2175,10 @@ export function usePatchTemplatesById(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchTemplatesById>>,
       ApiError,
-      { id: string; body: Parameters<typeof patchTemplatesById>[1] }
+      {
+        id: Parameters<typeof patchTemplatesById>[0]
+        body: Parameters<typeof patchTemplatesById>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2115,7 +2186,7 @@ export function usePatchTemplatesById(
   return useMutation<
     Awaited<ReturnType<typeof patchTemplatesById>>,
     ApiError,
-    { id: string; body: Parameters<typeof patchTemplatesById>[1] }
+    { id: Parameters<typeof patchTemplatesById>[0]; body: Parameters<typeof patchTemplatesById>[1] }
   >({
     mutationFn: ({ id, body }) => patchTemplatesById(id, body),
     ...options,
@@ -2124,11 +2195,19 @@ export function usePatchTemplatesById(
 
 export function useDeleteTemplatesById(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteTemplatesById>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteTemplatesById>>,
+      ApiError,
+      Parameters<typeof deleteTemplatesById>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteTemplatesById>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteTemplatesById>>,
+    ApiError,
+    Parameters<typeof deleteTemplatesById>[0]
+  >({
     mutationFn: (id) => deleteTemplatesById(id),
     ...options,
   })
@@ -2136,11 +2215,19 @@ export function useDeleteTemplatesById(
 
 export function useCreateTemplatesByIdPublish(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof createTemplatesByIdPublish>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof createTemplatesByIdPublish>>,
+      ApiError,
+      Parameters<typeof createTemplatesByIdPublish>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof createTemplatesByIdPublish>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof createTemplatesByIdPublish>>,
+    ApiError,
+    Parameters<typeof createTemplatesByIdPublish>[0]
+  >({
     mutationFn: (id) => createTemplatesByIdPublish(id),
     ...options,
   })
@@ -2148,11 +2235,19 @@ export function useCreateTemplatesByIdPublish(
 
 export function useCreateTemplatesByIdDuplicate(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof createTemplatesByIdDuplicate>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof createTemplatesByIdDuplicate>>,
+      ApiError,
+      Parameters<typeof createTemplatesByIdDuplicate>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof createTemplatesByIdDuplicate>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof createTemplatesByIdDuplicate>>,
+    ApiError,
+    Parameters<typeof createTemplatesByIdDuplicate>[0]
+  >({
     mutationFn: (id) => createTemplatesByIdDuplicate(id),
     ...options,
   })
@@ -2182,11 +2277,19 @@ export function useCreateAudiences(
 /** @deprecated */
 export function useDeleteAudiencesById(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteAudiencesById>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteAudiencesById>>,
+      ApiError,
+      Parameters<typeof deleteAudiencesById>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteAudiencesById>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteAudiencesById>>,
+    ApiError,
+    Parameters<typeof deleteAudiencesById>[0]
+  >({
     mutationFn: (id) => deleteAudiencesById(id),
     ...options,
   })
@@ -2217,7 +2320,7 @@ export function usePatchContactsById(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchContactsById>>,
       ApiError,
-      { id: string; body: Parameters<typeof patchContactsById>[1] }
+      { id: Parameters<typeof patchContactsById>[0]; body: Parameters<typeof patchContactsById>[1] }
     >,
     'mutationFn'
   >
@@ -2225,7 +2328,7 @@ export function usePatchContactsById(
   return useMutation<
     Awaited<ReturnType<typeof patchContactsById>>,
     ApiError,
-    { id: string; body: Parameters<typeof patchContactsById>[1] }
+    { id: Parameters<typeof patchContactsById>[0]; body: Parameters<typeof patchContactsById>[1] }
   >({
     mutationFn: ({ id, body }) => patchContactsById(id, body),
     ...options,
@@ -2234,11 +2337,19 @@ export function usePatchContactsById(
 
 export function useDeleteContactsById(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteContactsById>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteContactsById>>,
+      ApiError,
+      Parameters<typeof deleteContactsById>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteContactsById>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteContactsById>>,
+    ApiError,
+    Parameters<typeof deleteContactsById>[0]
+  >({
     mutationFn: (id) => deleteContactsById(id),
     ...options,
   })
@@ -2269,7 +2380,10 @@ export function usePatchBroadcastsById(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchBroadcastsById>>,
       ApiError,
-      { id: string; body: Parameters<typeof patchBroadcastsById>[1] }
+      {
+        id: Parameters<typeof patchBroadcastsById>[0]
+        body: Parameters<typeof patchBroadcastsById>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2277,7 +2391,10 @@ export function usePatchBroadcastsById(
   return useMutation<
     Awaited<ReturnType<typeof patchBroadcastsById>>,
     ApiError,
-    { id: string; body: Parameters<typeof patchBroadcastsById>[1] }
+    {
+      id: Parameters<typeof patchBroadcastsById>[0]
+      body: Parameters<typeof patchBroadcastsById>[1]
+    }
   >({
     mutationFn: ({ id, body }) => patchBroadcastsById(id, body),
     ...options,
@@ -2286,11 +2403,19 @@ export function usePatchBroadcastsById(
 
 export function useDeleteBroadcastsById(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteBroadcastsById>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteBroadcastsById>>,
+      ApiError,
+      Parameters<typeof deleteBroadcastsById>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteBroadcastsById>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteBroadcastsById>>,
+    ApiError,
+    Parameters<typeof deleteBroadcastsById>[0]
+  >({
     mutationFn: (id) => deleteBroadcastsById(id),
     ...options,
   })
@@ -2301,7 +2426,10 @@ export function useCreateBroadcastsByIdSend(
     UseMutationOptions<
       Awaited<ReturnType<typeof createBroadcastsByIdSend>>,
       ApiError,
-      { id: string; body: Parameters<typeof createBroadcastsByIdSend>[1] }
+      {
+        id: Parameters<typeof createBroadcastsByIdSend>[0]
+        body: Parameters<typeof createBroadcastsByIdSend>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2309,7 +2437,10 @@ export function useCreateBroadcastsByIdSend(
   return useMutation<
     Awaited<ReturnType<typeof createBroadcastsByIdSend>>,
     ApiError,
-    { id: string; body: Parameters<typeof createBroadcastsByIdSend>[1] }
+    {
+      id: Parameters<typeof createBroadcastsByIdSend>[0]
+      body: Parameters<typeof createBroadcastsByIdSend>[1]
+    }
   >({
     mutationFn: ({ id, body }) => createBroadcastsByIdSend(id, body),
     ...options,
@@ -2341,7 +2472,10 @@ export function usePatchWebhooksByWebhookId(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchWebhooksByWebhookId>>,
       ApiError,
-      { webhookId: string; body: Parameters<typeof patchWebhooksByWebhookId>[1] }
+      {
+        webhookId: Parameters<typeof patchWebhooksByWebhookId>[0]
+        body: Parameters<typeof patchWebhooksByWebhookId>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2349,7 +2483,10 @@ export function usePatchWebhooksByWebhookId(
   return useMutation<
     Awaited<ReturnType<typeof patchWebhooksByWebhookId>>,
     ApiError,
-    { webhookId: string; body: Parameters<typeof patchWebhooksByWebhookId>[1] }
+    {
+      webhookId: Parameters<typeof patchWebhooksByWebhookId>[0]
+      body: Parameters<typeof patchWebhooksByWebhookId>[1]
+    }
   >({
     mutationFn: ({ webhookId, body }) => patchWebhooksByWebhookId(webhookId, body),
     ...options,
@@ -2358,11 +2495,19 @@ export function usePatchWebhooksByWebhookId(
 
 export function useDeleteWebhooksByWebhookId(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteWebhooksByWebhookId>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteWebhooksByWebhookId>>,
+      ApiError,
+      Parameters<typeof deleteWebhooksByWebhookId>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteWebhooksByWebhookId>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteWebhooksByWebhookId>>,
+    ApiError,
+    Parameters<typeof deleteWebhooksByWebhookId>[0]
+  >({
     mutationFn: (webhookId) => deleteWebhooksByWebhookId(webhookId),
     ...options,
   })
@@ -2390,11 +2535,19 @@ export function useCreateSegments(
 
 export function useDeleteSegmentsById(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteSegmentsById>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteSegmentsById>>,
+      ApiError,
+      Parameters<typeof deleteSegmentsById>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteSegmentsById>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteSegmentsById>>,
+    ApiError,
+    Parameters<typeof deleteSegmentsById>[0]
+  >({
     mutationFn: (id) => deleteSegmentsById(id),
     ...options,
   })
@@ -2425,7 +2578,7 @@ export function usePatchTopicsById(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchTopicsById>>,
       ApiError,
-      { id: string; body: Parameters<typeof patchTopicsById>[1] }
+      { id: Parameters<typeof patchTopicsById>[0]; body: Parameters<typeof patchTopicsById>[1] }
     >,
     'mutationFn'
   >
@@ -2433,7 +2586,7 @@ export function usePatchTopicsById(
   return useMutation<
     Awaited<ReturnType<typeof patchTopicsById>>,
     ApiError,
-    { id: string; body: Parameters<typeof patchTopicsById>[1] }
+    { id: Parameters<typeof patchTopicsById>[0]; body: Parameters<typeof patchTopicsById>[1] }
   >({
     mutationFn: ({ id, body }) => patchTopicsById(id, body),
     ...options,
@@ -2442,11 +2595,19 @@ export function usePatchTopicsById(
 
 export function useDeleteTopicsById(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteTopicsById>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteTopicsById>>,
+      ApiError,
+      Parameters<typeof deleteTopicsById>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteTopicsById>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteTopicsById>>,
+    ApiError,
+    Parameters<typeof deleteTopicsById>[0]
+  >({
     mutationFn: (id) => deleteTopicsById(id),
     ...options,
   })
@@ -2477,7 +2638,10 @@ export function usePatchContactPropertiesById(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchContactPropertiesById>>,
       ApiError,
-      { id: string; body: Parameters<typeof patchContactPropertiesById>[1] }
+      {
+        id: Parameters<typeof patchContactPropertiesById>[0]
+        body: Parameters<typeof patchContactPropertiesById>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2485,7 +2649,10 @@ export function usePatchContactPropertiesById(
   return useMutation<
     Awaited<ReturnType<typeof patchContactPropertiesById>>,
     ApiError,
-    { id: string; body: Parameters<typeof patchContactPropertiesById>[1] }
+    {
+      id: Parameters<typeof patchContactPropertiesById>[0]
+      body: Parameters<typeof patchContactPropertiesById>[1]
+    }
   >({
     mutationFn: ({ id, body }) => patchContactPropertiesById(id, body),
     ...options,
@@ -2494,11 +2661,19 @@ export function usePatchContactPropertiesById(
 
 export function useDeleteContactPropertiesById(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteContactPropertiesById>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteContactPropertiesById>>,
+      ApiError,
+      Parameters<typeof deleteContactPropertiesById>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteContactPropertiesById>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteContactPropertiesById>>,
+    ApiError,
+    Parameters<typeof deleteContactPropertiesById>[0]
+  >({
     mutationFn: (id) => deleteContactPropertiesById(id),
     ...options,
   })
@@ -2509,7 +2684,10 @@ export function useCreateContactsByContactIdSegmentsBySegmentId(
     UseMutationOptions<
       Awaited<ReturnType<typeof createContactsByContactIdSegmentsBySegmentId>>,
       ApiError,
-      { contactId: string; segmentId: string }
+      {
+        contactId: Parameters<typeof createContactsByContactIdSegmentsBySegmentId>[0]
+        segmentId: Parameters<typeof createContactsByContactIdSegmentsBySegmentId>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2517,7 +2695,10 @@ export function useCreateContactsByContactIdSegmentsBySegmentId(
   return useMutation<
     Awaited<ReturnType<typeof createContactsByContactIdSegmentsBySegmentId>>,
     ApiError,
-    { contactId: string; segmentId: string }
+    {
+      contactId: Parameters<typeof createContactsByContactIdSegmentsBySegmentId>[0]
+      segmentId: Parameters<typeof createContactsByContactIdSegmentsBySegmentId>[1]
+    }
   >({
     mutationFn: ({ contactId, segmentId }) =>
       createContactsByContactIdSegmentsBySegmentId(contactId, segmentId),
@@ -2530,7 +2711,10 @@ export function useDeleteContactsByContactIdSegmentsBySegmentId(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteContactsByContactIdSegmentsBySegmentId>>,
       ApiError,
-      { contactId: string; segmentId: string }
+      {
+        contactId: Parameters<typeof deleteContactsByContactIdSegmentsBySegmentId>[0]
+        segmentId: Parameters<typeof deleteContactsByContactIdSegmentsBySegmentId>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2538,7 +2722,10 @@ export function useDeleteContactsByContactIdSegmentsBySegmentId(
   return useMutation<
     Awaited<ReturnType<typeof deleteContactsByContactIdSegmentsBySegmentId>>,
     ApiError,
-    { contactId: string; segmentId: string }
+    {
+      contactId: Parameters<typeof deleteContactsByContactIdSegmentsBySegmentId>[0]
+      segmentId: Parameters<typeof deleteContactsByContactIdSegmentsBySegmentId>[1]
+    }
   >({
     mutationFn: ({ contactId, segmentId }) =>
       deleteContactsByContactIdSegmentsBySegmentId(contactId, segmentId),
@@ -2551,7 +2738,10 @@ export function usePatchContactsByContactIdTopics(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchContactsByContactIdTopics>>,
       ApiError,
-      { contactId: string; body: Parameters<typeof patchContactsByContactIdTopics>[1] }
+      {
+        contactId: Parameters<typeof patchContactsByContactIdTopics>[0]
+        body: Parameters<typeof patchContactsByContactIdTopics>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2559,7 +2749,10 @@ export function usePatchContactsByContactIdTopics(
   return useMutation<
     Awaited<ReturnType<typeof patchContactsByContactIdTopics>>,
     ApiError,
-    { contactId: string; body: Parameters<typeof patchContactsByContactIdTopics>[1] }
+    {
+      contactId: Parameters<typeof patchContactsByContactIdTopics>[0]
+      body: Parameters<typeof patchContactsByContactIdTopics>[1]
+    }
   >({
     mutationFn: ({ contactId, body }) => patchContactsByContactIdTopics(contactId, body),
     ...options,
@@ -2591,7 +2784,10 @@ export function usePatchAutomationsByAutomationId(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchAutomationsByAutomationId>>,
       ApiError,
-      { automationId: string; body: Parameters<typeof patchAutomationsByAutomationId>[1] }
+      {
+        automationId: Parameters<typeof patchAutomationsByAutomationId>[0]
+        body: Parameters<typeof patchAutomationsByAutomationId>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2599,7 +2795,10 @@ export function usePatchAutomationsByAutomationId(
   return useMutation<
     Awaited<ReturnType<typeof patchAutomationsByAutomationId>>,
     ApiError,
-    { automationId: string; body: Parameters<typeof patchAutomationsByAutomationId>[1] }
+    {
+      automationId: Parameters<typeof patchAutomationsByAutomationId>[0]
+      body: Parameters<typeof patchAutomationsByAutomationId>[1]
+    }
   >({
     mutationFn: ({ automationId, body }) => patchAutomationsByAutomationId(automationId, body),
     ...options,
@@ -2611,17 +2810,19 @@ export function useDeleteAutomationsByAutomationId(
     UseMutationOptions<
       Awaited<ReturnType<typeof deleteAutomationsByAutomationId>>,
       ApiError,
-      string
+      Parameters<typeof deleteAutomationsByAutomationId>[0]
     >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteAutomationsByAutomationId>>, ApiError, string>(
-    {
-      mutationFn: (automationId) => deleteAutomationsByAutomationId(automationId),
-      ...options,
-    }
-  )
+  return useMutation<
+    Awaited<ReturnType<typeof deleteAutomationsByAutomationId>>,
+    ApiError,
+    Parameters<typeof deleteAutomationsByAutomationId>[0]
+  >({
+    mutationFn: (automationId) => deleteAutomationsByAutomationId(automationId),
+    ...options,
+  })
 }
 
 export function useCreateAutomationsByAutomationIdStop(
@@ -2629,7 +2830,7 @@ export function useCreateAutomationsByAutomationIdStop(
     UseMutationOptions<
       Awaited<ReturnType<typeof createAutomationsByAutomationIdStop>>,
       ApiError,
-      string
+      Parameters<typeof createAutomationsByAutomationIdStop>[0]
     >,
     'mutationFn'
   >
@@ -2637,7 +2838,7 @@ export function useCreateAutomationsByAutomationIdStop(
   return useMutation<
     Awaited<ReturnType<typeof createAutomationsByAutomationIdStop>>,
     ApiError,
-    string
+    Parameters<typeof createAutomationsByAutomationIdStop>[0]
   >({
     mutationFn: (automationId) => createAutomationsByAutomationIdStop(automationId),
     ...options,
@@ -2689,7 +2890,10 @@ export function usePatchEventsByIdentifier(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchEventsByIdentifier>>,
       ApiError,
-      { identifier: string; body: Parameters<typeof patchEventsByIdentifier>[1] }
+      {
+        identifier: Parameters<typeof patchEventsByIdentifier>[0]
+        body: Parameters<typeof patchEventsByIdentifier>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2697,7 +2901,10 @@ export function usePatchEventsByIdentifier(
   return useMutation<
     Awaited<ReturnType<typeof patchEventsByIdentifier>>,
     ApiError,
-    { identifier: string; body: Parameters<typeof patchEventsByIdentifier>[1] }
+    {
+      identifier: Parameters<typeof patchEventsByIdentifier>[0]
+      body: Parameters<typeof patchEventsByIdentifier>[1]
+    }
   >({
     mutationFn: ({ identifier, body }) => patchEventsByIdentifier(identifier, body),
     ...options,
@@ -2706,11 +2913,19 @@ export function usePatchEventsByIdentifier(
 
 export function useDeleteEventsByIdentifier(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteEventsByIdentifier>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteEventsByIdentifier>>,
+      ApiError,
+      Parameters<typeof deleteEventsByIdentifier>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteEventsByIdentifier>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteEventsByIdentifier>>,
+    ApiError,
+    Parameters<typeof deleteEventsByIdentifier>[0]
+  >({
     mutationFn: (identifier) => deleteEventsByIdentifier(identifier),
     ...options,
   })

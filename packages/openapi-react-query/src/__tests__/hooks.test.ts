@@ -125,7 +125,7 @@ describe('generateHooks — task-hooks.json fixture', () => {
 
   it('useGetTask accepts id as positional arg and uses taskKeys.detail(id!)', () => {
     expect(content).toContain('useGetTask')
-    expect(content).toContain('id: string | undefined | null')
+    expect(content).toContain('id: Parameters<typeof getTask>[0] | undefined | null')
     expect(content).toContain('queryKey: taskKeys.detail(id!)')
   })
 
@@ -134,9 +134,9 @@ describe('generateHooks — task-hooks.json fixture', () => {
     expect(content).toContain('Parameters<typeof createTask>[0]')
   })
 
-  it('useUpdateTask variables type has { id: string; body: Parameters<typeof updateTask>[1] }', () => {
+  it('useUpdateTask variables type has { id: Parameters<typeof updateTask>[0]; body: Parameters<typeof updateTask>[1] }', () => {
     expect(content).toContain('useUpdateTask')
-    expect(content).toContain('{ id: string; body: Parameters<typeof updateTask>[1] }')
+    expect(content).toContain('{ id: Parameters<typeof updateTask>[0]; body: Parameters<typeof updateTask>[1] }')
   })
 
   it('useUpdateTask mutationFn destructures { id, body }', () => {
@@ -170,7 +170,7 @@ describe('generateHooks — task-hooks.json fixture', () => {
 
 describe('generateHooks — Feature #61: nullish path params auto-disable', () => {
   it('useGetTask signature contains string | undefined | null for id', () => {
-    expect(content).toContain('id: string | undefined | null')
+    expect(content).toContain('id: Parameters<typeof getTask>[0] | undefined | null')
   })
 
   it('useGetTask generated hook contains enabled: id != null guard', () => {
@@ -210,8 +210,8 @@ describe('generateHooks — Feature #61: nullish path params auto-disable', () =
       },
     }
     const { content: c } = generateHooks(specMultiParam, { staleTime: 0, gcTime: 0 })
-    expect(c).toContain('projectId: string | undefined | null')
-    expect(c).toContain('id: string | undefined | null')
+    expect(c).toContain('projectId: Parameters<typeof getItem>[0] | undefined | null')
+    expect(c).toContain('id: Parameters<typeof getItem>[1] | undefined | null')
     expect(c).toContain('enabled: projectId != null && id != null && (options?.enabled ?? true)')
   })
 })
@@ -319,8 +319,8 @@ describe('generateHooks — Bug #53: key factory includes query params when oper
 
   it('key factory detail entry includes optional params when path + optional query params', () => {
     const { content } = generateHooks(specWithPathAndQueryParams, { staleTime: 0, gcTime: 0 })
-    // Key factory should accept (uuid: string, params?)
-    expect(content).toContain('(uuid: string, params?: Parameters<typeof readTemplateDetails>[1])')
+    // Key factory should accept (uuid: Parameters<typeof readTemplateDetails>[0], params?)
+    expect(content).toContain('(uuid: Parameters<typeof readTemplateDetails>[0], params?: Parameters<typeof readTemplateDetails>[1])')
   })
 
   it('key factory detail entry includes params value in tuple', () => {
@@ -340,7 +340,7 @@ describe('generateHooks — Bug #53: key factory includes query params when oper
       gcTime: 0,
     })
     // Key factory should accept required params (no ?)
-    expect(content).toContain('(id: string, params: Parameters<typeof getReport>[1])')
+    expect(content).toContain('(id: Parameters<typeof getReport>[0], params: Parameters<typeof getReport>[1])')
   })
 
   it('hook marks params as required when path param + required query param', () => {
@@ -440,7 +440,7 @@ describe('generateHooks — Bug #54: mutation hook handles all argument shapes',
     }
     const { content } = generateHooks(spec, { staleTime: 0, gcTime: 0 })
     // Variables includes id, body, and params
-    expect(content).toContain('id: string')
+    expect(content).toContain('id: Parameters<typeof patchOp>[0]')
     expect(content).toContain('body: Parameters<typeof patchOp>[1]')
     expect(content).toContain('params: Parameters<typeof patchOp>[2]')
     // mutationFn destructures all three and passes in correct order
@@ -466,7 +466,7 @@ describe('generateHooks — Bug #54: mutation hook handles all argument shapes',
     }
     const { content } = generateHooks(spec, { staleTime: 0, gcTime: 0 })
     // Variables includes id and params
-    expect(content).toContain('id: string')
+    expect(content).toContain('id: Parameters<typeof deleteOp>[0]')
     expect(content).toContain('params: Parameters<typeof deleteOp>[1]')
     // mutationFn destructures and passes both
     expect(content).toContain('({ id, params }) => deleteOp(id, params)')
@@ -617,12 +617,12 @@ describe('generateHooks — Feature #60: suspense query variants', () => {
 
   it('suspense detail hook path params are required string (not nullish)', () => {
     const { content } = generateHooks(suspenseSpec, { staleTime: 0, gcTime: 0, suspense: true })
-    // useSuspenseGetTask should have id: string (not string | undefined | null)
+    // useSuspenseGetTask should have id: Parameters<typeof getTask>[0] (not nullish widened)
     const suspenseHookStart = content.indexOf('export function useSuspenseGetTask')
     const suspenseHookEnd = content.indexOf('\n}', suspenseHookStart) + 2
     const suspenseHookContent = content.slice(suspenseHookStart, suspenseHookEnd)
-    expect(suspenseHookContent).toContain('id: string')
-    expect(suspenseHookContent).not.toContain('id: string | undefined | null')
+    expect(suspenseHookContent).toContain('id: Parameters<typeof getTask>[0]')
+    expect(suspenseHookContent).not.toContain('id: Parameters<typeof getTask>[0] | undefined | null')
   })
 
   it('when suspense: false (default), no useSuspense* hooks generated', () => {
@@ -658,7 +658,7 @@ describe('generateHooks — Feature #60: suspense query variants', () => {
     }
     const { content } = generateHooks(spec, { staleTime: 0, gcTime: 0, suspense: true })
     expect(content).toContain('export function useSuspenseListRepoCommits')
-    expect(content).toContain('repoId: string')
+    expect(content).toContain('repoId: Parameters<typeof listRepoCommits>[0]')
     expect(content).toContain('params?:')
   })
 
@@ -682,7 +682,7 @@ describe('generateHooks — Feature #60: suspense query variants', () => {
     }
     const { content } = generateHooks(spec, { staleTime: 0, gcTime: 0, suspense: true })
     expect(content).toContain('export function useSuspenseSearchCategory')
-    expect(content).toContain('category: string')
+    expect(content).toContain('category: Parameters<typeof searchCategory>[0]')
     // Required query param → non-optional params token (no ?)
     expect(content).toContain('params: Parameters')
   })
@@ -708,8 +708,8 @@ describe('generateHooks — Feature #60: suspense query variants', () => {
     const { content } = generateHooks(spec, { staleTime: 0, gcTime: 0, suspense: true })
     expect(content).toContain('export function useSuspenseGetOrgRepo')
     // Both path params appear in the function signature
-    expect(content).toContain('orgId: string')
-    expect(content).toContain('repoId: string')
+    expect(content).toContain('orgId: Parameters<typeof getOrgRepo>[0]')
+    expect(content).toContain('repoId: Parameters<typeof getOrgRepo>[1]')
   })
 
   it('suspense hook with 2 path params + query params builds correct queryKey', () => {
@@ -733,8 +733,8 @@ describe('generateHooks — Feature #60: suspense query variants', () => {
     }
     const { content } = generateHooks(spec, { staleTime: 0, gcTime: 0, suspense: true })
     expect(content).toContain('export function useSuspenseListOrgRepoCommits')
-    expect(content).toContain('orgId: string')
-    expect(content).toContain('repoId: string')
+    expect(content).toContain('orgId: Parameters<typeof listOrgRepoCommits>[0]')
+    expect(content).toContain('repoId: Parameters<typeof listOrgRepoCommits>[1]')
     expect(content).toContain('params?:')
   })
 
@@ -1310,33 +1310,34 @@ describe('mutation hook variables type — all 12 shapes', () => {
     expect(shapesContent).toContain('mutationFn: ({ body, params }) => postD(body, params)')
   })
 
-  it('case 5 (1 path param, no body, no query): variablesType is string, mutationFn is (id) => fn(id)', () => {
-    // string is the entire variables type — only case that uses literal 'string'
+  it('case 5 (1 path param, no body, no query): variablesType is Parameters<typeof deleteE>[0], mutationFn is (id) => fn(id)', () => {
     expect(shapesContent).toContain(
-      'UseMutationOptions<Awaited<ReturnType<typeof deleteE>>, ApiError, string>'
+      'UseMutationOptions<Awaited<ReturnType<typeof deleteE>>, ApiError, Parameters<typeof deleteE>[0]>'
     )
     expect(shapesContent).toContain('mutationFn: (id) => deleteE(id)')
   })
 
-  it('case 6 (1 path param, no body, has query): variablesType is { id: string; params: ...[1] }, mutationFn destructures { id, params }', () => {
-    expect(shapesContent).toContain('id: string; params: Parameters<typeof deleteF>[1]')
+  it('case 6 (1 path param, no body, has query): variablesType is { id: Parameters<typeof deleteF>[0]; params: ...[1] }, mutationFn destructures { id, params }', () => {
+    expect(shapesContent).toContain('id: Parameters<typeof deleteF>[0]; params: Parameters<typeof deleteF>[1]')
     expect(shapesContent).toContain('mutationFn: ({ id, params }) => deleteF(id, params)')
   })
 
-  it('case 7 (1 path param, has body, no query): variablesType is { id: string; body: ...[1] }, mutationFn destructures { id, body }', () => {
-    expect(shapesContent).toContain('id: string; body: Parameters<typeof putG>[1]')
+  it('case 7 (1 path param, has body, no query): variablesType is { id: Parameters<typeof putG>[0]; body: ...[1] }, mutationFn destructures { id, body }', () => {
+    expect(shapesContent).toContain('id: Parameters<typeof putG>[0]; body: Parameters<typeof putG>[1]')
     expect(shapesContent).toContain('mutationFn: ({ id, body }) => putG(id, body)')
   })
 
   it('case 8 (1 path param, has body, has query): variablesType is { id: string; body: ...[1]; params: ...[2] }, mutationFn destructures all', () => {
     expect(shapesContent).toContain(
-      'id: string; body: Parameters<typeof putH>[1]; params: Parameters<typeof putH>[2]'
+      'id: Parameters<typeof putH>[0]; body: Parameters<typeof putH>[1]; params: Parameters<typeof putH>[2]'
     )
     expect(shapesContent).toContain('mutationFn: ({ id, body, params }) => putH(id, body, params)')
   })
 
   it('case 9 (2+ params, no body, no query): variablesType is { projectId: string; taskId: string }, mutationFn destructures both path params', () => {
-    expect(shapesContent).toContain('projectId: string; taskId: string }')
+    expect(shapesContent).toContain(
+      'projectId: Parameters<typeof deleteI>[0]; taskId: Parameters<typeof deleteI>[1] }'
+    )
     expect(shapesContent).toContain(
       'mutationFn: ({ projectId, taskId }) => deleteI(projectId, taskId)'
     )
@@ -1344,7 +1345,7 @@ describe('mutation hook variables type — all 12 shapes', () => {
 
   it('case 10 (2+ params, no body, has query): variablesType includes both path params and params, mutationFn passes all', () => {
     expect(shapesContent).toContain(
-      'projectId: string; taskId: string; params: Parameters<typeof deleteJ>[2]'
+      'projectId: Parameters<typeof deleteJ>[0]; taskId: Parameters<typeof deleteJ>[1]; params: Parameters<typeof deleteJ>[2]'
     )
     expect(shapesContent).toContain(
       'mutationFn: ({ projectId, taskId, params }) => deleteJ(projectId, taskId, params)'
@@ -1353,7 +1354,7 @@ describe('mutation hook variables type — all 12 shapes', () => {
 
   it('case 11 (2+ params, has body, no query): variablesType includes both path params and body at index [2]', () => {
     expect(shapesContent).toContain(
-      'projectId: string; taskId: string; body: Parameters<typeof putK>[2]'
+      'projectId: Parameters<typeof putK>[0]; taskId: Parameters<typeof putK>[1]; body: Parameters<typeof putK>[2]'
     )
     expect(shapesContent).toContain(
       'mutationFn: ({ projectId, taskId, body }) => putK(projectId, taskId, body)'
@@ -1362,7 +1363,7 @@ describe('mutation hook variables type — all 12 shapes', () => {
 
   it('case 12 (2+ params, has body, has query): variablesType includes both path params, body at [2], params at [3]', () => {
     expect(shapesContent).toContain(
-      'projectId: string; taskId: string; body: Parameters<typeof putL>[2]; params: Parameters<typeof putL>[3]'
+      'projectId: Parameters<typeof putL>[0]; taskId: Parameters<typeof putL>[1]; body: Parameters<typeof putL>[2]; params: Parameters<typeof putL>[3]'
     )
     expect(shapesContent).toContain(
       'mutationFn: ({ projectId, taskId, body, params }) => putL(projectId, taskId, body, params)'
@@ -1519,12 +1520,18 @@ describe('query hook key builder — 2+ path params with query params', () => {
   })
 
   it('key factory detail entry accepts both path params as typed args', () => {
-    expect(multiParamContent).toContain('(projectId: string, taskId: string,')
+    expect(multiParamContent).toContain(
+      '(projectId: Parameters<typeof getProjectTask>[0], taskId: Parameters<typeof getProjectTask>[1],'
+    )
   })
 
-  it('hook signature includes both path params as string | undefined | null', () => {
-    expect(multiParamContent).toContain('projectId: string | undefined | null')
-    expect(multiParamContent).toContain('taskId: string | undefined | null')
+  it('hook signature includes both path params as typed (derived) | undefined | null', () => {
+    expect(multiParamContent).toContain(
+      'projectId: Parameters<typeof getProjectTask>[0] | undefined | null'
+    )
+    expect(multiParamContent).toContain(
+      'taskId: Parameters<typeof getProjectTask>[1] | undefined | null'
+    )
   })
 
   it('enabled guard ANDs both path params', () => {
@@ -2018,13 +2025,13 @@ describe('Feature #188: queryOptions factories', () => {
     expect(factoryBody).not.toContain('taskKeys.detail(id!)')
   })
 
-  it('getTaskQueryOptions path param is plain string (not nullish widened)', () => {
-    // Factory takes id: string (not string | undefined | null)
+  it('getTaskQueryOptions path param is plain (not nullish widened)', () => {
+    // Factory takes the derived param type (not widened with | undefined | null)
     const factoryStart = qoContent.indexOf('export function getTaskQueryOptions')
     const factoryEnd = qoContent.indexOf('\n}', factoryStart) + 2
     const factoryBody = qoContent.slice(factoryStart, factoryEnd)
-    expect(factoryBody).toContain('id: string')
-    expect(factoryBody).not.toContain('id: string | undefined | null')
+    expect(factoryBody).toContain('id: Parameters<typeof getTask>[0]')
+    expect(factoryBody).not.toContain('| undefined | null')
   })
 
   it('listTasksQueryOptions contains staleTime and gcTime', () => {
@@ -2133,9 +2140,9 @@ describe('Feature #188: queryOptions factories', () => {
     expect(factoryStart).toBeGreaterThan(-1)
     const factoryEnd = mpContent.indexOf('\n}', factoryStart) + 2
     const factoryBody = mpContent.slice(factoryStart, factoryEnd)
-    // Plain strings, no nullish widening
-    expect(factoryBody).toContain('projectId: string')
-    expect(factoryBody).toContain('taskId: string')
+    // Derived param types, no nullish widening
+    expect(factoryBody).toContain('projectId: Parameters<typeof getProjectTask>[0]')
+    expect(factoryBody).toContain('taskId: Parameters<typeof getProjectTask>[1]')
     expect(factoryBody).not.toContain('projectId!')
     expect(factoryBody).not.toContain('taskId!')
     expect(factoryBody).not.toContain('| undefined | null')

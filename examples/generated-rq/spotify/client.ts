@@ -466,7 +466,7 @@ export async function getPlaylist(
 
 export async function changePlaylistDetails(
   playlistId: string,
-  body: Record<string, unknown>,
+  body: { name?: string; public?: boolean; collaborative?: boolean; description?: string },
   config?: Partial<ClientConfig>
 ): Promise<void> {
   await _request('PUT', `/playlists/${encodeURIComponent(playlistId)}`, { body }, config)
@@ -506,7 +506,7 @@ export async function getPlaylistsTracks(
  */
 export async function addTracksToPlaylist(
   playlistId: string,
-  body: Record<string, unknown>,
+  body: { uris?: string[]; position?: number },
   params?: {
     position?: number
     uris?: string
@@ -529,7 +529,13 @@ export async function addTracksToPlaylist(
  */
 export async function reorderOrReplacePlaylistsTracks(
   playlistId: string,
-  body: Record<string, unknown>,
+  body: {
+    uris?: string[]
+    range_start?: number
+    insert_before?: number
+    range_length?: number
+    snapshot_id?: string
+  },
   params?: {
     uris?: string
   },
@@ -550,7 +556,7 @@ export async function reorderOrReplacePlaylistsTracks(
  */
 export async function removeTracksPlaylist(
   playlistId: string,
-  body: Record<string, unknown>,
+  body: { tracks: { uri?: string }[]; snapshot_id?: string },
   config?: Partial<ClientConfig>
 ): Promise<void> {
   await _request('DELETE', `/playlists/${encodeURIComponent(playlistId)}/tracks`, { body }, config)
@@ -584,7 +590,7 @@ export async function getPlaylistsItems(
 
 export async function addItemsToPlaylist(
   playlistId: string,
-  body: Record<string, unknown>,
+  body: { uris?: string[]; position?: number },
   params?: {
     position?: number
     uris?: string
@@ -604,7 +610,13 @@ export async function addItemsToPlaylist(
 
 export async function reorderOrReplacePlaylistsItems(
   playlistId: string,
-  body: Record<string, unknown>,
+  body: {
+    uris?: string[]
+    range_start?: number
+    insert_before?: number
+    range_length?: number
+    snapshot_id?: string
+  },
   params?: {
     uris?: string
   },
@@ -622,7 +634,7 @@ export async function reorderOrReplacePlaylistsItems(
 
 export async function removeItemsPlaylist(
   playlistId: string,
-  body: Record<string, unknown>,
+  body: { items: { uri?: string }[]; snapshot_id?: string },
   config?: Partial<ClientConfig>
 ): Promise<void> {
   await _request('DELETE', `/playlists/${encodeURIComponent(playlistId)}/items`, { body }, config)
@@ -642,7 +654,7 @@ export async function getAListOfCurrentUsersPlaylists(
 }
 
 export async function createPlaylist(
-  body: Record<string, unknown>,
+  body: { name: string; public?: boolean; collaborative?: boolean; description?: string },
   config?: Partial<ClientConfig>
 ): Promise<void> {
   await _request('POST', '/me/playlists', { body }, config)
@@ -709,7 +721,7 @@ export async function getUsersSavedAlbums(
  * @deprecated
  */
 export async function saveAlbumsUser(
-  body: Record<string, unknown>,
+  body: { ids?: string[] },
   params: {
     ids: string
   },
@@ -724,7 +736,7 @@ export async function saveAlbumsUser(
  * @deprecated
  */
 export async function removeAlbumsUser(
-  body: Record<string, unknown>,
+  body: { ids?: string[] },
   params: {
     ids: string
   },
@@ -768,7 +780,7 @@ export async function getUsersSavedTracks(
  * @deprecated
  */
 export async function saveTracksUser(
-  body: Record<string, unknown>,
+  body: { ids: string[]; timestamped_ids?: { id: string; added_at: string }[] },
   config?: Partial<ClientConfig>
 ): Promise<void> {
   await _request('PUT', '/me/tracks', { body }, config)
@@ -778,7 +790,7 @@ export async function saveTracksUser(
  * @deprecated
  */
 export async function removeTracksUser(
-  body: Record<string, unknown>,
+  body: { ids?: string[] },
   params: {
     ids: string
   },
@@ -822,7 +834,7 @@ export async function getUsersSavedEpisodes(
  * @deprecated
  */
 export async function saveEpisodesUser(
-  body: Record<string, unknown>,
+  body: { ids: string[] },
   params: {
     ids: string
   },
@@ -837,7 +849,7 @@ export async function saveEpisodesUser(
  * @deprecated
  */
 export async function removeEpisodesUser(
-  body: Record<string, unknown>,
+  body: { ids?: string[] },
   params: {
     ids: string
   },
@@ -879,7 +891,7 @@ export async function getUsersSavedShows(
  * @deprecated
  */
 export async function saveShowsUser(
-  body: Record<string, unknown>,
+  body: { ids?: string[] },
   params: {
     ids: string
   },
@@ -894,7 +906,7 @@ export async function saveShowsUser(
  * @deprecated
  */
 export async function removeShowsUser(
-  body: Record<string, unknown>,
+  body: { ids?: string[] },
   params: {
     ids: string
     market?: string
@@ -953,7 +965,7 @@ export async function getListUsersPlaylists(
  */
 export async function createPlaylistForUser(
   userId: string,
-  body: Record<string, unknown>,
+  body: { name: string; public?: boolean; collaborative?: boolean; description?: string },
   config?: Partial<ClientConfig>
 ): Promise<void> {
   await _request('POST', `/users/${encodeURIComponent(userId)}/playlists`, { body }, config)
@@ -964,7 +976,7 @@ export async function createPlaylistForUser(
  */
 export async function followPlaylist(
   playlistId: string,
-  body: Record<string, unknown>,
+  body: { public?: boolean },
   config?: Partial<ClientConfig>
 ): Promise<void> {
   await _request('PUT', `/playlists/${encodeURIComponent(playlistId)}/followers`, { body }, config)
@@ -1107,7 +1119,7 @@ export async function getFollowed(
  * @deprecated
  */
 export async function followArtistsUsers(
-  body: Record<string, unknown>,
+  body: { ids: string[] },
   params: {
     type: 'artist' | 'user'
     ids: string
@@ -1124,7 +1136,7 @@ export async function followArtistsUsers(
  * @deprecated
  */
 export async function unfollowArtistsUsers(
-  body: Record<string, unknown>,
+  body: { ids?: string[] },
   params: {
     type: 'artist' | 'user'
     ids: string
@@ -1353,7 +1365,7 @@ export async function getInformationAboutTheUsersCurrentPlayback(
 }
 
 export async function transferAUsersPlayback(
-  body: Record<string, unknown>,
+  body: { device_ids: string[]; play?: boolean },
   config?: Partial<ClientConfig>
 ): Promise<void> {
   await _request('PUT', '/me/player', { body }, config)
@@ -1378,7 +1390,12 @@ export async function getTheUsersCurrentlyPlayingTrack(
 }
 
 export async function startAUsersPlayback(
-  body: Record<string, unknown>,
+  body: {
+    context_uri?: string
+    uris?: string[]
+    offset?: Record<string, unknown>
+    position_ms?: number
+  },
   params?: {
     deviceId?: string
   },

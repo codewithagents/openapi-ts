@@ -35,12 +35,12 @@ export const specialEventKeys = {
   all: () => ['special-events'] as const,
   list: (params?: Parameters<typeof listSpecialEvents>[0]) =>
     ['special-events', 'list', params] as const,
-  detail: (eventId: string) => ['special-events', eventId] as const,
+  detail: (eventId: Parameters<typeof getSpecialEvent>[0]) => ['special-events', eventId] as const,
 }
 
 export const ticketKeys = {
   all: () => ['tickets'] as const,
-  detail: (ticketId: string) => ['tickets', ticketId] as const,
+  detail: (ticketId: Parameters<typeof getTicketCode>[0]) => ['tickets', ticketId] as const,
 }
 
 // ── Query options factories ──────────────────────────────────
@@ -78,7 +78,7 @@ export function listSpecialEventsQueryOptions(
 }
 
 export function getSpecialEventQueryOptions(
-  eventId: string,
+  eventId: Parameters<typeof getSpecialEvent>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSpecialEvent>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -94,7 +94,7 @@ export function getSpecialEventQueryOptions(
 }
 
 export function getTicketCodeQueryOptions(
-  ticketId: string,
+  ticketId: Parameters<typeof getTicketCode>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTicketCode>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -206,7 +206,7 @@ export function useListSpecialEventsInfinite(
 }
 
 export function useGetSpecialEvent(
-  eventId: string | undefined | null,
+  eventId: Parameters<typeof getSpecialEvent>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSpecialEvent>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -223,7 +223,7 @@ export function useGetSpecialEvent(
 }
 
 export function useGetTicketCode(
-  ticketId: string | undefined | null,
+  ticketId: Parameters<typeof getTicketCode>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTicketCode>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -266,7 +266,10 @@ export function useUpdateSpecialEvent(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateSpecialEvent>>,
       ApiError,
-      { eventId: string; body: Parameters<typeof updateSpecialEvent>[1] }
+      {
+        eventId: Parameters<typeof updateSpecialEvent>[0]
+        body: Parameters<typeof updateSpecialEvent>[1]
+      }
     >,
     'mutationFn'
   >
@@ -274,7 +277,10 @@ export function useUpdateSpecialEvent(
   return useMutation<
     Awaited<ReturnType<typeof updateSpecialEvent>>,
     ApiError,
-    { eventId: string; body: Parameters<typeof updateSpecialEvent>[1] }
+    {
+      eventId: Parameters<typeof updateSpecialEvent>[0]
+      body: Parameters<typeof updateSpecialEvent>[1]
+    }
   >({
     mutationFn: ({ eventId, body }) => updateSpecialEvent(eventId, body),
     ...options,
@@ -283,11 +289,19 @@ export function useUpdateSpecialEvent(
 
 export function useDeleteSpecialEvent(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteSpecialEvent>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteSpecialEvent>>,
+      ApiError,
+      Parameters<typeof deleteSpecialEvent>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteSpecialEvent>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteSpecialEvent>>,
+    ApiError,
+    Parameters<typeof deleteSpecialEvent>[0]
+  >({
     mutationFn: (eventId) => deleteSpecialEvent(eventId),
     ...options,
   })

@@ -13,14 +13,14 @@ export const apiKeys = {
 export const holidayKeys = {
   all: () => ['holidays'] as const,
   list: (params?: Parameters<typeof holidays>[0]) => ['holidays', 'list', params] as const,
-  detail: (holidayId: string, params?: Parameters<typeof holiday>[1]) =>
+  detail: (holidayId: Parameters<typeof holiday>[0], params?: Parameters<typeof holiday>[1]) =>
     ['holidays', holidayId, params] as const,
 }
 
 export const provinceKeys = {
   all: () => ['provinces'] as const,
   list: (params?: Parameters<typeof provinces>[0]) => ['provinces', 'list', params] as const,
-  detail: (provinceId: string, params?: Parameters<typeof province>[1]) =>
+  detail: (provinceId: Parameters<typeof province>[0], params?: Parameters<typeof province>[1]) =>
     ['provinces', provinceId, params] as const,
 }
 
@@ -63,7 +63,7 @@ export function holidaysQueryOptions(
 }
 
 export function holidayQueryOptions(
-  holidayId: string,
+  holidayId: Parameters<typeof holiday>[0],
   params?: Parameters<typeof holiday>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof holiday>>, ApiError>,
@@ -96,7 +96,7 @@ export function provincesQueryOptions(
 }
 
 export function provinceQueryOptions(
-  provinceId: string,
+  provinceId: Parameters<typeof province>[0],
   params?: Parameters<typeof province>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof province>>, ApiError>,
@@ -161,7 +161,7 @@ export function useHolidays(
 }
 
 export function useHoliday(
-  holidayId: string | undefined | null,
+  holidayId: Parameters<typeof holiday>[0] | undefined | null,
   params?: Parameters<typeof holiday>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof holiday>>, ApiError>,
@@ -195,7 +195,7 @@ export function useProvinces(
 }
 
 export function useProvince(
-  provinceId: string | undefined | null,
+  provinceId: Parameters<typeof province>[0] | undefined | null,
   params?: Parameters<typeof province>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof province>>, ApiError>,
