@@ -116,33 +116,50 @@ export const apiKeys = {
   getTags: (params?: Parameters<typeof getTags>[0]) => ['api', 'getTags', params] as const,
   getUserMe: () => ['api', 'getUserMe'] as const,
   videos: (params?: Parameters<typeof videos>[0]) => ['api', 'videos', params] as const,
-  getAgentSessionById: (id: string) => ['api', 'getAgentSessionById', id] as const,
-  getArticleById: (id: string) => ['api', 'getArticleById', id] as const,
-  getArticleByPath: (username: string, slug: string) =>
-    ['api', 'getArticleByPath', username, slug] as const,
-  getSegment: (id: string) => ['api', 'getSegment', id] as const,
-  getUsersInSegment: (id: string, params?: Parameters<typeof getUsersInSegment>[1]) =>
-    ['api', 'getUsersInSegment', id, params] as const,
-  getApiBillboardsById: (id: string) => ['api', 'getApiBillboardsById', id] as const,
-  getCommentById: (id: string) => ['api', 'getCommentById', id] as const,
-  getOrganization: (username: string) => ['api', 'getOrganization', username] as const,
-  getOrgUsers: (organizationIdOrUsername: string, params?: Parameters<typeof getOrgUsers>[1]) =>
-    ['api', 'getOrgUsers', organizationIdOrUsername, params] as const,
+  getAgentSessionById: (id: Parameters<typeof getAgentSessionById>[0]) =>
+    ['api', 'getAgentSessionById', id] as const,
+  getArticleById: (id: Parameters<typeof getArticleById>[0]) =>
+    ['api', 'getArticleById', id] as const,
+  getArticleByPath: (
+    username: Parameters<typeof getArticleByPath>[0],
+    slug: Parameters<typeof getArticleByPath>[1]
+  ) => ['api', 'getArticleByPath', username, slug] as const,
+  getSegment: (id: Parameters<typeof getSegment>[0]) => ['api', 'getSegment', id] as const,
+  getUsersInSegment: (
+    id: Parameters<typeof getUsersInSegment>[0],
+    params?: Parameters<typeof getUsersInSegment>[1]
+  ) => ['api', 'getUsersInSegment', id, params] as const,
+  getApiBillboardsById: (id: Parameters<typeof getApiBillboardsById>[0]) =>
+    ['api', 'getApiBillboardsById', id] as const,
+  getCommentById: (id: Parameters<typeof getCommentById>[0]) =>
+    ['api', 'getCommentById', id] as const,
+  getOrganization: (username: Parameters<typeof getOrganization>[0]) =>
+    ['api', 'getOrganization', username] as const,
+  getOrgUsers: (
+    organizationIdOrUsername: Parameters<typeof getOrgUsers>[0],
+    params?: Parameters<typeof getOrgUsers>[1]
+  ) => ['api', 'getOrgUsers', organizationIdOrUsername, params] as const,
   getOrgArticles: (
-    organizationIdOrUsername: string,
+    organizationIdOrUsername: Parameters<typeof getOrgArticles>[0],
     params?: Parameters<typeof getOrgArticles>[1]
   ) => ['api', 'getOrgArticles', organizationIdOrUsername, params] as const,
-  getOrganizationById: (id: string) => ['api', 'getOrganizationById', id] as const,
-  getApiPagesById: (id: string) => ['api', 'getApiPagesById', id] as const,
-  getProfileImage: (username: string) => ['api', 'getProfileImage', username] as const,
-  getSurveyByIdOrSlug: (idOrSlug: string) => ['api', 'getSurveyByIdOrSlug', idOrSlug] as const,
-  getSurveyPollVotes: (idOrSlug: string, params?: Parameters<typeof getSurveyPollVotes>[1]) =>
-    ['api', 'getSurveyPollVotes', idOrSlug, params] as const,
+  getOrganizationById: (id: Parameters<typeof getOrganizationById>[0]) =>
+    ['api', 'getOrganizationById', id] as const,
+  getApiPagesById: (id: Parameters<typeof getApiPagesById>[0]) =>
+    ['api', 'getApiPagesById', id] as const,
+  getProfileImage: (username: Parameters<typeof getProfileImage>[0]) =>
+    ['api', 'getProfileImage', username] as const,
+  getSurveyByIdOrSlug: (idOrSlug: Parameters<typeof getSurveyByIdOrSlug>[0]) =>
+    ['api', 'getSurveyByIdOrSlug', idOrSlug] as const,
+  getSurveyPollVotes: (
+    idOrSlug: Parameters<typeof getSurveyPollVotes>[0],
+    params?: Parameters<typeof getSurveyPollVotes>[1]
+  ) => ['api', 'getSurveyPollVotes', idOrSlug, params] as const,
   getSurveyPollTextResponses: (
-    idOrSlug: string,
+    idOrSlug: Parameters<typeof getSurveyPollTextResponses>[0],
     params?: Parameters<typeof getSurveyPollTextResponses>[1]
   ) => ['api', 'getSurveyPollTextResponses', idOrSlug, params] as const,
-  getUser: (id: string) => ['api', 'getUser', id] as const,
+  getUser: (id: Parameters<typeof getUser>[0]) => ['api', 'getUser', id] as const,
 }
 
 // ── Query options factories ──────────────────────────────────
@@ -163,7 +180,7 @@ export function getAgentSessionsQueryOptions(
 }
 
 export function getAgentSessionByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getAgentSessionById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -211,7 +228,7 @@ export function getLatestArticlesQueryOptions(
 }
 
 export function getArticleByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getArticleById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getArticleById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -227,8 +244,8 @@ export function getArticleByIdQueryOptions(
 }
 
 export function getArticleByPathQueryOptions(
-  username: string,
-  slug: string,
+  username: Parameters<typeof getArticleByPath>[0],
+  slug: Parameters<typeof getArticleByPath>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getArticleByPath>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -324,7 +341,7 @@ export function getSegmentsQueryOptions(
 }
 
 export function getSegmentQueryOptions(
-  id: string,
+  id: Parameters<typeof getSegment>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSegment>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -340,7 +357,7 @@ export function getSegmentQueryOptions(
 }
 
 export function getUsersInSegmentQueryOptions(
-  id: string,
+  id: Parameters<typeof getUsersInSegment>[0],
   params?: Parameters<typeof getUsersInSegment>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUsersInSegment>>, ApiError>,
@@ -372,7 +389,7 @@ export function getApiBillboardsQueryOptions(
 }
 
 export function getApiBillboardsByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getApiBillboardsById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getApiBillboardsById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -404,7 +421,7 @@ export function getCommentsByArticleIdQueryOptions(
 }
 
 export function getCommentByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getCommentById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getCommentById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -451,7 +468,7 @@ export function getFollowersQueryOptions(
 }
 
 export function getOrganizationQueryOptions(
-  username: string,
+  username: Parameters<typeof getOrganization>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getOrganization>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -467,7 +484,7 @@ export function getOrganizationQueryOptions(
 }
 
 export function getOrgUsersQueryOptions(
-  organizationIdOrUsername: string,
+  organizationIdOrUsername: Parameters<typeof getOrgUsers>[0],
   params?: Parameters<typeof getOrgUsers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getOrgUsers>>, ApiError>,
@@ -484,7 +501,7 @@ export function getOrgUsersQueryOptions(
 }
 
 export function getOrgArticlesQueryOptions(
-  organizationIdOrUsername: string,
+  organizationIdOrUsername: Parameters<typeof getOrgArticles>[0],
   params?: Parameters<typeof getOrgArticles>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getOrgArticles>>, ApiError>,
@@ -517,7 +534,7 @@ export function getOrganizationsQueryOptions(
 }
 
 export function getOrganizationByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getOrganizationById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getOrganizationById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -548,7 +565,7 @@ export function getApiPagesQueryOptions(
 }
 
 export function getApiPagesByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getApiPagesById>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getApiPagesById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -580,7 +597,7 @@ export function getPodcastEpisodesQueryOptions(
 }
 
 export function getProfileImageQueryOptions(
-  username: string,
+  username: Parameters<typeof getProfileImage>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getProfileImage>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -628,7 +645,7 @@ export function getSurveysQueryOptions(
 }
 
 export function getSurveyByIdOrSlugQueryOptions(
-  idOrSlug: string,
+  idOrSlug: Parameters<typeof getSurveyByIdOrSlug>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSurveyByIdOrSlug>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -644,7 +661,7 @@ export function getSurveyByIdOrSlugQueryOptions(
 }
 
 export function getSurveyPollVotesQueryOptions(
-  idOrSlug: string,
+  idOrSlug: Parameters<typeof getSurveyPollVotes>[0],
   params?: Parameters<typeof getSurveyPollVotes>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSurveyPollVotes>>, ApiError>,
@@ -661,7 +678,7 @@ export function getSurveyPollVotesQueryOptions(
 }
 
 export function getSurveyPollTextResponsesQueryOptions(
-  idOrSlug: string,
+  idOrSlug: Parameters<typeof getSurveyPollTextResponses>[0],
   params?: Parameters<typeof getSurveyPollTextResponses>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSurveyPollTextResponses>>, ApiError>,
@@ -709,7 +726,7 @@ export function getUserMeQueryOptions(
 }
 
 export function getUserQueryOptions(
-  id: string,
+  id: Parameters<typeof getUser>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUser>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -758,7 +775,7 @@ export function useGetAgentSessions(
 }
 
 export function useGetAgentSessionById(
-  id: string | undefined | null,
+  id: Parameters<typeof getAgentSessionById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAgentSessionById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -869,7 +886,7 @@ export function useGetLatestArticlesInfinite(
 }
 
 export function useGetArticleById(
-  id: string | undefined | null,
+  id: Parameters<typeof getArticleById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getArticleById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -886,8 +903,8 @@ export function useGetArticleById(
 }
 
 export function useGetArticleByPath(
-  username: string | undefined | null,
-  slug: string | undefined | null,
+  username: Parameters<typeof getArticleByPath>[0] | undefined | null,
+  slug: Parameters<typeof getArticleByPath>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getArticleByPath>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1108,7 +1125,7 @@ export function useGetSegments(
 }
 
 export function useGetSegment(
-  id: string | undefined | null,
+  id: Parameters<typeof getSegment>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSegment>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1125,7 +1142,7 @@ export function useGetSegment(
 }
 
 export function useGetUsersInSegment(
-  id: string | undefined | null,
+  id: Parameters<typeof getUsersInSegment>[0] | undefined | null,
   params?: Parameters<typeof getUsersInSegment>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUsersInSegment>>, ApiError>,
@@ -1158,7 +1175,7 @@ export function useGetApiBillboards(
 }
 
 export function useGetApiBillboardsById(
-  id: string | undefined | null,
+  id: Parameters<typeof getApiBillboardsById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getApiBillboardsById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1222,7 +1239,7 @@ export function useGetCommentsByArticleIdInfinite(
 }
 
 export function useGetCommentById(
-  id: string | undefined | null,
+  id: Parameters<typeof getCommentById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getCommentById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1301,7 +1318,7 @@ export function useGetFollowersInfinite(
 }
 
 export function useGetOrganization(
-  username: string | undefined | null,
+  username: Parameters<typeof getOrganization>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getOrganization>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1318,7 +1335,7 @@ export function useGetOrganization(
 }
 
 export function useGetOrgUsers(
-  organizationIdOrUsername: string | undefined | null,
+  organizationIdOrUsername: Parameters<typeof getOrgUsers>[0] | undefined | null,
   params?: Parameters<typeof getOrgUsers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getOrgUsers>>, ApiError>,
@@ -1336,7 +1353,7 @@ export function useGetOrgUsers(
 }
 
 export function useGetOrgArticles(
-  organizationIdOrUsername: string | undefined | null,
+  organizationIdOrUsername: Parameters<typeof getOrgArticles>[0] | undefined | null,
   params?: Parameters<typeof getOrgArticles>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getOrgArticles>>, ApiError>,
@@ -1401,7 +1418,7 @@ export function useGetOrganizationsInfinite(
 }
 
 export function useGetOrganizationById(
-  id: string | undefined | null,
+  id: Parameters<typeof getOrganizationById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getOrganizationById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1433,7 +1450,7 @@ export function useGetApiPages(
 }
 
 export function useGetApiPagesById(
-  id: string | undefined | null,
+  id: Parameters<typeof getApiPagesById>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getApiPagesById>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1497,7 +1514,7 @@ export function useGetPodcastEpisodesInfinite(
 }
 
 export function useGetProfileImage(
-  username: string | undefined | null,
+  username: Parameters<typeof getProfileImage>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getProfileImage>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1608,7 +1625,7 @@ export function useGetSurveysInfinite(
 }
 
 export function useGetSurveyByIdOrSlug(
-  idOrSlug: string | undefined | null,
+  idOrSlug: Parameters<typeof getSurveyByIdOrSlug>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSurveyByIdOrSlug>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1625,7 +1642,7 @@ export function useGetSurveyByIdOrSlug(
 }
 
 export function useGetSurveyPollVotes(
-  idOrSlug: string | undefined | null,
+  idOrSlug: Parameters<typeof getSurveyPollVotes>[0] | undefined | null,
   params?: Parameters<typeof getSurveyPollVotes>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSurveyPollVotes>>, ApiError>,
@@ -1643,7 +1660,7 @@ export function useGetSurveyPollVotes(
 }
 
 export function useGetSurveyPollTextResponses(
-  idOrSlug: string | undefined | null,
+  idOrSlug: Parameters<typeof getSurveyPollTextResponses>[0] | undefined | null,
   params?: Parameters<typeof getSurveyPollTextResponses>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getSurveyPollTextResponses>>, ApiError>,
@@ -1723,7 +1740,7 @@ export function useGetUserMe(
 }
 
 export function useGetUser(
-  id: string | undefined | null,
+  id: Parameters<typeof getUser>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUser>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1833,7 +1850,7 @@ export function useUpdateArticle(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateArticle>>,
       ApiError,
-      { id: string; body: Parameters<typeof updateArticle>[1] }
+      { id: Parameters<typeof updateArticle>[0]; body: Parameters<typeof updateArticle>[1] }
     >,
     'mutationFn'
   >
@@ -1841,7 +1858,7 @@ export function useUpdateArticle(
   return useMutation<
     Awaited<ReturnType<typeof updateArticle>>,
     ApiError,
-    { id: string; body: Parameters<typeof updateArticle>[1] }
+    { id: Parameters<typeof updateArticle>[0]; body: Parameters<typeof updateArticle>[1] }
   >({
     mutationFn: ({ id, body }) => updateArticle(id, body),
     ...options,
@@ -1853,7 +1870,7 @@ export function useUnpublishArticle(
     UseMutationOptions<
       Awaited<ReturnType<typeof unpublishArticle>>,
       ApiError,
-      { id: string; params: Parameters<typeof unpublishArticle>[1] }
+      { id: Parameters<typeof unpublishArticle>[0]; params: Parameters<typeof unpublishArticle>[1] }
     >,
     'mutationFn'
   >
@@ -1861,7 +1878,7 @@ export function useUnpublishArticle(
   return useMutation<
     Awaited<ReturnType<typeof unpublishArticle>>,
     ApiError,
-    { id: string; params: Parameters<typeof unpublishArticle>[1] }
+    { id: Parameters<typeof unpublishArticle>[0]; params: Parameters<typeof unpublishArticle>[1] }
   >({
     mutationFn: ({ id, params }) => unpublishArticle(id, params),
     ...options,
@@ -1882,11 +1899,19 @@ export function useCreateSegment(
 
 export function useDeleteSegment(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteSegment>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteSegment>>,
+      ApiError,
+      Parameters<typeof deleteSegment>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteSegment>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteSegment>>,
+    ApiError,
+    Parameters<typeof deleteSegment>[0]
+  >({
     mutationFn: (id) => deleteSegment(id),
     ...options,
   })
@@ -1897,7 +1922,7 @@ export function useAddUsersToSegment(
     UseMutationOptions<
       Awaited<ReturnType<typeof addUsersToSegment>>,
       ApiError,
-      { id: string; body: Parameters<typeof addUsersToSegment>[1] }
+      { id: Parameters<typeof addUsersToSegment>[0]; body: Parameters<typeof addUsersToSegment>[1] }
     >,
     'mutationFn'
   >
@@ -1905,7 +1930,7 @@ export function useAddUsersToSegment(
   return useMutation<
     Awaited<ReturnType<typeof addUsersToSegment>>,
     ApiError,
-    { id: string; body: Parameters<typeof addUsersToSegment>[1] }
+    { id: Parameters<typeof addUsersToSegment>[0]; body: Parameters<typeof addUsersToSegment>[1] }
   >({
     mutationFn: ({ id, body }) => addUsersToSegment(id, body),
     ...options,
@@ -1917,7 +1942,10 @@ export function useRemoveUsersFromSegment(
     UseMutationOptions<
       Awaited<ReturnType<typeof removeUsersFromSegment>>,
       ApiError,
-      { id: string; body: Parameters<typeof removeUsersFromSegment>[1] }
+      {
+        id: Parameters<typeof removeUsersFromSegment>[0]
+        body: Parameters<typeof removeUsersFromSegment>[1]
+      }
     >,
     'mutationFn'
   >
@@ -1925,7 +1953,10 @@ export function useRemoveUsersFromSegment(
   return useMutation<
     Awaited<ReturnType<typeof removeUsersFromSegment>>,
     ApiError,
-    { id: string; body: Parameters<typeof removeUsersFromSegment>[1] }
+    {
+      id: Parameters<typeof removeUsersFromSegment>[0]
+      body: Parameters<typeof removeUsersFromSegment>[1]
+    }
   >({
     mutationFn: ({ id, body }) => removeUsersFromSegment(id, body),
     ...options,
@@ -1957,7 +1988,10 @@ export function useUpdateApiBillboardsById(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateApiBillboardsById>>,
       ApiError,
-      { id: string; body: Parameters<typeof updateApiBillboardsById>[1] }
+      {
+        id: Parameters<typeof updateApiBillboardsById>[0]
+        body: Parameters<typeof updateApiBillboardsById>[1]
+      }
     >,
     'mutationFn'
   >
@@ -1965,7 +1999,10 @@ export function useUpdateApiBillboardsById(
   return useMutation<
     Awaited<ReturnType<typeof updateApiBillboardsById>>,
     ApiError,
-    { id: string; body: Parameters<typeof updateApiBillboardsById>[1] }
+    {
+      id: Parameters<typeof updateApiBillboardsById>[0]
+      body: Parameters<typeof updateApiBillboardsById>[1]
+    }
   >({
     mutationFn: ({ id, body }) => updateApiBillboardsById(id, body),
     ...options,
@@ -1977,7 +2014,7 @@ export function useUpdateApiBillboardsByIdUnpublish(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateApiBillboardsByIdUnpublish>>,
       ApiError,
-      string
+      Parameters<typeof updateApiBillboardsByIdUnpublish>[0]
     >,
     'mutationFn'
   >
@@ -1985,7 +2022,7 @@ export function useUpdateApiBillboardsByIdUnpublish(
   return useMutation<
     Awaited<ReturnType<typeof updateApiBillboardsByIdUnpublish>>,
     ApiError,
-    string
+    Parameters<typeof updateApiBillboardsByIdUnpublish>[0]
   >({
     mutationFn: (id) => updateApiBillboardsByIdUnpublish(id),
     ...options,
@@ -2017,7 +2054,10 @@ export function useUpdateApiOrganizationsById(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateApiOrganizationsById>>,
       ApiError,
-      { id: string; body: Parameters<typeof updateApiOrganizationsById>[1] }
+      {
+        id: Parameters<typeof updateApiOrganizationsById>[0]
+        body: Parameters<typeof updateApiOrganizationsById>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2025,7 +2065,10 @@ export function useUpdateApiOrganizationsById(
   return useMutation<
     Awaited<ReturnType<typeof updateApiOrganizationsById>>,
     ApiError,
-    { id: string; body: Parameters<typeof updateApiOrganizationsById>[1] }
+    {
+      id: Parameters<typeof updateApiOrganizationsById>[0]
+      body: Parameters<typeof updateApiOrganizationsById>[1]
+    }
   >({
     mutationFn: ({ id, body }) => updateApiOrganizationsById(id, body),
     ...options,
@@ -2034,11 +2077,19 @@ export function useUpdateApiOrganizationsById(
 
 export function useDeleteApiOrganizationsById(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteApiOrganizationsById>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteApiOrganizationsById>>,
+      ApiError,
+      Parameters<typeof deleteApiOrganizationsById>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteApiOrganizationsById>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteApiOrganizationsById>>,
+    ApiError,
+    Parameters<typeof deleteApiOrganizationsById>[0]
+  >({
     mutationFn: (id) => deleteApiOrganizationsById(id),
     ...options,
   })
@@ -2069,7 +2120,10 @@ export function useUpdateApiPagesById(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateApiPagesById>>,
       ApiError,
-      { id: string; body: Parameters<typeof updateApiPagesById>[1] }
+      {
+        id: Parameters<typeof updateApiPagesById>[0]
+        body: Parameters<typeof updateApiPagesById>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2077,7 +2131,7 @@ export function useUpdateApiPagesById(
   return useMutation<
     Awaited<ReturnType<typeof updateApiPagesById>>,
     ApiError,
-    { id: string; body: Parameters<typeof updateApiPagesById>[1] }
+    { id: Parameters<typeof updateApiPagesById>[0]; body: Parameters<typeof updateApiPagesById>[1] }
   >({
     mutationFn: ({ id, body }) => updateApiPagesById(id, body),
     ...options,
@@ -2086,11 +2140,19 @@ export function useUpdateApiPagesById(
 
 export function useDeleteApiPagesById(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteApiPagesById>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteApiPagesById>>,
+      ApiError,
+      Parameters<typeof deleteApiPagesById>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteApiPagesById>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteApiPagesById>>,
+    ApiError,
+    Parameters<typeof deleteApiPagesById>[0]
+  >({
     mutationFn: (id) => deleteApiPagesById(id),
     ...options,
   })
@@ -2138,11 +2200,19 @@ export function useCreateApiReactions(
 
 export function useSuspendUser(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof suspendUser>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof suspendUser>>,
+      ApiError,
+      Parameters<typeof suspendUser>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof suspendUser>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof suspendUser>>,
+    ApiError,
+    Parameters<typeof suspendUser>[0]
+  >({
     mutationFn: (id) => suspendUser(id),
     ...options,
   })
@@ -2150,11 +2220,19 @@ export function useSuspendUser(
 
 export function useLimitUser(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof limitUser>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof limitUser>>,
+      ApiError,
+      Parameters<typeof limitUser>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof limitUser>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof limitUser>>,
+    ApiError,
+    Parameters<typeof limitUser>[0]
+  >({
     mutationFn: (id) => limitUser(id),
     ...options,
   })
@@ -2162,11 +2240,19 @@ export function useLimitUser(
 
 export function useUnLimitUser(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof unLimitUser>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof unLimitUser>>,
+      ApiError,
+      Parameters<typeof unLimitUser>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof unLimitUser>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof unLimitUser>>,
+    ApiError,
+    Parameters<typeof unLimitUser>[0]
+  >({
     mutationFn: (id) => unLimitUser(id),
     ...options,
   })
@@ -2174,11 +2260,19 @@ export function useUnLimitUser(
 
 export function useSpamUser(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof spamUser>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof spamUser>>,
+      ApiError,
+      Parameters<typeof spamUser>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof spamUser>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof spamUser>>,
+    ApiError,
+    Parameters<typeof spamUser>[0]
+  >({
     mutationFn: (id) => spamUser(id),
     ...options,
   })
@@ -2186,11 +2280,19 @@ export function useSpamUser(
 
 export function useUnSpamUser(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof unSpamUser>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof unSpamUser>>,
+      ApiError,
+      Parameters<typeof unSpamUser>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof unSpamUser>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof unSpamUser>>,
+    ApiError,
+    Parameters<typeof unSpamUser>[0]
+  >({
     mutationFn: (id) => unSpamUser(id),
     ...options,
   })
@@ -2198,11 +2300,19 @@ export function useUnSpamUser(
 
 export function useTrustUser(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof trustUser>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof trustUser>>,
+      ApiError,
+      Parameters<typeof trustUser>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof trustUser>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof trustUser>>,
+    ApiError,
+    Parameters<typeof trustUser>[0]
+  >({
     mutationFn: (id) => trustUser(id),
     ...options,
   })
@@ -2210,11 +2320,19 @@ export function useTrustUser(
 
 export function useUnTrustUser(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof unTrustUser>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof unTrustUser>>,
+      ApiError,
+      Parameters<typeof unTrustUser>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof unTrustUser>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof unTrustUser>>,
+    ApiError,
+    Parameters<typeof unTrustUser>[0]
+  >({
     mutationFn: (id) => unTrustUser(id),
     ...options,
   })
@@ -2222,11 +2340,19 @@ export function useUnTrustUser(
 
 export function useUnpublishUser(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof unpublishUser>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof unpublishUser>>,
+      ApiError,
+      Parameters<typeof unpublishUser>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof unpublishUser>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof unpublishUser>>,
+    ApiError,
+    Parameters<typeof unpublishUser>[0]
+  >({
     mutationFn: (id) => unpublishUser(id),
     ...options,
   })

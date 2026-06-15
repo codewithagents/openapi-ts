@@ -128,13 +128,13 @@ export async function findPetsByTags(
   return res.json()
 }
 
-export async function getPetById(petId: string, config?: Partial<ClientConfig>): Promise<Pet> {
+export async function getPetById(petId: number, config?: Partial<ClientConfig>): Promise<Pet> {
   const res = await _request('GET', `/pet/${encodeURIComponent(petId)}`, {}, config)
   return res.json()
 }
 
 export async function updatePetWithForm(
-  petId: string,
+  petId: number,
   params?: {
     name?: string
     status?: string
@@ -149,7 +149,7 @@ export async function updatePetWithForm(
 }
 
 export async function deletePet(
-  petId: string,
+  petId: number,
   params?: {
     api_key?: string
   },
@@ -162,7 +162,7 @@ export async function deletePet(
 }
 
 export async function uploadFile(
-  petId: string,
+  petId: number,
   params?: {
     additionalMetadata?: string
   },
@@ -193,14 +193,14 @@ export async function placeOrder(body: Order, config?: Partial<ClientConfig>): P
 }
 
 export async function getOrderById(
-  orderId: string,
+  orderId: number,
   config?: Partial<ClientConfig>
 ): Promise<Order> {
   const res = await _request('GET', `/store/order/${encodeURIComponent(orderId)}`, {}, config)
   return res.json()
 }
 
-export async function deleteOrder(orderId: string, config?: Partial<ClientConfig>): Promise<void> {
+export async function deleteOrder(orderId: number, config?: Partial<ClientConfig>): Promise<void> {
   await _request('DELETE', `/store/order/${encodeURIComponent(orderId)}`, {}, config)
 }
 

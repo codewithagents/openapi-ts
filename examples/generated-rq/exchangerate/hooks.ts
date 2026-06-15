@@ -7,13 +7,14 @@ import { getLatestByBaseCurrency, type ApiError } from './client.js'
 
 export const latestKeys = {
   all: () => ['latest'] as const,
-  detail: (baseCurrency: string) => ['latest', baseCurrency] as const,
+  detail: (baseCurrency: Parameters<typeof getLatestByBaseCurrency>[0]) =>
+    ['latest', baseCurrency] as const,
 }
 
 // ── Query options factories ──────────────────────────────────
 
 export function getLatestByBaseCurrencyQueryOptions(
-  baseCurrency: string,
+  baseCurrency: Parameters<typeof getLatestByBaseCurrency>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLatestByBaseCurrency>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -31,7 +32,7 @@ export function getLatestByBaseCurrencyQueryOptions(
 // ── Queries ──────────────────────────────────────────────────
 
 export function useGetLatestByBaseCurrency(
-  baseCurrency: string | undefined | null,
+  baseCurrency: Parameters<typeof getLatestByBaseCurrency>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLatestByBaseCurrency>>, ApiError>,
     'queryKey' | 'queryFn'

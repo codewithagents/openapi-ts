@@ -49,21 +49,28 @@ import {
 
 export const businessLineKeys = {
   all: () => ['businessLines'] as const,
-  detail: (id: string) => ['businessLines', id] as const,
+  detail: (id: Parameters<typeof getBusinessLinesId>[0]) => ['businessLines', id] as const,
 }
 
 export const documentKeys = {
   all: () => ['documents'] as const,
-  detail: (id: string, params?: Parameters<typeof getDocumentsId>[1]) =>
-    ['documents', id, params] as const,
+  detail: (
+    id: Parameters<typeof getDocumentsId>[0],
+    params?: Parameters<typeof getDocumentsId>[1]
+  ) => ['documents', id, params] as const,
 }
 
 export const legalEntityKeys = {
   all: () => ['legalEntities'] as const,
-  getLegalEntitiesId: (id: string) => ['legalEntities', 'getLegalEntitiesId', id] as const,
+  getLegalEntitiesId: (id: Parameters<typeof getLegalEntitiesId>[0]) =>
+    ['legalEntities', 'getLegalEntitiesId', id] as const,
   getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference: (
-    id: string,
-    termsofserviceacceptancereference: string,
+    id: Parameters<
+      typeof getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference
+    >[0],
+    termsofserviceacceptancereference: Parameters<
+      typeof getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference
+    >[1],
     params?: Parameters<
       typeof getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference
     >[2]
@@ -75,33 +82,39 @@ export const legalEntityKeys = {
       termsofserviceacceptancereference,
       params,
     ] as const,
-  getLegalEntitiesIdBusinessLines: (id: string) =>
+  getLegalEntitiesIdBusinessLines: (id: Parameters<typeof getLegalEntitiesIdBusinessLines>[0]) =>
     ['legalEntities', 'getLegalEntitiesIdBusinessLines', id] as const,
-  getLegalEntitiesIdPciQuestionnaires: (id: string) =>
-    ['legalEntities', 'getLegalEntitiesIdPciQuestionnaires', id] as const,
-  getLegalEntitiesIdPciQuestionnairesPciid: (id: string, pciid: string) =>
-    ['legalEntities', 'getLegalEntitiesIdPciQuestionnairesPciid', id, pciid] as const,
-  getLegalEntitiesIdTermsOfServiceAcceptanceInfos: (id: string) =>
-    ['legalEntities', 'getLegalEntitiesIdTermsOfServiceAcceptanceInfos', id] as const,
-  getLegalEntitiesIdTermsOfServiceStatus: (id: string) =>
-    ['legalEntities', 'getLegalEntitiesIdTermsOfServiceStatus', id] as const,
+  getLegalEntitiesIdPciQuestionnaires: (
+    id: Parameters<typeof getLegalEntitiesIdPciQuestionnaires>[0]
+  ) => ['legalEntities', 'getLegalEntitiesIdPciQuestionnaires', id] as const,
+  getLegalEntitiesIdPciQuestionnairesPciid: (
+    id: Parameters<typeof getLegalEntitiesIdPciQuestionnairesPciid>[0],
+    pciid: Parameters<typeof getLegalEntitiesIdPciQuestionnairesPciid>[1]
+  ) => ['legalEntities', 'getLegalEntitiesIdPciQuestionnairesPciid', id, pciid] as const,
+  getLegalEntitiesIdTermsOfServiceAcceptanceInfos: (
+    id: Parameters<typeof getLegalEntitiesIdTermsOfServiceAcceptanceInfos>[0]
+  ) => ['legalEntities', 'getLegalEntitiesIdTermsOfServiceAcceptanceInfos', id] as const,
+  getLegalEntitiesIdTermsOfServiceStatus: (
+    id: Parameters<typeof getLegalEntitiesIdTermsOfServiceStatus>[0]
+  ) => ['legalEntities', 'getLegalEntitiesIdTermsOfServiceStatus', id] as const,
 }
 
 export const themeKeys = {
   all: () => ['themes'] as const,
   list: () => ['themes', 'list'] as const,
-  detail: (id: string) => ['themes', id] as const,
+  detail: (id: Parameters<typeof getThemesId>[0]) => ['themes', id] as const,
 }
 
 export const transferInstrumentKeys = {
   all: () => ['transferInstruments'] as const,
-  detail: (id: string) => ['transferInstruments', id] as const,
+  detail: (id: Parameters<typeof getTransferInstrumentsId>[0]) =>
+    ['transferInstruments', id] as const,
 }
 
 // ── Query options factories ──────────────────────────────────
 
 export function getBusinessLinesIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getBusinessLinesId>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getBusinessLinesId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -117,7 +130,7 @@ export function getBusinessLinesIdQueryOptions(
 }
 
 export function getDocumentsIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getDocumentsId>[0],
   params?: Parameters<typeof getDocumentsId>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getDocumentsId>>, ApiError>,
@@ -134,7 +147,7 @@ export function getDocumentsIdQueryOptions(
 }
 
 export function getLegalEntitiesIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getLegalEntitiesId>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLegalEntitiesId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -150,8 +163,12 @@ export function getLegalEntitiesIdQueryOptions(
 }
 
 export function getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereferenceQueryOptions(
-  id: string,
-  termsofserviceacceptancereference: string,
+  id: Parameters<
+    typeof getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference
+  >[0],
+  termsofserviceacceptancereference: Parameters<
+    typeof getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference
+  >[1],
   params?: Parameters<
     typeof getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference
   >[2],
@@ -194,7 +211,7 @@ export function getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceac
 }
 
 export function getLegalEntitiesIdBusinessLinesQueryOptions(
-  id: string,
+  id: Parameters<typeof getLegalEntitiesIdBusinessLines>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLegalEntitiesIdBusinessLines>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -210,7 +227,7 @@ export function getLegalEntitiesIdBusinessLinesQueryOptions(
 }
 
 export function getLegalEntitiesIdPciQuestionnairesQueryOptions(
-  id: string,
+  id: Parameters<typeof getLegalEntitiesIdPciQuestionnaires>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLegalEntitiesIdPciQuestionnaires>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -226,8 +243,8 @@ export function getLegalEntitiesIdPciQuestionnairesQueryOptions(
 }
 
 export function getLegalEntitiesIdPciQuestionnairesPciidQueryOptions(
-  id: string,
-  pciid: string,
+  id: Parameters<typeof getLegalEntitiesIdPciQuestionnairesPciid>[0],
+  pciid: Parameters<typeof getLegalEntitiesIdPciQuestionnairesPciid>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLegalEntitiesIdPciQuestionnairesPciid>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -246,7 +263,7 @@ export function getLegalEntitiesIdPciQuestionnairesPciidQueryOptions(
 }
 
 export function getLegalEntitiesIdTermsOfServiceAcceptanceInfosQueryOptions(
-  id: string,
+  id: Parameters<typeof getLegalEntitiesIdTermsOfServiceAcceptanceInfos>[0],
   options?: Omit<
     UseQueryOptions<
       Awaited<ReturnType<typeof getLegalEntitiesIdTermsOfServiceAcceptanceInfos>>,
@@ -268,7 +285,7 @@ export function getLegalEntitiesIdTermsOfServiceAcceptanceInfosQueryOptions(
 }
 
 export function getLegalEntitiesIdTermsOfServiceStatusQueryOptions(
-  id: string,
+  id: Parameters<typeof getLegalEntitiesIdTermsOfServiceStatus>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLegalEntitiesIdTermsOfServiceStatus>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -301,7 +318,7 @@ export function getThemesQueryOptions(
 }
 
 export function getThemesIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getThemesId>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getThemesId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -317,7 +334,7 @@ export function getThemesIdQueryOptions(
 }
 
 export function getTransferInstrumentsIdQueryOptions(
-  id: string,
+  id: Parameters<typeof getTransferInstrumentsId>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTransferInstrumentsId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -335,7 +352,7 @@ export function getTransferInstrumentsIdQueryOptions(
 // ── Queries ──────────────────────────────────────────────────
 
 export function useGetBusinessLinesId(
-  id: string | undefined | null,
+  id: Parameters<typeof getBusinessLinesId>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getBusinessLinesId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -352,7 +369,7 @@ export function useGetBusinessLinesId(
 }
 
 export function useGetDocumentsId(
-  id: string | undefined | null,
+  id: Parameters<typeof getDocumentsId>[0] | undefined | null,
   params?: Parameters<typeof getDocumentsId>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getDocumentsId>>, ApiError>,
@@ -370,7 +387,7 @@ export function useGetDocumentsId(
 }
 
 export function useGetLegalEntitiesId(
-  id: string | undefined | null,
+  id: Parameters<typeof getLegalEntitiesId>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLegalEntitiesId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -387,8 +404,18 @@ export function useGetLegalEntitiesId(
 }
 
 export function useGetLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference(
-  id: string | undefined | null,
-  termsofserviceacceptancereference: string | undefined | null,
+  id:
+    | Parameters<
+        typeof getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference
+      >[0]
+    | undefined
+    | null,
+  termsofserviceacceptancereference:
+    | Parameters<
+        typeof getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference
+      >[1]
+    | undefined
+    | null,
   params?: Parameters<
     typeof getLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofserviceacceptancereference
   >[2],
@@ -432,7 +459,7 @@ export function useGetLegalEntitiesIdAcceptedTermsOfServiceDocumentTermsofservic
 }
 
 export function useGetLegalEntitiesIdBusinessLines(
-  id: string | undefined | null,
+  id: Parameters<typeof getLegalEntitiesIdBusinessLines>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLegalEntitiesIdBusinessLines>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -449,7 +476,7 @@ export function useGetLegalEntitiesIdBusinessLines(
 }
 
 export function useGetLegalEntitiesIdPciQuestionnaires(
-  id: string | undefined | null,
+  id: Parameters<typeof getLegalEntitiesIdPciQuestionnaires>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLegalEntitiesIdPciQuestionnaires>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -466,8 +493,8 @@ export function useGetLegalEntitiesIdPciQuestionnaires(
 }
 
 export function useGetLegalEntitiesIdPciQuestionnairesPciid(
-  id: string | undefined | null,
-  pciid: string | undefined | null,
+  id: Parameters<typeof getLegalEntitiesIdPciQuestionnairesPciid>[0] | undefined | null,
+  pciid: Parameters<typeof getLegalEntitiesIdPciQuestionnairesPciid>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLegalEntitiesIdPciQuestionnairesPciid>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -484,7 +511,7 @@ export function useGetLegalEntitiesIdPciQuestionnairesPciid(
 }
 
 export function useGetLegalEntitiesIdTermsOfServiceAcceptanceInfos(
-  id: string | undefined | null,
+  id: Parameters<typeof getLegalEntitiesIdTermsOfServiceAcceptanceInfos>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<
       Awaited<ReturnType<typeof getLegalEntitiesIdTermsOfServiceAcceptanceInfos>>,
@@ -507,7 +534,7 @@ export function useGetLegalEntitiesIdTermsOfServiceAcceptanceInfos(
 }
 
 export function useGetLegalEntitiesIdTermsOfServiceStatus(
-  id: string | undefined | null,
+  id: Parameters<typeof getLegalEntitiesIdTermsOfServiceStatus>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getLegalEntitiesIdTermsOfServiceStatus>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -539,7 +566,7 @@ export function useGetThemes(
 }
 
 export function useGetThemesId(
-  id: string | undefined | null,
+  id: Parameters<typeof getThemesId>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getThemesId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -556,7 +583,7 @@ export function useGetThemesId(
 }
 
 export function useGetTransferInstrumentsId(
-  id: string | undefined | null,
+  id: Parameters<typeof getTransferInstrumentsId>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTransferInstrumentsId>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -599,7 +626,10 @@ export function usePatchBusinessLinesId(
     UseMutationOptions<
       Awaited<ReturnType<typeof patchBusinessLinesId>>,
       ApiError,
-      { id: string; body: Parameters<typeof patchBusinessLinesId>[1] }
+      {
+        id: Parameters<typeof patchBusinessLinesId>[0]
+        body: Parameters<typeof patchBusinessLinesId>[1]
+      }
     >,
     'mutationFn'
   >
@@ -607,7 +637,10 @@ export function usePatchBusinessLinesId(
   return useMutation<
     Awaited<ReturnType<typeof patchBusinessLinesId>>,
     ApiError,
-    { id: string; body: Parameters<typeof patchBusinessLinesId>[1] }
+    {
+      id: Parameters<typeof patchBusinessLinesId>[0]
+      body: Parameters<typeof patchBusinessLinesId>[1]
+    }
   >({
     mutationFn: ({ id, body }) => patchBusinessLinesId(id, body),
     ...options,
@@ -616,11 +649,19 @@ export function usePatchBusinessLinesId(
 
 export function useDeleteBusinessLinesId(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteBusinessLinesId>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteBusinessLinesId>>,
+      ApiError,
+      Parameters<typeof deleteBusinessLinesId>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteBusinessLinesId>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteBusinessLinesId>>,
+    ApiError,
+    Parameters<typeof deleteBusinessLinesId>[0]
+  >({
     mutationFn: (id) => deleteBusinessLinesId(id),
     ...options,
   })
@@ -652,7 +693,7 @@ export function usePatchDocumentsId(
       Awaited<ReturnType<typeof patchDocumentsId>>,
       ApiError,
       {
-        id: string
+        id: Parameters<typeof patchDocumentsId>[0]
         body: Parameters<typeof patchDocumentsId>[1]
         params: Parameters<typeof patchDocumentsId>[2]
       }
@@ -664,7 +705,7 @@ export function usePatchDocumentsId(
     Awaited<ReturnType<typeof patchDocumentsId>>,
     ApiError,
     {
-      id: string
+      id: Parameters<typeof patchDocumentsId>[0]
       body: Parameters<typeof patchDocumentsId>[1]
       params: Parameters<typeof patchDocumentsId>[2]
     }
@@ -676,11 +717,19 @@ export function usePatchDocumentsId(
 
 export function useDeleteDocumentsId(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteDocumentsId>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteDocumentsId>>,
+      ApiError,
+      Parameters<typeof deleteDocumentsId>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteDocumentsId>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteDocumentsId>>,
+    ApiError,
+    Parameters<typeof deleteDocumentsId>[0]
+  >({
     mutationFn: (id) => deleteDocumentsId(id),
     ...options,
   })
@@ -718,7 +767,7 @@ export function usePatchLegalEntitiesId(
       Awaited<ReturnType<typeof patchLegalEntitiesId>>,
       ApiError,
       {
-        id: string
+        id: Parameters<typeof patchLegalEntitiesId>[0]
         body: Parameters<typeof patchLegalEntitiesId>[1]
         params: Parameters<typeof patchLegalEntitiesId>[2]
       }
@@ -730,7 +779,7 @@ export function usePatchLegalEntitiesId(
     Awaited<ReturnType<typeof patchLegalEntitiesId>>,
     ApiError,
     {
-      id: string
+      id: Parameters<typeof patchLegalEntitiesId>[0]
       body: Parameters<typeof patchLegalEntitiesId>[1]
       params: Parameters<typeof patchLegalEntitiesId>[2]
     }
@@ -745,7 +794,7 @@ export function usePostLegalEntitiesIdCheckTaxElectronicDeliveryConsent(
     UseMutationOptions<
       Awaited<ReturnType<typeof postLegalEntitiesIdCheckTaxElectronicDeliveryConsent>>,
       ApiError,
-      string
+      Parameters<typeof postLegalEntitiesIdCheckTaxElectronicDeliveryConsent>[0]
     >,
     'mutationFn'
   >
@@ -753,7 +802,7 @@ export function usePostLegalEntitiesIdCheckTaxElectronicDeliveryConsent(
   return useMutation<
     Awaited<ReturnType<typeof postLegalEntitiesIdCheckTaxElectronicDeliveryConsent>>,
     ApiError,
-    string
+    Parameters<typeof postLegalEntitiesIdCheckTaxElectronicDeliveryConsent>[0]
   >({
     mutationFn: (id) => postLegalEntitiesIdCheckTaxElectronicDeliveryConsent(id),
     ...options,
@@ -765,7 +814,7 @@ export function usePostLegalEntitiesIdCheckVerificationErrors(
     UseMutationOptions<
       Awaited<ReturnType<typeof postLegalEntitiesIdCheckVerificationErrors>>,
       ApiError,
-      string
+      Parameters<typeof postLegalEntitiesIdCheckVerificationErrors>[0]
     >,
     'mutationFn'
   >
@@ -773,7 +822,7 @@ export function usePostLegalEntitiesIdCheckVerificationErrors(
   return useMutation<
     Awaited<ReturnType<typeof postLegalEntitiesIdCheckVerificationErrors>>,
     ApiError,
-    string
+    Parameters<typeof postLegalEntitiesIdCheckVerificationErrors>[0]
   >({
     mutationFn: (id) => postLegalEntitiesIdCheckVerificationErrors(id),
     ...options,
@@ -785,7 +834,7 @@ export function usePostLegalEntitiesIdConfirmDataReview(
     UseMutationOptions<
       Awaited<ReturnType<typeof postLegalEntitiesIdConfirmDataReview>>,
       ApiError,
-      string
+      Parameters<typeof postLegalEntitiesIdConfirmDataReview>[0]
     >,
     'mutationFn'
   >
@@ -793,7 +842,7 @@ export function usePostLegalEntitiesIdConfirmDataReview(
   return useMutation<
     Awaited<ReturnType<typeof postLegalEntitiesIdConfirmDataReview>>,
     ApiError,
-    string
+    Parameters<typeof postLegalEntitiesIdConfirmDataReview>[0]
   >({
     mutationFn: (id) => postLegalEntitiesIdConfirmDataReview(id),
     ...options,
@@ -805,7 +854,10 @@ export function usePostLegalEntitiesIdOnboardingLinks(
     UseMutationOptions<
       Awaited<ReturnType<typeof postLegalEntitiesIdOnboardingLinks>>,
       ApiError,
-      { id: string; body: Parameters<typeof postLegalEntitiesIdOnboardingLinks>[1] }
+      {
+        id: Parameters<typeof postLegalEntitiesIdOnboardingLinks>[0]
+        body: Parameters<typeof postLegalEntitiesIdOnboardingLinks>[1]
+      }
     >,
     'mutationFn'
   >
@@ -813,7 +865,10 @@ export function usePostLegalEntitiesIdOnboardingLinks(
   return useMutation<
     Awaited<ReturnType<typeof postLegalEntitiesIdOnboardingLinks>>,
     ApiError,
-    { id: string; body: Parameters<typeof postLegalEntitiesIdOnboardingLinks>[1] }
+    {
+      id: Parameters<typeof postLegalEntitiesIdOnboardingLinks>[0]
+      body: Parameters<typeof postLegalEntitiesIdOnboardingLinks>[1]
+    }
   >({
     mutationFn: ({ id, body }) => postLegalEntitiesIdOnboardingLinks(id, body),
     ...options,
@@ -826,7 +881,7 @@ export function usePostLegalEntitiesIdPciQuestionnairesGeneratePciTemplates(
       Awaited<ReturnType<typeof postLegalEntitiesIdPciQuestionnairesGeneratePciTemplates>>,
       ApiError,
       {
-        id: string
+        id: Parameters<typeof postLegalEntitiesIdPciQuestionnairesGeneratePciTemplates>[0]
         body: Parameters<typeof postLegalEntitiesIdPciQuestionnairesGeneratePciTemplates>[1]
       }
     >,
@@ -837,7 +892,7 @@ export function usePostLegalEntitiesIdPciQuestionnairesGeneratePciTemplates(
     Awaited<ReturnType<typeof postLegalEntitiesIdPciQuestionnairesGeneratePciTemplates>>,
     ApiError,
     {
-      id: string
+      id: Parameters<typeof postLegalEntitiesIdPciQuestionnairesGeneratePciTemplates>[0]
       body: Parameters<typeof postLegalEntitiesIdPciQuestionnairesGeneratePciTemplates>[1]
     }
   >({
@@ -853,7 +908,7 @@ export function usePostLegalEntitiesIdPciQuestionnairesSignPciTemplates(
       Awaited<ReturnType<typeof postLegalEntitiesIdPciQuestionnairesSignPciTemplates>>,
       ApiError,
       {
-        id: string
+        id: Parameters<typeof postLegalEntitiesIdPciQuestionnairesSignPciTemplates>[0]
         body: Parameters<typeof postLegalEntitiesIdPciQuestionnairesSignPciTemplates>[1]
       }
     >,
@@ -863,7 +918,10 @@ export function usePostLegalEntitiesIdPciQuestionnairesSignPciTemplates(
   return useMutation<
     Awaited<ReturnType<typeof postLegalEntitiesIdPciQuestionnairesSignPciTemplates>>,
     ApiError,
-    { id: string; body: Parameters<typeof postLegalEntitiesIdPciQuestionnairesSignPciTemplates>[1] }
+    {
+      id: Parameters<typeof postLegalEntitiesIdPciQuestionnairesSignPciTemplates>[0]
+      body: Parameters<typeof postLegalEntitiesIdPciQuestionnairesSignPciTemplates>[1]
+    }
   >({
     mutationFn: ({ id, body }) => postLegalEntitiesIdPciQuestionnairesSignPciTemplates(id, body),
     ...options,
@@ -876,7 +934,7 @@ export function usePostLegalEntitiesIdPciQuestionnairesSigningRequired(
       Awaited<ReturnType<typeof postLegalEntitiesIdPciQuestionnairesSigningRequired>>,
       ApiError,
       {
-        id: string
+        id: Parameters<typeof postLegalEntitiesIdPciQuestionnairesSigningRequired>[0]
         body: Parameters<typeof postLegalEntitiesIdPciQuestionnairesSigningRequired>[1]
       }
     >,
@@ -886,7 +944,10 @@ export function usePostLegalEntitiesIdPciQuestionnairesSigningRequired(
   return useMutation<
     Awaited<ReturnType<typeof postLegalEntitiesIdPciQuestionnairesSigningRequired>>,
     ApiError,
-    { id: string; body: Parameters<typeof postLegalEntitiesIdPciQuestionnairesSigningRequired>[1] }
+    {
+      id: Parameters<typeof postLegalEntitiesIdPciQuestionnairesSigningRequired>[0]
+      body: Parameters<typeof postLegalEntitiesIdPciQuestionnairesSigningRequired>[1]
+    }
   >({
     mutationFn: ({ id, body }) => postLegalEntitiesIdPciQuestionnairesSigningRequired(id, body),
     ...options,
@@ -898,7 +959,10 @@ export function usePostLegalEntitiesIdSetTaxElectronicDeliveryConsent(
     UseMutationOptions<
       Awaited<ReturnType<typeof postLegalEntitiesIdSetTaxElectronicDeliveryConsent>>,
       ApiError,
-      { id: string; body: Parameters<typeof postLegalEntitiesIdSetTaxElectronicDeliveryConsent>[1] }
+      {
+        id: Parameters<typeof postLegalEntitiesIdSetTaxElectronicDeliveryConsent>[0]
+        body: Parameters<typeof postLegalEntitiesIdSetTaxElectronicDeliveryConsent>[1]
+      }
     >,
     'mutationFn'
   >
@@ -906,7 +970,10 @@ export function usePostLegalEntitiesIdSetTaxElectronicDeliveryConsent(
   return useMutation<
     Awaited<ReturnType<typeof postLegalEntitiesIdSetTaxElectronicDeliveryConsent>>,
     ApiError,
-    { id: string; body: Parameters<typeof postLegalEntitiesIdSetTaxElectronicDeliveryConsent>[1] }
+    {
+      id: Parameters<typeof postLegalEntitiesIdSetTaxElectronicDeliveryConsent>[0]
+      body: Parameters<typeof postLegalEntitiesIdSetTaxElectronicDeliveryConsent>[1]
+    }
   >({
     mutationFn: ({ id, body }) => postLegalEntitiesIdSetTaxElectronicDeliveryConsent(id, body),
     ...options,
@@ -918,7 +985,10 @@ export function usePostLegalEntitiesIdTermsOfService(
     UseMutationOptions<
       Awaited<ReturnType<typeof postLegalEntitiesIdTermsOfService>>,
       ApiError,
-      { id: string; body: Parameters<typeof postLegalEntitiesIdTermsOfService>[1] }
+      {
+        id: Parameters<typeof postLegalEntitiesIdTermsOfService>[0]
+        body: Parameters<typeof postLegalEntitiesIdTermsOfService>[1]
+      }
     >,
     'mutationFn'
   >
@@ -926,7 +996,10 @@ export function usePostLegalEntitiesIdTermsOfService(
   return useMutation<
     Awaited<ReturnType<typeof postLegalEntitiesIdTermsOfService>>,
     ApiError,
-    { id: string; body: Parameters<typeof postLegalEntitiesIdTermsOfService>[1] }
+    {
+      id: Parameters<typeof postLegalEntitiesIdTermsOfService>[0]
+      body: Parameters<typeof postLegalEntitiesIdTermsOfService>[1]
+    }
   >({
     mutationFn: ({ id, body }) => postLegalEntitiesIdTermsOfService(id, body),
     ...options,
@@ -939,8 +1012,10 @@ export function usePatchLegalEntitiesIdTermsOfServiceTermsofservicedocumentid(
       Awaited<ReturnType<typeof patchLegalEntitiesIdTermsOfServiceTermsofservicedocumentid>>,
       ApiError,
       {
-        id: string
-        termsofservicedocumentid: string
+        id: Parameters<typeof patchLegalEntitiesIdTermsOfServiceTermsofservicedocumentid>[0]
+        termsofservicedocumentid: Parameters<
+          typeof patchLegalEntitiesIdTermsOfServiceTermsofservicedocumentid
+        >[1]
         body: Parameters<typeof patchLegalEntitiesIdTermsOfServiceTermsofservicedocumentid>[2]
       }
     >,
@@ -951,8 +1026,10 @@ export function usePatchLegalEntitiesIdTermsOfServiceTermsofservicedocumentid(
     Awaited<ReturnType<typeof patchLegalEntitiesIdTermsOfServiceTermsofservicedocumentid>>,
     ApiError,
     {
-      id: string
-      termsofservicedocumentid: string
+      id: Parameters<typeof patchLegalEntitiesIdTermsOfServiceTermsofservicedocumentid>[0]
+      termsofservicedocumentid: Parameters<
+        typeof patchLegalEntitiesIdTermsOfServiceTermsofservicedocumentid
+      >[1]
       body: Parameters<typeof patchLegalEntitiesIdTermsOfServiceTermsofservicedocumentid>[2]
     }
   >({
@@ -998,7 +1075,7 @@ export function usePatchTransferInstrumentsId(
       Awaited<ReturnType<typeof patchTransferInstrumentsId>>,
       ApiError,
       {
-        id: string
+        id: Parameters<typeof patchTransferInstrumentsId>[0]
         body: Parameters<typeof patchTransferInstrumentsId>[1]
         params: Parameters<typeof patchTransferInstrumentsId>[2]
       }
@@ -1010,7 +1087,7 @@ export function usePatchTransferInstrumentsId(
     Awaited<ReturnType<typeof patchTransferInstrumentsId>>,
     ApiError,
     {
-      id: string
+      id: Parameters<typeof patchTransferInstrumentsId>[0]
       body: Parameters<typeof patchTransferInstrumentsId>[1]
       params: Parameters<typeof patchTransferInstrumentsId>[2]
     }
@@ -1022,11 +1099,19 @@ export function usePatchTransferInstrumentsId(
 
 export function useDeleteTransferInstrumentsId(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteTransferInstrumentsId>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteTransferInstrumentsId>>,
+      ApiError,
+      Parameters<typeof deleteTransferInstrumentsId>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteTransferInstrumentsId>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteTransferInstrumentsId>>,
+    ApiError,
+    Parameters<typeof deleteTransferInstrumentsId>[0]
+  >({
     mutationFn: (id) => deleteTransferInstrumentsId(id),
     ...options,
   })
@@ -1037,7 +1122,7 @@ export function usePostLegalEntitiesIdRequestPeriodicReview(
     UseMutationOptions<
       Awaited<ReturnType<typeof postLegalEntitiesIdRequestPeriodicReview>>,
       ApiError,
-      string
+      Parameters<typeof postLegalEntitiesIdRequestPeriodicReview>[0]
     >,
     'mutationFn'
   >
@@ -1045,7 +1130,7 @@ export function usePostLegalEntitiesIdRequestPeriodicReview(
   return useMutation<
     Awaited<ReturnType<typeof postLegalEntitiesIdRequestPeriodicReview>>,
     ApiError,
-    string
+    Parameters<typeof postLegalEntitiesIdRequestPeriodicReview>[0]
   >({
     mutationFn: (id) => postLegalEntitiesIdRequestPeriodicReview(id),
     ...options,

@@ -136,70 +136,120 @@ export const _2Keys = {
   getUsersComplianceStream: (params: Parameters<typeof getUsersComplianceStream>[0]) =>
     ['2', 'getUsersComplianceStream', params] as const,
   findMyUser: (params?: Parameters<typeof findMyUser>[0]) => ['2', 'findMyUser', params] as const,
-  getBatchComplianceJob: (id: string, params?: Parameters<typeof getBatchComplianceJob>[1]) =>
-    ['2', 'getBatchComplianceJob', id, params] as const,
+  getBatchComplianceJob: (
+    id: Parameters<typeof getBatchComplianceJob>[0],
+    params?: Parameters<typeof getBatchComplianceJob>[1]
+  ) => ['2', 'getBatchComplianceJob', id, params] as const,
   getDmConversationsWithParticipantIdDmEvents: (
-    participantId: string,
+    participantId: Parameters<typeof getDmConversationsWithParticipantIdDmEvents>[0],
     params?: Parameters<typeof getDmConversationsWithParticipantIdDmEvents>[1]
   ) => ['2', 'getDmConversationsWithParticipantIdDmEvents', participantId, params] as const,
   getDmConversationsIdDmEvents: (
-    id: string,
+    id: Parameters<typeof getDmConversationsIdDmEvents>[0],
     params?: Parameters<typeof getDmConversationsIdDmEvents>[1]
   ) => ['2', 'getDmConversationsIdDmEvents', id, params] as const,
-  listIdGet: (id: string, params?: Parameters<typeof listIdGet>[1]) =>
+  listIdGet: (id: Parameters<typeof listIdGet>[0], params?: Parameters<typeof listIdGet>[1]) =>
     ['2', 'listIdGet', id, params] as const,
-  listGetFollowers: (id: string, params?: Parameters<typeof listGetFollowers>[1]) =>
-    ['2', 'listGetFollowers', id, params] as const,
-  listGetMembers: (id: string, params?: Parameters<typeof listGetMembers>[1]) =>
-    ['2', 'listGetMembers', id, params] as const,
-  listsIdTweets: (id: string, params?: Parameters<typeof listsIdTweets>[1]) =>
-    ['2', 'listsIdTweets', id, params] as const,
-  findSpaceById: (id: string, params?: Parameters<typeof findSpaceById>[1]) =>
-    ['2', 'findSpaceById', id, params] as const,
-  spaceBuyers: (id: string, params?: Parameters<typeof spaceBuyers>[1]) =>
-    ['2', 'spaceBuyers', id, params] as const,
-  spaceTweets: (id: string, params?: Parameters<typeof spaceTweets>[1]) =>
-    ['2', 'spaceTweets', id, params] as const,
-  findTweetById: (id: string, params?: Parameters<typeof findTweetById>[1]) =>
-    ['2', 'findTweetById', id, params] as const,
-  tweetsIdLikingUsers: (id: string, params?: Parameters<typeof tweetsIdLikingUsers>[1]) =>
-    ['2', 'tweetsIdLikingUsers', id, params] as const,
+  listGetFollowers: (
+    id: Parameters<typeof listGetFollowers>[0],
+    params?: Parameters<typeof listGetFollowers>[1]
+  ) => ['2', 'listGetFollowers', id, params] as const,
+  listGetMembers: (
+    id: Parameters<typeof listGetMembers>[0],
+    params?: Parameters<typeof listGetMembers>[1]
+  ) => ['2', 'listGetMembers', id, params] as const,
+  listsIdTweets: (
+    id: Parameters<typeof listsIdTweets>[0],
+    params?: Parameters<typeof listsIdTweets>[1]
+  ) => ['2', 'listsIdTweets', id, params] as const,
+  findSpaceById: (
+    id: Parameters<typeof findSpaceById>[0],
+    params?: Parameters<typeof findSpaceById>[1]
+  ) => ['2', 'findSpaceById', id, params] as const,
+  spaceBuyers: (
+    id: Parameters<typeof spaceBuyers>[0],
+    params?: Parameters<typeof spaceBuyers>[1]
+  ) => ['2', 'spaceBuyers', id, params] as const,
+  spaceTweets: (
+    id: Parameters<typeof spaceTweets>[0],
+    params?: Parameters<typeof spaceTweets>[1]
+  ) => ['2', 'spaceTweets', id, params] as const,
+  findTweetById: (
+    id: Parameters<typeof findTweetById>[0],
+    params?: Parameters<typeof findTweetById>[1]
+  ) => ['2', 'findTweetById', id, params] as const,
+  tweetsIdLikingUsers: (
+    id: Parameters<typeof tweetsIdLikingUsers>[0],
+    params?: Parameters<typeof tweetsIdLikingUsers>[1]
+  ) => ['2', 'tweetsIdLikingUsers', id, params] as const,
   findTweetsThatQuoteATweet: (
-    id: string,
+    id: Parameters<typeof findTweetsThatQuoteATweet>[0],
     params?: Parameters<typeof findTweetsThatQuoteATweet>[1]
   ) => ['2', 'findTweetsThatQuoteATweet', id, params] as const,
-  tweetsIdRetweetingUsers: (id: string, params?: Parameters<typeof tweetsIdRetweetingUsers>[1]) =>
-    ['2', 'tweetsIdRetweetingUsers', id, params] as const,
-  findUserByUsername: (username: string, params?: Parameters<typeof findUserByUsername>[1]) =>
-    ['2', 'findUserByUsername', username, params] as const,
-  findUserById: (id: string, params?: Parameters<typeof findUserById>[1]) =>
-    ['2', 'findUserById', id, params] as const,
-  usersIdBlocking: (id: string, params?: Parameters<typeof usersIdBlocking>[1]) =>
-    ['2', 'usersIdBlocking', id, params] as const,
-  getUsersIdBookmarks: (id: string, params?: Parameters<typeof getUsersIdBookmarks>[1]) =>
-    ['2', 'getUsersIdBookmarks', id, params] as const,
-  userFollowedLists: (id: string, params?: Parameters<typeof userFollowedLists>[1]) =>
-    ['2', 'userFollowedLists', id, params] as const,
-  usersIdFollowers: (id: string, params?: Parameters<typeof usersIdFollowers>[1]) =>
-    ['2', 'usersIdFollowers', id, params] as const,
-  usersIdFollowing: (id: string, params?: Parameters<typeof usersIdFollowing>[1]) =>
-    ['2', 'usersIdFollowing', id, params] as const,
-  usersIdLikedTweets: (id: string, params?: Parameters<typeof usersIdLikedTweets>[1]) =>
-    ['2', 'usersIdLikedTweets', id, params] as const,
-  getUserListMemberships: (id: string, params?: Parameters<typeof getUserListMemberships>[1]) =>
-    ['2', 'getUserListMemberships', id, params] as const,
-  usersIdMentions: (id: string, params?: Parameters<typeof usersIdMentions>[1]) =>
-    ['2', 'usersIdMentions', id, params] as const,
-  usersIdMuting: (id: string, params?: Parameters<typeof usersIdMuting>[1]) =>
-    ['2', 'usersIdMuting', id, params] as const,
-  listUserOwnedLists: (id: string, params?: Parameters<typeof listUserOwnedLists>[1]) =>
-    ['2', 'listUserOwnedLists', id, params] as const,
-  listUserPinnedLists: (id: string, params?: Parameters<typeof listUserPinnedLists>[1]) =>
-    ['2', 'listUserPinnedLists', id, params] as const,
-  usersIdTimeline: (id: string, params?: Parameters<typeof usersIdTimeline>[1]) =>
-    ['2', 'usersIdTimeline', id, params] as const,
-  usersIdTweets: (id: string, params?: Parameters<typeof usersIdTweets>[1]) =>
-    ['2', 'usersIdTweets', id, params] as const,
+  tweetsIdRetweetingUsers: (
+    id: Parameters<typeof tweetsIdRetweetingUsers>[0],
+    params?: Parameters<typeof tweetsIdRetweetingUsers>[1]
+  ) => ['2', 'tweetsIdRetweetingUsers', id, params] as const,
+  findUserByUsername: (
+    username: Parameters<typeof findUserByUsername>[0],
+    params?: Parameters<typeof findUserByUsername>[1]
+  ) => ['2', 'findUserByUsername', username, params] as const,
+  findUserById: (
+    id: Parameters<typeof findUserById>[0],
+    params?: Parameters<typeof findUserById>[1]
+  ) => ['2', 'findUserById', id, params] as const,
+  usersIdBlocking: (
+    id: Parameters<typeof usersIdBlocking>[0],
+    params?: Parameters<typeof usersIdBlocking>[1]
+  ) => ['2', 'usersIdBlocking', id, params] as const,
+  getUsersIdBookmarks: (
+    id: Parameters<typeof getUsersIdBookmarks>[0],
+    params?: Parameters<typeof getUsersIdBookmarks>[1]
+  ) => ['2', 'getUsersIdBookmarks', id, params] as const,
+  userFollowedLists: (
+    id: Parameters<typeof userFollowedLists>[0],
+    params?: Parameters<typeof userFollowedLists>[1]
+  ) => ['2', 'userFollowedLists', id, params] as const,
+  usersIdFollowers: (
+    id: Parameters<typeof usersIdFollowers>[0],
+    params?: Parameters<typeof usersIdFollowers>[1]
+  ) => ['2', 'usersIdFollowers', id, params] as const,
+  usersIdFollowing: (
+    id: Parameters<typeof usersIdFollowing>[0],
+    params?: Parameters<typeof usersIdFollowing>[1]
+  ) => ['2', 'usersIdFollowing', id, params] as const,
+  usersIdLikedTweets: (
+    id: Parameters<typeof usersIdLikedTweets>[0],
+    params?: Parameters<typeof usersIdLikedTweets>[1]
+  ) => ['2', 'usersIdLikedTweets', id, params] as const,
+  getUserListMemberships: (
+    id: Parameters<typeof getUserListMemberships>[0],
+    params?: Parameters<typeof getUserListMemberships>[1]
+  ) => ['2', 'getUserListMemberships', id, params] as const,
+  usersIdMentions: (
+    id: Parameters<typeof usersIdMentions>[0],
+    params?: Parameters<typeof usersIdMentions>[1]
+  ) => ['2', 'usersIdMentions', id, params] as const,
+  usersIdMuting: (
+    id: Parameters<typeof usersIdMuting>[0],
+    params?: Parameters<typeof usersIdMuting>[1]
+  ) => ['2', 'usersIdMuting', id, params] as const,
+  listUserOwnedLists: (
+    id: Parameters<typeof listUserOwnedLists>[0],
+    params?: Parameters<typeof listUserOwnedLists>[1]
+  ) => ['2', 'listUserOwnedLists', id, params] as const,
+  listUserPinnedLists: (
+    id: Parameters<typeof listUserPinnedLists>[0],
+    params?: Parameters<typeof listUserPinnedLists>[1]
+  ) => ['2', 'listUserPinnedLists', id, params] as const,
+  usersIdTimeline: (
+    id: Parameters<typeof usersIdTimeline>[0],
+    params?: Parameters<typeof usersIdTimeline>[1]
+  ) => ['2', 'usersIdTimeline', id, params] as const,
+  usersIdTweets: (
+    id: Parameters<typeof usersIdTweets>[0],
+    params?: Parameters<typeof usersIdTweets>[1]
+  ) => ['2', 'usersIdTweets', id, params] as const,
 }
 
 // ── Query options factories ──────────────────────────────────
@@ -221,7 +271,7 @@ export function listBatchComplianceJobsQueryOptions(
 }
 
 export function getBatchComplianceJobQueryOptions(
-  id: string,
+  id: Parameters<typeof getBatchComplianceJob>[0],
   params?: Parameters<typeof getBatchComplianceJob>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getBatchComplianceJob>>, ApiError>,
@@ -238,7 +288,7 @@ export function getBatchComplianceJobQueryOptions(
 }
 
 export function getDmConversationsWithParticipantIdDmEventsQueryOptions(
-  participantId: string,
+  participantId: Parameters<typeof getDmConversationsWithParticipantIdDmEvents>[0],
   params?: Parameters<typeof getDmConversationsWithParticipantIdDmEvents>[1],
   options?: Omit<
     UseQueryOptions<
@@ -261,7 +311,7 @@ export function getDmConversationsWithParticipantIdDmEventsQueryOptions(
 }
 
 export function getDmConversationsIdDmEventsQueryOptions(
-  id: string,
+  id: Parameters<typeof getDmConversationsIdDmEvents>[0],
   params?: Parameters<typeof getDmConversationsIdDmEvents>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getDmConversationsIdDmEvents>>, ApiError>,
@@ -294,7 +344,7 @@ export function getDmEventsQueryOptions(
 }
 
 export function listIdGetQueryOptions(
-  id: string,
+  id: Parameters<typeof listIdGet>[0],
   params?: Parameters<typeof listIdGet>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listIdGet>>, ApiError>,
@@ -311,7 +361,7 @@ export function listIdGetQueryOptions(
 }
 
 export function listGetFollowersQueryOptions(
-  id: string,
+  id: Parameters<typeof listGetFollowers>[0],
   params?: Parameters<typeof listGetFollowers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listGetFollowers>>, ApiError>,
@@ -328,7 +378,7 @@ export function listGetFollowersQueryOptions(
 }
 
 export function listGetMembersQueryOptions(
-  id: string,
+  id: Parameters<typeof listGetMembers>[0],
   params?: Parameters<typeof listGetMembers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listGetMembers>>, ApiError>,
@@ -345,7 +395,7 @@ export function listGetMembersQueryOptions(
 }
 
 export function listsIdTweetsQueryOptions(
-  id: string,
+  id: Parameters<typeof listsIdTweets>[0],
   params?: Parameters<typeof listsIdTweets>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listsIdTweets>>, ApiError>,
@@ -425,7 +475,7 @@ export function searchSpacesQueryOptions(
 }
 
 export function findSpaceByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof findSpaceById>[0],
   params?: Parameters<typeof findSpaceById>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof findSpaceById>>, ApiError>,
@@ -442,7 +492,7 @@ export function findSpaceByIdQueryOptions(
 }
 
 export function spaceBuyersQueryOptions(
-  id: string,
+  id: Parameters<typeof spaceBuyers>[0],
   params?: Parameters<typeof spaceBuyers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof spaceBuyers>>, ApiError>,
@@ -459,7 +509,7 @@ export function spaceBuyersQueryOptions(
 }
 
 export function spaceTweetsQueryOptions(
-  id: string,
+  id: Parameters<typeof spaceTweets>[0],
   params?: Parameters<typeof spaceTweets>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof spaceTweets>>, ApiError>,
@@ -668,7 +718,7 @@ export function getRulesQueryOptions(
 }
 
 export function findTweetByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof findTweetById>[0],
   params?: Parameters<typeof findTweetById>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof findTweetById>>, ApiError>,
@@ -685,7 +735,7 @@ export function findTweetByIdQueryOptions(
 }
 
 export function tweetsIdLikingUsersQueryOptions(
-  id: string,
+  id: Parameters<typeof tweetsIdLikingUsers>[0],
   params?: Parameters<typeof tweetsIdLikingUsers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof tweetsIdLikingUsers>>, ApiError>,
@@ -702,7 +752,7 @@ export function tweetsIdLikingUsersQueryOptions(
 }
 
 export function findTweetsThatQuoteATweetQueryOptions(
-  id: string,
+  id: Parameters<typeof findTweetsThatQuoteATweet>[0],
   params?: Parameters<typeof findTweetsThatQuoteATweet>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof findTweetsThatQuoteATweet>>, ApiError>,
@@ -719,7 +769,7 @@ export function findTweetsThatQuoteATweetQueryOptions(
 }
 
 export function tweetsIdRetweetingUsersQueryOptions(
-  id: string,
+  id: Parameters<typeof tweetsIdRetweetingUsers>[0],
   params?: Parameters<typeof tweetsIdRetweetingUsers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof tweetsIdRetweetingUsers>>, ApiError>,
@@ -768,7 +818,7 @@ export function findUsersByUsernameQueryOptions(
 }
 
 export function findUserByUsernameQueryOptions(
-  username: string,
+  username: Parameters<typeof findUserByUsername>[0],
   params?: Parameters<typeof findUserByUsername>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof findUserByUsername>>, ApiError>,
@@ -817,7 +867,7 @@ export function findMyUserQueryOptions(
 }
 
 export function findUserByIdQueryOptions(
-  id: string,
+  id: Parameters<typeof findUserById>[0],
   params?: Parameters<typeof findUserById>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof findUserById>>, ApiError>,
@@ -834,7 +884,7 @@ export function findUserByIdQueryOptions(
 }
 
 export function usersIdBlockingQueryOptions(
-  id: string,
+  id: Parameters<typeof usersIdBlocking>[0],
   params?: Parameters<typeof usersIdBlocking>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdBlocking>>, ApiError>,
@@ -851,7 +901,7 @@ export function usersIdBlockingQueryOptions(
 }
 
 export function getUsersIdBookmarksQueryOptions(
-  id: string,
+  id: Parameters<typeof getUsersIdBookmarks>[0],
   params?: Parameters<typeof getUsersIdBookmarks>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUsersIdBookmarks>>, ApiError>,
@@ -868,7 +918,7 @@ export function getUsersIdBookmarksQueryOptions(
 }
 
 export function userFollowedListsQueryOptions(
-  id: string,
+  id: Parameters<typeof userFollowedLists>[0],
   params?: Parameters<typeof userFollowedLists>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof userFollowedLists>>, ApiError>,
@@ -885,7 +935,7 @@ export function userFollowedListsQueryOptions(
 }
 
 export function usersIdFollowersQueryOptions(
-  id: string,
+  id: Parameters<typeof usersIdFollowers>[0],
   params?: Parameters<typeof usersIdFollowers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdFollowers>>, ApiError>,
@@ -902,7 +952,7 @@ export function usersIdFollowersQueryOptions(
 }
 
 export function usersIdFollowingQueryOptions(
-  id: string,
+  id: Parameters<typeof usersIdFollowing>[0],
   params?: Parameters<typeof usersIdFollowing>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdFollowing>>, ApiError>,
@@ -919,7 +969,7 @@ export function usersIdFollowingQueryOptions(
 }
 
 export function usersIdLikedTweetsQueryOptions(
-  id: string,
+  id: Parameters<typeof usersIdLikedTweets>[0],
   params?: Parameters<typeof usersIdLikedTweets>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdLikedTweets>>, ApiError>,
@@ -936,7 +986,7 @@ export function usersIdLikedTweetsQueryOptions(
 }
 
 export function getUserListMembershipsQueryOptions(
-  id: string,
+  id: Parameters<typeof getUserListMemberships>[0],
   params?: Parameters<typeof getUserListMemberships>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUserListMemberships>>, ApiError>,
@@ -953,7 +1003,7 @@ export function getUserListMembershipsQueryOptions(
 }
 
 export function usersIdMentionsQueryOptions(
-  id: string,
+  id: Parameters<typeof usersIdMentions>[0],
   params?: Parameters<typeof usersIdMentions>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdMentions>>, ApiError>,
@@ -970,7 +1020,7 @@ export function usersIdMentionsQueryOptions(
 }
 
 export function usersIdMutingQueryOptions(
-  id: string,
+  id: Parameters<typeof usersIdMuting>[0],
   params?: Parameters<typeof usersIdMuting>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdMuting>>, ApiError>,
@@ -987,7 +1037,7 @@ export function usersIdMutingQueryOptions(
 }
 
 export function listUserOwnedListsQueryOptions(
-  id: string,
+  id: Parameters<typeof listUserOwnedLists>[0],
   params?: Parameters<typeof listUserOwnedLists>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listUserOwnedLists>>, ApiError>,
@@ -1004,7 +1054,7 @@ export function listUserOwnedListsQueryOptions(
 }
 
 export function listUserPinnedListsQueryOptions(
-  id: string,
+  id: Parameters<typeof listUserPinnedLists>[0],
   params?: Parameters<typeof listUserPinnedLists>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listUserPinnedLists>>, ApiError>,
@@ -1021,7 +1071,7 @@ export function listUserPinnedListsQueryOptions(
 }
 
 export function usersIdTimelineQueryOptions(
-  id: string,
+  id: Parameters<typeof usersIdTimeline>[0],
   params?: Parameters<typeof usersIdTimeline>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdTimeline>>, ApiError>,
@@ -1038,7 +1088,7 @@ export function usersIdTimelineQueryOptions(
 }
 
 export function usersIdTweetsQueryOptions(
-  id: string,
+  id: Parameters<typeof usersIdTweets>[0],
   params?: Parameters<typeof usersIdTweets>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdTweets>>, ApiError>,
@@ -1073,7 +1123,7 @@ export function useListBatchComplianceJobs(
 }
 
 export function useGetBatchComplianceJob(
-  id: string | undefined | null,
+  id: Parameters<typeof getBatchComplianceJob>[0] | undefined | null,
   params?: Parameters<typeof getBatchComplianceJob>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getBatchComplianceJob>>, ApiError>,
@@ -1091,7 +1141,10 @@ export function useGetBatchComplianceJob(
 }
 
 export function useGetDmConversationsWithParticipantIdDmEvents(
-  participantId: string | undefined | null,
+  participantId:
+    | Parameters<typeof getDmConversationsWithParticipantIdDmEvents>[0]
+    | undefined
+    | null,
   params?: Parameters<typeof getDmConversationsWithParticipantIdDmEvents>[1],
   options?: Omit<
     UseQueryOptions<
@@ -1115,7 +1168,7 @@ export function useGetDmConversationsWithParticipantIdDmEvents(
 }
 
 export function useGetDmConversationsIdDmEvents(
-  id: string | undefined | null,
+  id: Parameters<typeof getDmConversationsIdDmEvents>[0] | undefined | null,
   params?: Parameters<typeof getDmConversationsIdDmEvents>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getDmConversationsIdDmEvents>>, ApiError>,
@@ -1149,7 +1202,7 @@ export function useGetDmEvents(
 }
 
 export function useListIdGet(
-  id: string | undefined | null,
+  id: Parameters<typeof listIdGet>[0] | undefined | null,
   params?: Parameters<typeof listIdGet>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listIdGet>>, ApiError>,
@@ -1167,7 +1220,7 @@ export function useListIdGet(
 }
 
 export function useListGetFollowers(
-  id: string | undefined | null,
+  id: Parameters<typeof listGetFollowers>[0] | undefined | null,
   params?: Parameters<typeof listGetFollowers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listGetFollowers>>, ApiError>,
@@ -1185,7 +1238,7 @@ export function useListGetFollowers(
 }
 
 export function useListGetMembers(
-  id: string | undefined | null,
+  id: Parameters<typeof listGetMembers>[0] | undefined | null,
   params?: Parameters<typeof listGetMembers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listGetMembers>>, ApiError>,
@@ -1203,7 +1256,7 @@ export function useListGetMembers(
 }
 
 export function useListsIdTweets(
-  id: string | undefined | null,
+  id: Parameters<typeof listsIdTweets>[0] | undefined | null,
   params?: Parameters<typeof listsIdTweets>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listsIdTweets>>, ApiError>,
@@ -1284,7 +1337,7 @@ export function useSearchSpaces(
 }
 
 export function useFindSpaceById(
-  id: string | undefined | null,
+  id: Parameters<typeof findSpaceById>[0] | undefined | null,
   params?: Parameters<typeof findSpaceById>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof findSpaceById>>, ApiError>,
@@ -1302,7 +1355,7 @@ export function useFindSpaceById(
 }
 
 export function useSpaceBuyers(
-  id: string | undefined | null,
+  id: Parameters<typeof spaceBuyers>[0] | undefined | null,
   params?: Parameters<typeof spaceBuyers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof spaceBuyers>>, ApiError>,
@@ -1320,7 +1373,7 @@ export function useSpaceBuyers(
 }
 
 export function useSpaceTweets(
-  id: string | undefined | null,
+  id: Parameters<typeof spaceTweets>[0] | undefined | null,
   params?: Parameters<typeof spaceTweets>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof spaceTweets>>, ApiError>,
@@ -1530,7 +1583,7 @@ export function useGetRules(
 }
 
 export function useFindTweetById(
-  id: string | undefined | null,
+  id: Parameters<typeof findTweetById>[0] | undefined | null,
   params?: Parameters<typeof findTweetById>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof findTweetById>>, ApiError>,
@@ -1548,7 +1601,7 @@ export function useFindTweetById(
 }
 
 export function useTweetsIdLikingUsers(
-  id: string | undefined | null,
+  id: Parameters<typeof tweetsIdLikingUsers>[0] | undefined | null,
   params?: Parameters<typeof tweetsIdLikingUsers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof tweetsIdLikingUsers>>, ApiError>,
@@ -1566,7 +1619,7 @@ export function useTweetsIdLikingUsers(
 }
 
 export function useFindTweetsThatQuoteATweet(
-  id: string | undefined | null,
+  id: Parameters<typeof findTweetsThatQuoteATweet>[0] | undefined | null,
   params?: Parameters<typeof findTweetsThatQuoteATweet>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof findTweetsThatQuoteATweet>>, ApiError>,
@@ -1584,7 +1637,7 @@ export function useFindTweetsThatQuoteATweet(
 }
 
 export function useTweetsIdRetweetingUsers(
-  id: string | undefined | null,
+  id: Parameters<typeof tweetsIdRetweetingUsers>[0] | undefined | null,
   params?: Parameters<typeof tweetsIdRetweetingUsers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof tweetsIdRetweetingUsers>>, ApiError>,
@@ -1634,7 +1687,7 @@ export function useFindUsersByUsername(
 }
 
 export function useFindUserByUsername(
-  username: string | undefined | null,
+  username: Parameters<typeof findUserByUsername>[0] | undefined | null,
   params?: Parameters<typeof findUserByUsername>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof findUserByUsername>>, ApiError>,
@@ -1684,7 +1737,7 @@ export function useFindMyUser(
 }
 
 export function useFindUserById(
-  id: string | undefined | null,
+  id: Parameters<typeof findUserById>[0] | undefined | null,
   params?: Parameters<typeof findUserById>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof findUserById>>, ApiError>,
@@ -1702,7 +1755,7 @@ export function useFindUserById(
 }
 
 export function useUsersIdBlocking(
-  id: string | undefined | null,
+  id: Parameters<typeof usersIdBlocking>[0] | undefined | null,
   params?: Parameters<typeof usersIdBlocking>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdBlocking>>, ApiError>,
@@ -1720,7 +1773,7 @@ export function useUsersIdBlocking(
 }
 
 export function useGetUsersIdBookmarks(
-  id: string | undefined | null,
+  id: Parameters<typeof getUsersIdBookmarks>[0] | undefined | null,
   params?: Parameters<typeof getUsersIdBookmarks>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUsersIdBookmarks>>, ApiError>,
@@ -1738,7 +1791,7 @@ export function useGetUsersIdBookmarks(
 }
 
 export function useUserFollowedLists(
-  id: string | undefined | null,
+  id: Parameters<typeof userFollowedLists>[0] | undefined | null,
   params?: Parameters<typeof userFollowedLists>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof userFollowedLists>>, ApiError>,
@@ -1756,7 +1809,7 @@ export function useUserFollowedLists(
 }
 
 export function useUsersIdFollowers(
-  id: string | undefined | null,
+  id: Parameters<typeof usersIdFollowers>[0] | undefined | null,
   params?: Parameters<typeof usersIdFollowers>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdFollowers>>, ApiError>,
@@ -1774,7 +1827,7 @@ export function useUsersIdFollowers(
 }
 
 export function useUsersIdFollowing(
-  id: string | undefined | null,
+  id: Parameters<typeof usersIdFollowing>[0] | undefined | null,
   params?: Parameters<typeof usersIdFollowing>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdFollowing>>, ApiError>,
@@ -1792,7 +1845,7 @@ export function useUsersIdFollowing(
 }
 
 export function useUsersIdLikedTweets(
-  id: string | undefined | null,
+  id: Parameters<typeof usersIdLikedTweets>[0] | undefined | null,
   params?: Parameters<typeof usersIdLikedTweets>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdLikedTweets>>, ApiError>,
@@ -1810,7 +1863,7 @@ export function useUsersIdLikedTweets(
 }
 
 export function useGetUserListMemberships(
-  id: string | undefined | null,
+  id: Parameters<typeof getUserListMemberships>[0] | undefined | null,
   params?: Parameters<typeof getUserListMemberships>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUserListMemberships>>, ApiError>,
@@ -1828,7 +1881,7 @@ export function useGetUserListMemberships(
 }
 
 export function useUsersIdMentions(
-  id: string | undefined | null,
+  id: Parameters<typeof usersIdMentions>[0] | undefined | null,
   params?: Parameters<typeof usersIdMentions>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdMentions>>, ApiError>,
@@ -1846,7 +1899,7 @@ export function useUsersIdMentions(
 }
 
 export function useUsersIdMuting(
-  id: string | undefined | null,
+  id: Parameters<typeof usersIdMuting>[0] | undefined | null,
   params?: Parameters<typeof usersIdMuting>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdMuting>>, ApiError>,
@@ -1864,7 +1917,7 @@ export function useUsersIdMuting(
 }
 
 export function useListUserOwnedLists(
-  id: string | undefined | null,
+  id: Parameters<typeof listUserOwnedLists>[0] | undefined | null,
   params?: Parameters<typeof listUserOwnedLists>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listUserOwnedLists>>, ApiError>,
@@ -1882,7 +1935,7 @@ export function useListUserOwnedLists(
 }
 
 export function useListUserPinnedLists(
-  id: string | undefined | null,
+  id: Parameters<typeof listUserPinnedLists>[0] | undefined | null,
   params?: Parameters<typeof listUserPinnedLists>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listUserPinnedLists>>, ApiError>,
@@ -1900,7 +1953,7 @@ export function useListUserPinnedLists(
 }
 
 export function useUsersIdTimeline(
-  id: string | undefined | null,
+  id: Parameters<typeof usersIdTimeline>[0] | undefined | null,
   params?: Parameters<typeof usersIdTimeline>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdTimeline>>, ApiError>,
@@ -1918,7 +1971,7 @@ export function useUsersIdTimeline(
 }
 
 export function useUsersIdTweets(
-  id: string | undefined | null,
+  id: Parameters<typeof usersIdTweets>[0] | undefined | null,
   params?: Parameters<typeof usersIdTweets>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof usersIdTweets>>, ApiError>,
@@ -1982,7 +2035,10 @@ export function useDmConversationWithUserEventIdCreate(
     UseMutationOptions<
       Awaited<ReturnType<typeof dmConversationWithUserEventIdCreate>>,
       ApiError,
-      { participantId: string; body: Parameters<typeof dmConversationWithUserEventIdCreate>[1] }
+      {
+        participantId: Parameters<typeof dmConversationWithUserEventIdCreate>[0]
+        body: Parameters<typeof dmConversationWithUserEventIdCreate>[1]
+      }
     >,
     'mutationFn'
   >
@@ -1990,7 +2046,10 @@ export function useDmConversationWithUserEventIdCreate(
   return useMutation<
     Awaited<ReturnType<typeof dmConversationWithUserEventIdCreate>>,
     ApiError,
-    { participantId: string; body: Parameters<typeof dmConversationWithUserEventIdCreate>[1] }
+    {
+      participantId: Parameters<typeof dmConversationWithUserEventIdCreate>[0]
+      body: Parameters<typeof dmConversationWithUserEventIdCreate>[1]
+    }
   >({
     mutationFn: ({ participantId, body }) =>
       dmConversationWithUserEventIdCreate(participantId, body),
@@ -2003,7 +2062,10 @@ export function useDmConversationByIdEventIdCreate(
     UseMutationOptions<
       Awaited<ReturnType<typeof dmConversationByIdEventIdCreate>>,
       ApiError,
-      { dmConversationId: string; body: Parameters<typeof dmConversationByIdEventIdCreate>[1] }
+      {
+        dmConversationId: Parameters<typeof dmConversationByIdEventIdCreate>[0]
+        body: Parameters<typeof dmConversationByIdEventIdCreate>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2011,7 +2073,10 @@ export function useDmConversationByIdEventIdCreate(
   return useMutation<
     Awaited<ReturnType<typeof dmConversationByIdEventIdCreate>>,
     ApiError,
-    { dmConversationId: string; body: Parameters<typeof dmConversationByIdEventIdCreate>[1] }
+    {
+      dmConversationId: Parameters<typeof dmConversationByIdEventIdCreate>[0]
+      body: Parameters<typeof dmConversationByIdEventIdCreate>[1]
+    }
   >({
     mutationFn: ({ dmConversationId, body }) =>
       dmConversationByIdEventIdCreate(dmConversationId, body),
@@ -2044,7 +2109,7 @@ export function useListIdUpdate(
     UseMutationOptions<
       Awaited<ReturnType<typeof listIdUpdate>>,
       ApiError,
-      { id: string; body: Parameters<typeof listIdUpdate>[1] }
+      { id: Parameters<typeof listIdUpdate>[0]; body: Parameters<typeof listIdUpdate>[1] }
     >,
     'mutationFn'
   >
@@ -2052,7 +2117,7 @@ export function useListIdUpdate(
   return useMutation<
     Awaited<ReturnType<typeof listIdUpdate>>,
     ApiError,
-    { id: string; body: Parameters<typeof listIdUpdate>[1] }
+    { id: Parameters<typeof listIdUpdate>[0]; body: Parameters<typeof listIdUpdate>[1] }
   >({
     mutationFn: ({ id, body }) => listIdUpdate(id, body),
     ...options,
@@ -2061,11 +2126,19 @@ export function useListIdUpdate(
 
 export function useListIdDelete(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof listIdDelete>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof listIdDelete>>,
+      ApiError,
+      Parameters<typeof listIdDelete>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof listIdDelete>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof listIdDelete>>,
+    ApiError,
+    Parameters<typeof listIdDelete>[0]
+  >({
     mutationFn: (id) => listIdDelete(id),
     ...options,
   })
@@ -2076,7 +2149,7 @@ export function useListAddMember(
     UseMutationOptions<
       Awaited<ReturnType<typeof listAddMember>>,
       ApiError,
-      { id: string; body: Parameters<typeof listAddMember>[1] }
+      { id: Parameters<typeof listAddMember>[0]; body: Parameters<typeof listAddMember>[1] }
     >,
     'mutationFn'
   >
@@ -2084,7 +2157,7 @@ export function useListAddMember(
   return useMutation<
     Awaited<ReturnType<typeof listAddMember>>,
     ApiError,
-    { id: string; body: Parameters<typeof listAddMember>[1] }
+    { id: Parameters<typeof listAddMember>[0]; body: Parameters<typeof listAddMember>[1] }
   >({
     mutationFn: ({ id, body }) => listAddMember(id, body),
     ...options,
@@ -2096,7 +2169,7 @@ export function useListRemoveMember(
     UseMutationOptions<
       Awaited<ReturnType<typeof listRemoveMember>>,
       ApiError,
-      { id: string; userId: string }
+      { id: Parameters<typeof listRemoveMember>[0]; userId: Parameters<typeof listRemoveMember>[1] }
     >,
     'mutationFn'
   >
@@ -2104,7 +2177,7 @@ export function useListRemoveMember(
   return useMutation<
     Awaited<ReturnType<typeof listRemoveMember>>,
     ApiError,
-    { id: string; userId: string }
+    { id: Parameters<typeof listRemoveMember>[0]; userId: Parameters<typeof listRemoveMember>[1] }
   >({
     mutationFn: ({ id, userId }) => listRemoveMember(id, userId),
     ...options,
@@ -2156,11 +2229,19 @@ export function useAddOrDeleteRules(
 
 export function useDeleteTweetById(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteTweetById>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteTweetById>>,
+      ApiError,
+      Parameters<typeof deleteTweetById>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteTweetById>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteTweetById>>,
+    ApiError,
+    Parameters<typeof deleteTweetById>[0]
+  >({
     mutationFn: (id) => deleteTweetById(id),
     ...options,
   })
@@ -2171,7 +2252,7 @@ export function useHideReplyById(
     UseMutationOptions<
       Awaited<ReturnType<typeof hideReplyById>>,
       ApiError,
-      { tweetId: string; body: Parameters<typeof hideReplyById>[1] }
+      { tweetId: Parameters<typeof hideReplyById>[0]; body: Parameters<typeof hideReplyById>[1] }
     >,
     'mutationFn'
   >
@@ -2179,7 +2260,7 @@ export function useHideReplyById(
   return useMutation<
     Awaited<ReturnType<typeof hideReplyById>>,
     ApiError,
-    { tweetId: string; body: Parameters<typeof hideReplyById>[1] }
+    { tweetId: Parameters<typeof hideReplyById>[0]; body: Parameters<typeof hideReplyById>[1] }
   >({
     mutationFn: ({ tweetId, body }) => hideReplyById(tweetId, body),
     ...options,
@@ -2191,7 +2272,7 @@ export function useUsersIdBlock(
     UseMutationOptions<
       Awaited<ReturnType<typeof usersIdBlock>>,
       ApiError,
-      { id: string; body: Parameters<typeof usersIdBlock>[1] }
+      { id: Parameters<typeof usersIdBlock>[0]; body: Parameters<typeof usersIdBlock>[1] }
     >,
     'mutationFn'
   >
@@ -2199,7 +2280,7 @@ export function useUsersIdBlock(
   return useMutation<
     Awaited<ReturnType<typeof usersIdBlock>>,
     ApiError,
-    { id: string; body: Parameters<typeof usersIdBlock>[1] }
+    { id: Parameters<typeof usersIdBlock>[0]; body: Parameters<typeof usersIdBlock>[1] }
   >({
     mutationFn: ({ id, body }) => usersIdBlock(id, body),
     ...options,
@@ -2211,7 +2292,10 @@ export function usePostUsersIdBookmarks(
     UseMutationOptions<
       Awaited<ReturnType<typeof postUsersIdBookmarks>>,
       ApiError,
-      { id: string; body: Parameters<typeof postUsersIdBookmarks>[1] }
+      {
+        id: Parameters<typeof postUsersIdBookmarks>[0]
+        body: Parameters<typeof postUsersIdBookmarks>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2219,7 +2303,10 @@ export function usePostUsersIdBookmarks(
   return useMutation<
     Awaited<ReturnType<typeof postUsersIdBookmarks>>,
     ApiError,
-    { id: string; body: Parameters<typeof postUsersIdBookmarks>[1] }
+    {
+      id: Parameters<typeof postUsersIdBookmarks>[0]
+      body: Parameters<typeof postUsersIdBookmarks>[1]
+    }
   >({
     mutationFn: ({ id, body }) => postUsersIdBookmarks(id, body),
     ...options,
@@ -2231,7 +2318,10 @@ export function useUsersIdBookmarksDelete(
     UseMutationOptions<
       Awaited<ReturnType<typeof usersIdBookmarksDelete>>,
       ApiError,
-      { id: string; tweetId: string }
+      {
+        id: Parameters<typeof usersIdBookmarksDelete>[0]
+        tweetId: Parameters<typeof usersIdBookmarksDelete>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2239,7 +2329,10 @@ export function useUsersIdBookmarksDelete(
   return useMutation<
     Awaited<ReturnType<typeof usersIdBookmarksDelete>>,
     ApiError,
-    { id: string; tweetId: string }
+    {
+      id: Parameters<typeof usersIdBookmarksDelete>[0]
+      tweetId: Parameters<typeof usersIdBookmarksDelete>[1]
+    }
   >({
     mutationFn: ({ id, tweetId }) => usersIdBookmarksDelete(id, tweetId),
     ...options,
@@ -2251,7 +2344,7 @@ export function useListUserFollow(
     UseMutationOptions<
       Awaited<ReturnType<typeof listUserFollow>>,
       ApiError,
-      { id: string; body: Parameters<typeof listUserFollow>[1] }
+      { id: Parameters<typeof listUserFollow>[0]; body: Parameters<typeof listUserFollow>[1] }
     >,
     'mutationFn'
   >
@@ -2259,7 +2352,7 @@ export function useListUserFollow(
   return useMutation<
     Awaited<ReturnType<typeof listUserFollow>>,
     ApiError,
-    { id: string; body: Parameters<typeof listUserFollow>[1] }
+    { id: Parameters<typeof listUserFollow>[0]; body: Parameters<typeof listUserFollow>[1] }
   >({
     mutationFn: ({ id, body }) => listUserFollow(id, body),
     ...options,
@@ -2271,7 +2364,7 @@ export function useListUserUnfollow(
     UseMutationOptions<
       Awaited<ReturnType<typeof listUserUnfollow>>,
       ApiError,
-      { id: string; listId: string }
+      { id: Parameters<typeof listUserUnfollow>[0]; listId: Parameters<typeof listUserUnfollow>[1] }
     >,
     'mutationFn'
   >
@@ -2279,7 +2372,7 @@ export function useListUserUnfollow(
   return useMutation<
     Awaited<ReturnType<typeof listUserUnfollow>>,
     ApiError,
-    { id: string; listId: string }
+    { id: Parameters<typeof listUserUnfollow>[0]; listId: Parameters<typeof listUserUnfollow>[1] }
   >({
     mutationFn: ({ id, listId }) => listUserUnfollow(id, listId),
     ...options,
@@ -2291,7 +2384,7 @@ export function useUsersIdFollow(
     UseMutationOptions<
       Awaited<ReturnType<typeof usersIdFollow>>,
       ApiError,
-      { id: string; body: Parameters<typeof usersIdFollow>[1] }
+      { id: Parameters<typeof usersIdFollow>[0]; body: Parameters<typeof usersIdFollow>[1] }
     >,
     'mutationFn'
   >
@@ -2299,7 +2392,7 @@ export function useUsersIdFollow(
   return useMutation<
     Awaited<ReturnType<typeof usersIdFollow>>,
     ApiError,
-    { id: string; body: Parameters<typeof usersIdFollow>[1] }
+    { id: Parameters<typeof usersIdFollow>[0]; body: Parameters<typeof usersIdFollow>[1] }
   >({
     mutationFn: ({ id, body }) => usersIdFollow(id, body),
     ...options,
@@ -2311,7 +2404,7 @@ export function useUsersIdLike(
     UseMutationOptions<
       Awaited<ReturnType<typeof usersIdLike>>,
       ApiError,
-      { id: string; body: Parameters<typeof usersIdLike>[1] }
+      { id: Parameters<typeof usersIdLike>[0]; body: Parameters<typeof usersIdLike>[1] }
     >,
     'mutationFn'
   >
@@ -2319,7 +2412,7 @@ export function useUsersIdLike(
   return useMutation<
     Awaited<ReturnType<typeof usersIdLike>>,
     ApiError,
-    { id: string; body: Parameters<typeof usersIdLike>[1] }
+    { id: Parameters<typeof usersIdLike>[0]; body: Parameters<typeof usersIdLike>[1] }
   >({
     mutationFn: ({ id, body }) => usersIdLike(id, body),
     ...options,
@@ -2331,7 +2424,7 @@ export function useUsersIdUnlike(
     UseMutationOptions<
       Awaited<ReturnType<typeof usersIdUnlike>>,
       ApiError,
-      { id: string; tweetId: string }
+      { id: Parameters<typeof usersIdUnlike>[0]; tweetId: Parameters<typeof usersIdUnlike>[1] }
     >,
     'mutationFn'
   >
@@ -2339,7 +2432,7 @@ export function useUsersIdUnlike(
   return useMutation<
     Awaited<ReturnType<typeof usersIdUnlike>>,
     ApiError,
-    { id: string; tweetId: string }
+    { id: Parameters<typeof usersIdUnlike>[0]; tweetId: Parameters<typeof usersIdUnlike>[1] }
   >({
     mutationFn: ({ id, tweetId }) => usersIdUnlike(id, tweetId),
     ...options,
@@ -2351,7 +2444,7 @@ export function useUsersIdMute(
     UseMutationOptions<
       Awaited<ReturnType<typeof usersIdMute>>,
       ApiError,
-      { id: string; body: Parameters<typeof usersIdMute>[1] }
+      { id: Parameters<typeof usersIdMute>[0]; body: Parameters<typeof usersIdMute>[1] }
     >,
     'mutationFn'
   >
@@ -2359,7 +2452,7 @@ export function useUsersIdMute(
   return useMutation<
     Awaited<ReturnType<typeof usersIdMute>>,
     ApiError,
-    { id: string; body: Parameters<typeof usersIdMute>[1] }
+    { id: Parameters<typeof usersIdMute>[0]; body: Parameters<typeof usersIdMute>[1] }
   >({
     mutationFn: ({ id, body }) => usersIdMute(id, body),
     ...options,
@@ -2371,7 +2464,7 @@ export function useListUserPin(
     UseMutationOptions<
       Awaited<ReturnType<typeof listUserPin>>,
       ApiError,
-      { id: string; body: Parameters<typeof listUserPin>[1] }
+      { id: Parameters<typeof listUserPin>[0]; body: Parameters<typeof listUserPin>[1] }
     >,
     'mutationFn'
   >
@@ -2379,7 +2472,7 @@ export function useListUserPin(
   return useMutation<
     Awaited<ReturnType<typeof listUserPin>>,
     ApiError,
-    { id: string; body: Parameters<typeof listUserPin>[1] }
+    { id: Parameters<typeof listUserPin>[0]; body: Parameters<typeof listUserPin>[1] }
   >({
     mutationFn: ({ id, body }) => listUserPin(id, body),
     ...options,
@@ -2391,7 +2484,7 @@ export function useListUserUnpin(
     UseMutationOptions<
       Awaited<ReturnType<typeof listUserUnpin>>,
       ApiError,
-      { id: string; listId: string }
+      { id: Parameters<typeof listUserUnpin>[0]; listId: Parameters<typeof listUserUnpin>[1] }
     >,
     'mutationFn'
   >
@@ -2399,7 +2492,7 @@ export function useListUserUnpin(
   return useMutation<
     Awaited<ReturnType<typeof listUserUnpin>>,
     ApiError,
-    { id: string; listId: string }
+    { id: Parameters<typeof listUserUnpin>[0]; listId: Parameters<typeof listUserUnpin>[1] }
   >({
     mutationFn: ({ id, listId }) => listUserUnpin(id, listId),
     ...options,
@@ -2411,7 +2504,7 @@ export function useUsersIdRetweets(
     UseMutationOptions<
       Awaited<ReturnType<typeof usersIdRetweets>>,
       ApiError,
-      { id: string; body: Parameters<typeof usersIdRetweets>[1] }
+      { id: Parameters<typeof usersIdRetweets>[0]; body: Parameters<typeof usersIdRetweets>[1] }
     >,
     'mutationFn'
   >
@@ -2419,7 +2512,7 @@ export function useUsersIdRetweets(
   return useMutation<
     Awaited<ReturnType<typeof usersIdRetweets>>,
     ApiError,
-    { id: string; body: Parameters<typeof usersIdRetweets>[1] }
+    { id: Parameters<typeof usersIdRetweets>[0]; body: Parameters<typeof usersIdRetweets>[1] }
   >({
     mutationFn: ({ id, body }) => usersIdRetweets(id, body),
     ...options,
@@ -2431,7 +2524,10 @@ export function useUsersIdUnretweets(
     UseMutationOptions<
       Awaited<ReturnType<typeof usersIdUnretweets>>,
       ApiError,
-      { id: string; sourceTweetId: string }
+      {
+        id: Parameters<typeof usersIdUnretweets>[0]
+        sourceTweetId: Parameters<typeof usersIdUnretweets>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2439,7 +2535,10 @@ export function useUsersIdUnretweets(
   return useMutation<
     Awaited<ReturnType<typeof usersIdUnretweets>>,
     ApiError,
-    { id: string; sourceTweetId: string }
+    {
+      id: Parameters<typeof usersIdUnretweets>[0]
+      sourceTweetId: Parameters<typeof usersIdUnretweets>[1]
+    }
   >({
     mutationFn: ({ id, sourceTweetId }) => usersIdUnretweets(id, sourceTweetId),
     ...options,
@@ -2451,7 +2550,10 @@ export function useUsersIdUnblock(
     UseMutationOptions<
       Awaited<ReturnType<typeof usersIdUnblock>>,
       ApiError,
-      { sourceUserId: string; targetUserId: string }
+      {
+        sourceUserId: Parameters<typeof usersIdUnblock>[0]
+        targetUserId: Parameters<typeof usersIdUnblock>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2459,7 +2561,10 @@ export function useUsersIdUnblock(
   return useMutation<
     Awaited<ReturnType<typeof usersIdUnblock>>,
     ApiError,
-    { sourceUserId: string; targetUserId: string }
+    {
+      sourceUserId: Parameters<typeof usersIdUnblock>[0]
+      targetUserId: Parameters<typeof usersIdUnblock>[1]
+    }
   >({
     mutationFn: ({ sourceUserId, targetUserId }) => usersIdUnblock(sourceUserId, targetUserId),
     ...options,
@@ -2471,7 +2576,10 @@ export function useUsersIdUnfollow(
     UseMutationOptions<
       Awaited<ReturnType<typeof usersIdUnfollow>>,
       ApiError,
-      { sourceUserId: string; targetUserId: string }
+      {
+        sourceUserId: Parameters<typeof usersIdUnfollow>[0]
+        targetUserId: Parameters<typeof usersIdUnfollow>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2479,7 +2587,10 @@ export function useUsersIdUnfollow(
   return useMutation<
     Awaited<ReturnType<typeof usersIdUnfollow>>,
     ApiError,
-    { sourceUserId: string; targetUserId: string }
+    {
+      sourceUserId: Parameters<typeof usersIdUnfollow>[0]
+      targetUserId: Parameters<typeof usersIdUnfollow>[1]
+    }
   >({
     mutationFn: ({ sourceUserId, targetUserId }) => usersIdUnfollow(sourceUserId, targetUserId),
     ...options,
@@ -2491,7 +2602,10 @@ export function useUsersIdUnmute(
     UseMutationOptions<
       Awaited<ReturnType<typeof usersIdUnmute>>,
       ApiError,
-      { sourceUserId: string; targetUserId: string }
+      {
+        sourceUserId: Parameters<typeof usersIdUnmute>[0]
+        targetUserId: Parameters<typeof usersIdUnmute>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2499,7 +2613,10 @@ export function useUsersIdUnmute(
   return useMutation<
     Awaited<ReturnType<typeof usersIdUnmute>>,
     ApiError,
-    { sourceUserId: string; targetUserId: string }
+    {
+      sourceUserId: Parameters<typeof usersIdUnmute>[0]
+      targetUserId: Parameters<typeof usersIdUnmute>[1]
+    }
   >({
     mutationFn: ({ sourceUserId, targetUserId }) => usersIdUnmute(sourceUserId, targetUserId),
     ...options,

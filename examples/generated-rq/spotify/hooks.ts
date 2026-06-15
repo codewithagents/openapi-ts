@@ -117,38 +117,46 @@ import {
 export const albumKeys = {
   all: () => ['albums'] as const,
   list: (params: Parameters<typeof getMultipleAlbums>[0]) => ['albums', 'list', params] as const,
-  getAnAlbum: (id: string, params?: Parameters<typeof getAnAlbum>[1]) =>
+  getAnAlbum: (id: Parameters<typeof getAnAlbum>[0], params?: Parameters<typeof getAnAlbum>[1]) =>
     ['albums', 'getAnAlbum', id, params] as const,
-  getAnAlbumsTracks: (id: string, params?: Parameters<typeof getAnAlbumsTracks>[1]) =>
-    ['albums', 'getAnAlbumsTracks', id, params] as const,
+  getAnAlbumsTracks: (
+    id: Parameters<typeof getAnAlbumsTracks>[0],
+    params?: Parameters<typeof getAnAlbumsTracks>[1]
+  ) => ['albums', 'getAnAlbumsTracks', id, params] as const,
 }
 
 export const artistKeys = {
   all: () => ['artists'] as const,
   list: (params: Parameters<typeof getMultipleArtists>[0]) => ['artists', 'list', params] as const,
-  getAnArtist: (id: string) => ['artists', 'getAnArtist', id] as const,
-  getAnArtistsAlbums: (id: string, params?: Parameters<typeof getAnArtistsAlbums>[1]) =>
-    ['artists', 'getAnArtistsAlbums', id, params] as const,
-  getAnArtistsTopTracks: (id: string, params?: Parameters<typeof getAnArtistsTopTracks>[1]) =>
-    ['artists', 'getAnArtistsTopTracks', id, params] as const,
-  getAnArtistsRelatedArtists: (id: string) =>
+  getAnArtist: (id: Parameters<typeof getAnArtist>[0]) => ['artists', 'getAnArtist', id] as const,
+  getAnArtistsAlbums: (
+    id: Parameters<typeof getAnArtistsAlbums>[0],
+    params?: Parameters<typeof getAnArtistsAlbums>[1]
+  ) => ['artists', 'getAnArtistsAlbums', id, params] as const,
+  getAnArtistsTopTracks: (
+    id: Parameters<typeof getAnArtistsTopTracks>[0],
+    params?: Parameters<typeof getAnArtistsTopTracks>[1]
+  ) => ['artists', 'getAnArtistsTopTracks', id, params] as const,
+  getAnArtistsRelatedArtists: (id: Parameters<typeof getAnArtistsRelatedArtists>[0]) =>
     ['artists', 'getAnArtistsRelatedArtists', id] as const,
 }
 
 export const showKeys = {
   all: () => ['shows'] as const,
   list: (params: Parameters<typeof getMultipleShows>[0]) => ['shows', 'list', params] as const,
-  getAShow: (id: string, params?: Parameters<typeof getAShow>[1]) =>
+  getAShow: (id: Parameters<typeof getAShow>[0], params?: Parameters<typeof getAShow>[1]) =>
     ['shows', 'getAShow', id, params] as const,
-  getAShowsEpisodes: (id: string, params?: Parameters<typeof getAShowsEpisodes>[1]) =>
-    ['shows', 'getAShowsEpisodes', id, params] as const,
+  getAShowsEpisodes: (
+    id: Parameters<typeof getAShowsEpisodes>[0],
+    params?: Parameters<typeof getAShowsEpisodes>[1]
+  ) => ['shows', 'getAShowsEpisodes', id, params] as const,
 }
 
 export const episodeKeys = {
   all: () => ['episodes'] as const,
   list: (params: Parameters<typeof getMultipleEpisodes>[0]) =>
     ['episodes', 'list', params] as const,
-  detail: (id: string, params?: Parameters<typeof getAnEpisode>[1]) =>
+  detail: (id: Parameters<typeof getAnEpisode>[0], params?: Parameters<typeof getAnEpisode>[1]) =>
     ['episodes', id, params] as const,
 }
 
@@ -156,10 +164,14 @@ export const audiobookKeys = {
   all: () => ['audiobooks'] as const,
   list: (params: Parameters<typeof getMultipleAudiobooks>[0]) =>
     ['audiobooks', 'list', params] as const,
-  getAnAudiobook: (id: string, params?: Parameters<typeof getAnAudiobook>[1]) =>
-    ['audiobooks', 'getAnAudiobook', id, params] as const,
-  getAudiobookChapters: (id: string, params?: Parameters<typeof getAudiobookChapters>[1]) =>
-    ['audiobooks', 'getAudiobookChapters', id, params] as const,
+  getAnAudiobook: (
+    id: Parameters<typeof getAnAudiobook>[0],
+    params?: Parameters<typeof getAnAudiobook>[1]
+  ) => ['audiobooks', 'getAnAudiobook', id, params] as const,
+  getAudiobookChapters: (
+    id: Parameters<typeof getAudiobookChapters>[0],
+    params?: Parameters<typeof getAudiobookChapters>[1]
+  ) => ['audiobooks', 'getAudiobookChapters', id, params] as const,
 }
 
 export const meKeys = {
@@ -213,14 +225,15 @@ export const meKeys = {
 export const chapterKeys = {
   all: () => ['chapters'] as const,
   list: (params: Parameters<typeof getSeveralChapters>[0]) => ['chapters', 'list', params] as const,
-  detail: (id: string, params?: Parameters<typeof getAChapter>[1]) =>
+  detail: (id: Parameters<typeof getAChapter>[0], params?: Parameters<typeof getAChapter>[1]) =>
     ['chapters', id, params] as const,
 }
 
 export const trackKeys = {
   all: () => ['tracks'] as const,
   list: (params: Parameters<typeof getSeveralTracks>[0]) => ['tracks', 'list', params] as const,
-  detail: (id: string, params?: Parameters<typeof getTrack>[1]) => ['tracks', id, params] as const,
+  detail: (id: Parameters<typeof getTrack>[0], params?: Parameters<typeof getTrack>[1]) =>
+    ['tracks', id, params] as const,
 }
 
 export const searchKeys = {
@@ -230,24 +243,34 @@ export const searchKeys = {
 
 export const playlistKeys = {
   all: () => ['playlists'] as const,
-  getPlaylist: (playlistId: string, params?: Parameters<typeof getPlaylist>[1]) =>
-    ['playlists', 'getPlaylist', playlistId, params] as const,
-  getPlaylistsTracks: (playlistId: string, params?: Parameters<typeof getPlaylistsTracks>[1]) =>
-    ['playlists', 'getPlaylistsTracks', playlistId, params] as const,
-  getPlaylistsItems: (playlistId: string, params?: Parameters<typeof getPlaylistsItems>[1]) =>
-    ['playlists', 'getPlaylistsItems', playlistId, params] as const,
-  getPlaylistCover: (playlistId: string) => ['playlists', 'getPlaylistCover', playlistId] as const,
+  getPlaylist: (
+    playlistId: Parameters<typeof getPlaylist>[0],
+    params?: Parameters<typeof getPlaylist>[1]
+  ) => ['playlists', 'getPlaylist', playlistId, params] as const,
+  getPlaylistsTracks: (
+    playlistId: Parameters<typeof getPlaylistsTracks>[0],
+    params?: Parameters<typeof getPlaylistsTracks>[1]
+  ) => ['playlists', 'getPlaylistsTracks', playlistId, params] as const,
+  getPlaylistsItems: (
+    playlistId: Parameters<typeof getPlaylistsItems>[0],
+    params?: Parameters<typeof getPlaylistsItems>[1]
+  ) => ['playlists', 'getPlaylistsItems', playlistId, params] as const,
+  getPlaylistCover: (playlistId: Parameters<typeof getPlaylistCover>[0]) =>
+    ['playlists', 'getPlaylistCover', playlistId] as const,
   checkIfUserFollowsPlaylist: (
-    playlistId: string,
+    playlistId: Parameters<typeof checkIfUserFollowsPlaylist>[0],
     params?: Parameters<typeof checkIfUserFollowsPlaylist>[1]
   ) => ['playlists', 'checkIfUserFollowsPlaylist', playlistId, params] as const,
 }
 
 export const userKeys = {
   all: () => ['users'] as const,
-  getUsersProfile: (userId: string) => ['users', 'getUsersProfile', userId] as const,
-  getListUsersPlaylists: (userId: string, params?: Parameters<typeof getListUsersPlaylists>[1]) =>
-    ['users', 'getListUsersPlaylists', userId, params] as const,
+  getUsersProfile: (userId: Parameters<typeof getUsersProfile>[0]) =>
+    ['users', 'getUsersProfile', userId] as const,
+  getListUsersPlaylists: (
+    userId: Parameters<typeof getListUsersPlaylists>[0],
+    params?: Parameters<typeof getListUsersPlaylists>[1]
+  ) => ['users', 'getListUsersPlaylists', userId, params] as const,
 }
 
 export const browseKeys = {
@@ -258,10 +281,12 @@ export const browseKeys = {
     ['browse', 'getCategories', params] as const,
   getNewReleases: (params?: Parameters<typeof getNewReleases>[0]) =>
     ['browse', 'getNewReleases', params] as const,
-  getACategory: (categoryId: string, params?: Parameters<typeof getACategory>[1]) =>
-    ['browse', 'getACategory', categoryId, params] as const,
+  getACategory: (
+    categoryId: Parameters<typeof getACategory>[0],
+    params?: Parameters<typeof getACategory>[1]
+  ) => ['browse', 'getACategory', categoryId, params] as const,
   getACategoriesPlaylists: (
-    categoryId: string,
+    categoryId: Parameters<typeof getACategoriesPlaylists>[0],
     params?: Parameters<typeof getACategoriesPlaylists>[1]
   ) => ['browse', 'getACategoriesPlaylists', categoryId, params] as const,
 }
@@ -270,12 +295,12 @@ export const audioFeatureKeys = {
   all: () => ['audio-features'] as const,
   list: (params: Parameters<typeof getSeveralAudioFeatures>[0]) =>
     ['audio-features', 'list', params] as const,
-  detail: (id: string) => ['audio-features', id] as const,
+  detail: (id: Parameters<typeof getAudioFeatures>[0]) => ['audio-features', id] as const,
 }
 
 export const audioAnalysiKeys = {
   all: () => ['audio-analysis'] as const,
-  detail: (id: string) => ['audio-analysis', id] as const,
+  detail: (id: Parameters<typeof getAudioAnalysis>[0]) => ['audio-analysis', id] as const,
 }
 
 export const recommendationKeys = {
@@ -293,7 +318,7 @@ export const marketKeys = {
 // ── Query options factories ──────────────────────────────────
 
 export function getAnAlbumQueryOptions(
-  id: string,
+  id: Parameters<typeof getAnAlbum>[0],
   params?: Parameters<typeof getAnAlbum>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnAlbum>>, ApiError>,
@@ -327,7 +352,7 @@ export function getMultipleAlbumsQueryOptions(
 }
 
 export function getAnAlbumsTracksQueryOptions(
-  id: string,
+  id: Parameters<typeof getAnAlbumsTracks>[0],
   params?: Parameters<typeof getAnAlbumsTracks>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnAlbumsTracks>>, ApiError>,
@@ -344,7 +369,7 @@ export function getAnAlbumsTracksQueryOptions(
 }
 
 export function getAnArtistQueryOptions(
-  id: string,
+  id: Parameters<typeof getAnArtist>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnArtist>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -377,7 +402,7 @@ export function getMultipleArtistsQueryOptions(
 }
 
 export function getAnArtistsAlbumsQueryOptions(
-  id: string,
+  id: Parameters<typeof getAnArtistsAlbums>[0],
   params?: Parameters<typeof getAnArtistsAlbums>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnArtistsAlbums>>, ApiError>,
@@ -395,7 +420,7 @@ export function getAnArtistsAlbumsQueryOptions(
 
 /** @deprecated */
 export function getAnArtistsTopTracksQueryOptions(
-  id: string,
+  id: Parameters<typeof getAnArtistsTopTracks>[0],
   params?: Parameters<typeof getAnArtistsTopTracks>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnArtistsTopTracks>>, ApiError>,
@@ -413,7 +438,7 @@ export function getAnArtistsTopTracksQueryOptions(
 
 /** @deprecated */
 export function getAnArtistsRelatedArtistsQueryOptions(
-  id: string,
+  id: Parameters<typeof getAnArtistsRelatedArtists>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnArtistsRelatedArtists>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -429,7 +454,7 @@ export function getAnArtistsRelatedArtistsQueryOptions(
 }
 
 export function getAShowQueryOptions(
-  id: string,
+  id: Parameters<typeof getAShow>[0],
   params?: Parameters<typeof getAShow>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAShow>>, ApiError>,
@@ -463,7 +488,7 @@ export function getMultipleShowsQueryOptions(
 }
 
 export function getAShowsEpisodesQueryOptions(
-  id: string,
+  id: Parameters<typeof getAShowsEpisodes>[0],
   params?: Parameters<typeof getAShowsEpisodes>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAShowsEpisodes>>, ApiError>,
@@ -480,7 +505,7 @@ export function getAShowsEpisodesQueryOptions(
 }
 
 export function getAnEpisodeQueryOptions(
-  id: string,
+  id: Parameters<typeof getAnEpisode>[0],
   params?: Parameters<typeof getAnEpisode>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnEpisode>>, ApiError>,
@@ -514,7 +539,7 @@ export function getMultipleEpisodesQueryOptions(
 }
 
 export function getAnAudiobookQueryOptions(
-  id: string,
+  id: Parameters<typeof getAnAudiobook>[0],
   params?: Parameters<typeof getAnAudiobook>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnAudiobook>>, ApiError>,
@@ -548,7 +573,7 @@ export function getMultipleAudiobooksQueryOptions(
 }
 
 export function getAudiobookChaptersQueryOptions(
-  id: string,
+  id: Parameters<typeof getAudiobookChapters>[0],
   params?: Parameters<typeof getAudiobookChapters>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAudiobookChapters>>, ApiError>,
@@ -598,7 +623,7 @@ export function checkUsersSavedAudiobooksQueryOptions(
 }
 
 export function getAChapterQueryOptions(
-  id: string,
+  id: Parameters<typeof getAChapter>[0],
   params?: Parameters<typeof getAChapter>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAChapter>>, ApiError>,
@@ -632,7 +657,7 @@ export function getSeveralChaptersQueryOptions(
 }
 
 export function getTrackQueryOptions(
-  id: string,
+  id: Parameters<typeof getTrack>[0],
   params?: Parameters<typeof getTrack>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTrack>>, ApiError>,
@@ -697,7 +722,7 @@ export function getCurrentUsersProfileQueryOptions(
 }
 
 export function getPlaylistQueryOptions(
-  playlistId: string,
+  playlistId: Parameters<typeof getPlaylist>[0],
   params?: Parameters<typeof getPlaylist>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getPlaylist>>, ApiError>,
@@ -715,7 +740,7 @@ export function getPlaylistQueryOptions(
 
 /** @deprecated */
 export function getPlaylistsTracksQueryOptions(
-  playlistId: string,
+  playlistId: Parameters<typeof getPlaylistsTracks>[0],
   params?: Parameters<typeof getPlaylistsTracks>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getPlaylistsTracks>>, ApiError>,
@@ -732,7 +757,7 @@ export function getPlaylistsTracksQueryOptions(
 }
 
 export function getPlaylistsItemsQueryOptions(
-  playlistId: string,
+  playlistId: Parameters<typeof getPlaylistsItems>[0],
   params?: Parameters<typeof getPlaylistsItems>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getPlaylistsItems>>, ApiError>,
@@ -914,7 +939,7 @@ export function checkUsersSavedShowsQueryOptions(
 
 /** @deprecated */
 export function getUsersProfileQueryOptions(
-  userId: string,
+  userId: Parameters<typeof getUsersProfile>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUsersProfile>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -931,7 +956,7 @@ export function getUsersProfileQueryOptions(
 
 /** @deprecated */
 export function getListUsersPlaylistsQueryOptions(
-  userId: string,
+  userId: Parameters<typeof getListUsersPlaylists>[0],
   params?: Parameters<typeof getListUsersPlaylists>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getListUsersPlaylists>>, ApiError>,
@@ -983,7 +1008,7 @@ export function getCategoriesQueryOptions(
 
 /** @deprecated */
 export function getACategoryQueryOptions(
-  categoryId: string,
+  categoryId: Parameters<typeof getACategory>[0],
   params?: Parameters<typeof getACategory>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getACategory>>, ApiError>,
@@ -1001,7 +1026,7 @@ export function getACategoryQueryOptions(
 
 /** @deprecated */
 export function getACategoriesPlaylistsQueryOptions(
-  categoryId: string,
+  categoryId: Parameters<typeof getACategoriesPlaylists>[0],
   params?: Parameters<typeof getACategoriesPlaylists>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getACategoriesPlaylists>>, ApiError>,
@@ -1018,7 +1043,7 @@ export function getACategoriesPlaylistsQueryOptions(
 }
 
 export function getPlaylistCoverQueryOptions(
-  playlistId: string,
+  playlistId: Parameters<typeof getPlaylistCover>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getPlaylistCover>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1085,7 +1110,7 @@ export function checkCurrentUserFollowsQueryOptions(
 
 /** @deprecated */
 export function checkIfUserFollowsPlaylistQueryOptions(
-  playlistId: string,
+  playlistId: Parameters<typeof checkIfUserFollowsPlaylist>[0],
   params?: Parameters<typeof checkIfUserFollowsPlaylist>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof checkIfUserFollowsPlaylist>>, ApiError>,
@@ -1120,7 +1145,7 @@ export function getSeveralAudioFeaturesQueryOptions(
 
 /** @deprecated */
 export function getAudioFeaturesQueryOptions(
-  id: string,
+  id: Parameters<typeof getAudioFeatures>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAudioFeatures>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1137,7 +1162,7 @@ export function getAudioFeaturesQueryOptions(
 
 /** @deprecated */
 export function getAudioAnalysisQueryOptions(
-  id: string,
+  id: Parameters<typeof getAudioAnalysis>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAudioAnalysis>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1320,7 +1345,7 @@ export function getUsersTopTracksQueryOptions(
 // ── Queries ──────────────────────────────────────────────────
 
 export function useGetAnAlbum(
-  id: string | undefined | null,
+  id: Parameters<typeof getAnAlbum>[0] | undefined | null,
   params?: Parameters<typeof getAnAlbum>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnAlbum>>, ApiError>,
@@ -1355,7 +1380,7 @@ export function useGetMultipleAlbums(
 }
 
 export function useGetAnAlbumsTracks(
-  id: string | undefined | null,
+  id: Parameters<typeof getAnAlbumsTracks>[0] | undefined | null,
   params?: Parameters<typeof getAnAlbumsTracks>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnAlbumsTracks>>, ApiError>,
@@ -1373,7 +1398,7 @@ export function useGetAnAlbumsTracks(
 }
 
 export function useGetAnArtist(
-  id: string | undefined | null,
+  id: Parameters<typeof getAnArtist>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnArtist>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1407,7 +1432,7 @@ export function useGetMultipleArtists(
 }
 
 export function useGetAnArtistsAlbums(
-  id: string | undefined | null,
+  id: Parameters<typeof getAnArtistsAlbums>[0] | undefined | null,
   params?: Parameters<typeof getAnArtistsAlbums>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnArtistsAlbums>>, ApiError>,
@@ -1426,7 +1451,7 @@ export function useGetAnArtistsAlbums(
 
 /** @deprecated */
 export function useGetAnArtistsTopTracks(
-  id: string | undefined | null,
+  id: Parameters<typeof getAnArtistsTopTracks>[0] | undefined | null,
   params?: Parameters<typeof getAnArtistsTopTracks>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnArtistsTopTracks>>, ApiError>,
@@ -1445,7 +1470,7 @@ export function useGetAnArtistsTopTracks(
 
 /** @deprecated */
 export function useGetAnArtistsRelatedArtists(
-  id: string | undefined | null,
+  id: Parameters<typeof getAnArtistsRelatedArtists>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnArtistsRelatedArtists>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -1462,7 +1487,7 @@ export function useGetAnArtistsRelatedArtists(
 }
 
 export function useGetAShow(
-  id: string | undefined | null,
+  id: Parameters<typeof getAShow>[0] | undefined | null,
   params?: Parameters<typeof getAShow>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAShow>>, ApiError>,
@@ -1497,7 +1522,7 @@ export function useGetMultipleShows(
 }
 
 export function useGetAShowsEpisodes(
-  id: string | undefined | null,
+  id: Parameters<typeof getAShowsEpisodes>[0] | undefined | null,
   params?: Parameters<typeof getAShowsEpisodes>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAShowsEpisodes>>, ApiError>,
@@ -1515,7 +1540,7 @@ export function useGetAShowsEpisodes(
 }
 
 export function useGetAnEpisode(
-  id: string | undefined | null,
+  id: Parameters<typeof getAnEpisode>[0] | undefined | null,
   params?: Parameters<typeof getAnEpisode>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnEpisode>>, ApiError>,
@@ -1550,7 +1575,7 @@ export function useGetMultipleEpisodes(
 }
 
 export function useGetAnAudiobook(
-  id: string | undefined | null,
+  id: Parameters<typeof getAnAudiobook>[0] | undefined | null,
   params?: Parameters<typeof getAnAudiobook>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAnAudiobook>>, ApiError>,
@@ -1585,7 +1610,7 @@ export function useGetMultipleAudiobooks(
 }
 
 export function useGetAudiobookChapters(
-  id: string | undefined | null,
+  id: Parameters<typeof getAudiobookChapters>[0] | undefined | null,
   params?: Parameters<typeof getAudiobookChapters>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAudiobookChapters>>, ApiError>,
@@ -1667,7 +1692,7 @@ export function useCheckUsersSavedAudiobooks(
 }
 
 export function useGetAChapter(
-  id: string | undefined | null,
+  id: Parameters<typeof getAChapter>[0] | undefined | null,
   params?: Parameters<typeof getAChapter>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAChapter>>, ApiError>,
@@ -1702,7 +1727,7 @@ export function useGetSeveralChapters(
 }
 
 export function useGetTrack(
-  id: string | undefined | null,
+  id: Parameters<typeof getTrack>[0] | undefined | null,
   params?: Parameters<typeof getTrack>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTrack>>, ApiError>,
@@ -1799,7 +1824,7 @@ export function useGetCurrentUsersProfile(
 }
 
 export function useGetPlaylist(
-  playlistId: string | undefined | null,
+  playlistId: Parameters<typeof getPlaylist>[0] | undefined | null,
   params?: Parameters<typeof getPlaylist>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getPlaylist>>, ApiError>,
@@ -1818,7 +1843,7 @@ export function useGetPlaylist(
 
 /** @deprecated */
 export function useGetPlaylistsTracks(
-  playlistId: string | undefined | null,
+  playlistId: Parameters<typeof getPlaylistsTracks>[0] | undefined | null,
   params?: Parameters<typeof getPlaylistsTracks>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getPlaylistsTracks>>, ApiError>,
@@ -1836,7 +1861,7 @@ export function useGetPlaylistsTracks(
 }
 
 export function useGetPlaylistsItems(
-  playlistId: string | undefined | null,
+  playlistId: Parameters<typeof getPlaylistsItems>[0] | undefined | null,
   params?: Parameters<typeof getPlaylistsItems>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getPlaylistsItems>>, ApiError>,
@@ -2175,7 +2200,7 @@ export function useCheckUsersSavedShows(
 
 /** @deprecated */
 export function useGetUsersProfile(
-  userId: string | undefined | null,
+  userId: Parameters<typeof getUsersProfile>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getUsersProfile>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2193,7 +2218,7 @@ export function useGetUsersProfile(
 
 /** @deprecated */
 export function useGetListUsersPlaylists(
-  userId: string | undefined | null,
+  userId: Parameters<typeof getListUsersPlaylists>[0] | undefined | null,
   params?: Parameters<typeof getListUsersPlaylists>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getListUsersPlaylists>>, ApiError>,
@@ -2310,7 +2335,7 @@ export function useGetCategoriesInfinite(
 
 /** @deprecated */
 export function useGetACategory(
-  categoryId: string | undefined | null,
+  categoryId: Parameters<typeof getACategory>[0] | undefined | null,
   params?: Parameters<typeof getACategory>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getACategory>>, ApiError>,
@@ -2329,7 +2354,7 @@ export function useGetACategory(
 
 /** @deprecated */
 export function useGetACategoriesPlaylists(
-  categoryId: string | undefined | null,
+  categoryId: Parameters<typeof getACategoriesPlaylists>[0] | undefined | null,
   params?: Parameters<typeof getACategoriesPlaylists>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getACategoriesPlaylists>>, ApiError>,
@@ -2347,7 +2372,7 @@ export function useGetACategoriesPlaylists(
 }
 
 export function useGetPlaylistCover(
-  playlistId: string | undefined | null,
+  playlistId: Parameters<typeof getPlaylistCover>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getPlaylistCover>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2478,7 +2503,7 @@ export function useCheckCurrentUserFollows(
 
 /** @deprecated */
 export function useCheckIfUserFollowsPlaylist(
-  playlistId: string | undefined | null,
+  playlistId: Parameters<typeof checkIfUserFollowsPlaylist>[0] | undefined | null,
   params?: Parameters<typeof checkIfUserFollowsPlaylist>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof checkIfUserFollowsPlaylist>>, ApiError>,
@@ -2514,7 +2539,7 @@ export function useGetSeveralAudioFeatures(
 
 /** @deprecated */
 export function useGetAudioFeatures(
-  id: string | undefined | null,
+  id: Parameters<typeof getAudioFeatures>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAudioFeatures>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2532,7 +2557,7 @@ export function useGetAudioFeatures(
 
 /** @deprecated */
 export function useGetAudioAnalysis(
-  id: string | undefined | null,
+  id: Parameters<typeof getAudioAnalysis>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getAudioAnalysis>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -2854,7 +2879,10 @@ export function useChangePlaylistDetails(
     UseMutationOptions<
       Awaited<ReturnType<typeof changePlaylistDetails>>,
       ApiError,
-      { playlistId: string; body: Parameters<typeof changePlaylistDetails>[1] }
+      {
+        playlistId: Parameters<typeof changePlaylistDetails>[0]
+        body: Parameters<typeof changePlaylistDetails>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2862,7 +2890,10 @@ export function useChangePlaylistDetails(
   return useMutation<
     Awaited<ReturnType<typeof changePlaylistDetails>>,
     ApiError,
-    { playlistId: string; body: Parameters<typeof changePlaylistDetails>[1] }
+    {
+      playlistId: Parameters<typeof changePlaylistDetails>[0]
+      body: Parameters<typeof changePlaylistDetails>[1]
+    }
   >({
     mutationFn: ({ playlistId, body }) => changePlaylistDetails(playlistId, body),
     ...options,
@@ -2876,7 +2907,7 @@ export function useAddTracksToPlaylist(
       Awaited<ReturnType<typeof addTracksToPlaylist>>,
       ApiError,
       {
-        playlistId: string
+        playlistId: Parameters<typeof addTracksToPlaylist>[0]
         body: Parameters<typeof addTracksToPlaylist>[1]
         params: Parameters<typeof addTracksToPlaylist>[2]
       }
@@ -2888,7 +2919,7 @@ export function useAddTracksToPlaylist(
     Awaited<ReturnType<typeof addTracksToPlaylist>>,
     ApiError,
     {
-      playlistId: string
+      playlistId: Parameters<typeof addTracksToPlaylist>[0]
       body: Parameters<typeof addTracksToPlaylist>[1]
       params: Parameters<typeof addTracksToPlaylist>[2]
     }
@@ -2905,7 +2936,7 @@ export function useReorderOrReplacePlaylistsTracks(
       Awaited<ReturnType<typeof reorderOrReplacePlaylistsTracks>>,
       ApiError,
       {
-        playlistId: string
+        playlistId: Parameters<typeof reorderOrReplacePlaylistsTracks>[0]
         body: Parameters<typeof reorderOrReplacePlaylistsTracks>[1]
         params: Parameters<typeof reorderOrReplacePlaylistsTracks>[2]
       }
@@ -2917,7 +2948,7 @@ export function useReorderOrReplacePlaylistsTracks(
     Awaited<ReturnType<typeof reorderOrReplacePlaylistsTracks>>,
     ApiError,
     {
-      playlistId: string
+      playlistId: Parameters<typeof reorderOrReplacePlaylistsTracks>[0]
       body: Parameters<typeof reorderOrReplacePlaylistsTracks>[1]
       params: Parameters<typeof reorderOrReplacePlaylistsTracks>[2]
     }
@@ -2934,7 +2965,10 @@ export function useRemoveTracksPlaylist(
     UseMutationOptions<
       Awaited<ReturnType<typeof removeTracksPlaylist>>,
       ApiError,
-      { playlistId: string; body: Parameters<typeof removeTracksPlaylist>[1] }
+      {
+        playlistId: Parameters<typeof removeTracksPlaylist>[0]
+        body: Parameters<typeof removeTracksPlaylist>[1]
+      }
     >,
     'mutationFn'
   >
@@ -2942,7 +2976,10 @@ export function useRemoveTracksPlaylist(
   return useMutation<
     Awaited<ReturnType<typeof removeTracksPlaylist>>,
     ApiError,
-    { playlistId: string; body: Parameters<typeof removeTracksPlaylist>[1] }
+    {
+      playlistId: Parameters<typeof removeTracksPlaylist>[0]
+      body: Parameters<typeof removeTracksPlaylist>[1]
+    }
   >({
     mutationFn: ({ playlistId, body }) => removeTracksPlaylist(playlistId, body),
     ...options,
@@ -2955,7 +2992,7 @@ export function useAddItemsToPlaylist(
       Awaited<ReturnType<typeof addItemsToPlaylist>>,
       ApiError,
       {
-        playlistId: string
+        playlistId: Parameters<typeof addItemsToPlaylist>[0]
         body: Parameters<typeof addItemsToPlaylist>[1]
         params: Parameters<typeof addItemsToPlaylist>[2]
       }
@@ -2967,7 +3004,7 @@ export function useAddItemsToPlaylist(
     Awaited<ReturnType<typeof addItemsToPlaylist>>,
     ApiError,
     {
-      playlistId: string
+      playlistId: Parameters<typeof addItemsToPlaylist>[0]
       body: Parameters<typeof addItemsToPlaylist>[1]
       params: Parameters<typeof addItemsToPlaylist>[2]
     }
@@ -2983,7 +3020,7 @@ export function useReorderOrReplacePlaylistsItems(
       Awaited<ReturnType<typeof reorderOrReplacePlaylistsItems>>,
       ApiError,
       {
-        playlistId: string
+        playlistId: Parameters<typeof reorderOrReplacePlaylistsItems>[0]
         body: Parameters<typeof reorderOrReplacePlaylistsItems>[1]
         params: Parameters<typeof reorderOrReplacePlaylistsItems>[2]
       }
@@ -2995,7 +3032,7 @@ export function useReorderOrReplacePlaylistsItems(
     Awaited<ReturnType<typeof reorderOrReplacePlaylistsItems>>,
     ApiError,
     {
-      playlistId: string
+      playlistId: Parameters<typeof reorderOrReplacePlaylistsItems>[0]
       body: Parameters<typeof reorderOrReplacePlaylistsItems>[1]
       params: Parameters<typeof reorderOrReplacePlaylistsItems>[2]
     }
@@ -3011,7 +3048,10 @@ export function useRemoveItemsPlaylist(
     UseMutationOptions<
       Awaited<ReturnType<typeof removeItemsPlaylist>>,
       ApiError,
-      { playlistId: string; body: Parameters<typeof removeItemsPlaylist>[1] }
+      {
+        playlistId: Parameters<typeof removeItemsPlaylist>[0]
+        body: Parameters<typeof removeItemsPlaylist>[1]
+      }
     >,
     'mutationFn'
   >
@@ -3019,7 +3059,10 @@ export function useRemoveItemsPlaylist(
   return useMutation<
     Awaited<ReturnType<typeof removeItemsPlaylist>>,
     ApiError,
-    { playlistId: string; body: Parameters<typeof removeItemsPlaylist>[1] }
+    {
+      playlistId: Parameters<typeof removeItemsPlaylist>[0]
+      body: Parameters<typeof removeItemsPlaylist>[1]
+    }
   >({
     mutationFn: ({ playlistId, body }) => removeItemsPlaylist(playlistId, body),
     ...options,
@@ -3275,7 +3318,10 @@ export function useCreatePlaylistForUser(
     UseMutationOptions<
       Awaited<ReturnType<typeof createPlaylistForUser>>,
       ApiError,
-      { userId: string; body: Parameters<typeof createPlaylistForUser>[1] }
+      {
+        userId: Parameters<typeof createPlaylistForUser>[0]
+        body: Parameters<typeof createPlaylistForUser>[1]
+      }
     >,
     'mutationFn'
   >
@@ -3283,7 +3329,10 @@ export function useCreatePlaylistForUser(
   return useMutation<
     Awaited<ReturnType<typeof createPlaylistForUser>>,
     ApiError,
-    { userId: string; body: Parameters<typeof createPlaylistForUser>[1] }
+    {
+      userId: Parameters<typeof createPlaylistForUser>[0]
+      body: Parameters<typeof createPlaylistForUser>[1]
+    }
   >({
     mutationFn: ({ userId, body }) => createPlaylistForUser(userId, body),
     ...options,
@@ -3296,7 +3345,10 @@ export function useFollowPlaylist(
     UseMutationOptions<
       Awaited<ReturnType<typeof followPlaylist>>,
       ApiError,
-      { playlistId: string; body: Parameters<typeof followPlaylist>[1] }
+      {
+        playlistId: Parameters<typeof followPlaylist>[0]
+        body: Parameters<typeof followPlaylist>[1]
+      }
     >,
     'mutationFn'
   >
@@ -3304,7 +3356,7 @@ export function useFollowPlaylist(
   return useMutation<
     Awaited<ReturnType<typeof followPlaylist>>,
     ApiError,
-    { playlistId: string; body: Parameters<typeof followPlaylist>[1] }
+    { playlistId: Parameters<typeof followPlaylist>[0]; body: Parameters<typeof followPlaylist>[1] }
   >({
     mutationFn: ({ playlistId, body }) => followPlaylist(playlistId, body),
     ...options,
@@ -3314,11 +3366,19 @@ export function useFollowPlaylist(
 /** @deprecated */
 export function useUnfollowPlaylist(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof unfollowPlaylist>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof unfollowPlaylist>>,
+      ApiError,
+      Parameters<typeof unfollowPlaylist>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof unfollowPlaylist>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof unfollowPlaylist>>,
+    ApiError,
+    Parameters<typeof unfollowPlaylist>[0]
+  >({
     mutationFn: (playlistId) => unfollowPlaylist(playlistId),
     ...options,
   })
@@ -3329,7 +3389,10 @@ export function useUploadCustomPlaylistCover(
     UseMutationOptions<
       Awaited<ReturnType<typeof uploadCustomPlaylistCover>>,
       ApiError,
-      { playlistId: string; body: Parameters<typeof uploadCustomPlaylistCover>[1] }
+      {
+        playlistId: Parameters<typeof uploadCustomPlaylistCover>[0]
+        body: Parameters<typeof uploadCustomPlaylistCover>[1]
+      }
     >,
     'mutationFn'
   >
@@ -3337,7 +3400,10 @@ export function useUploadCustomPlaylistCover(
   return useMutation<
     Awaited<ReturnType<typeof uploadCustomPlaylistCover>>,
     ApiError,
-    { playlistId: string; body: Parameters<typeof uploadCustomPlaylistCover>[1] }
+    {
+      playlistId: Parameters<typeof uploadCustomPlaylistCover>[0]
+      body: Parameters<typeof uploadCustomPlaylistCover>[1]
+    }
   >({
     mutationFn: ({ playlistId, body }) => uploadCustomPlaylistCover(playlistId, body),
     ...options,

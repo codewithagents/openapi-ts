@@ -220,13 +220,16 @@ describe('required query params', () => {
 })
 
 describe('inline response schemas', () => {
-  it('inline object response → Record<string, unknown>', async () => {
-    // searchPosts in blog-api has an inline object response
+  it('inline object response with properties is expanded to a typed object (#298)', async () => {
+    // searchPosts in blog-api has an inline object response { results: Post[]; total }
     const spec = await parseSpec(join(__dirname, '../__fixtures__/specs/blog-api.json'))
     const out = generateClient(spec).content
     expect(out).toContain('searchPosts')
-    // inline object: Record<string, unknown> (not 'unknown')
-    expect(out).toContain('Promise<Record<string, unknown>>')
+    // The inline object must be expanded, not collapsed to the Record catch-all.
+    expect(out).not.toContain('Promise<Record<string, unknown>>')
+    expect(out).toContain('Promise<{ results?: Post[]; total?: number }>')
+    // The referenced component schema must be imported from ./models.js.
+    expect(out).toMatch(/import type \{[^}]*\bPost\b[^}]*\} from '\.\/models\.js'/)
   })
 
   it('primitive response schema → correct primitive type', async () => {

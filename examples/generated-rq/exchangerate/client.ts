@@ -86,7 +86,12 @@ async function _request(
 export async function getLatestByBaseCurrency(
   baseCurrency: string,
   config?: Partial<ClientConfig>
-): Promise<Record<string, unknown>> {
+): Promise<{
+  base?: string
+  date?: string
+  rates?: Record<string, number>
+  time_last_updated?: number
+}> {
   const res = await _request('GET', `/latest/${encodeURIComponent(baseCurrency)}`, {}, config)
   return res.json()
 }

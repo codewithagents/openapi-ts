@@ -352,24 +352,28 @@ function buildKeyFactory(resource: string, entries: KeyEntry[]): string {
       // detail: (id) => ['resource', id]  or  getItemUsage: (id) => ['resource', 'getItemUsage', id]
       const param = entry.pathParams[0]!
       lines.push(
-        `  ${entry.key}: (${param}: string) => [${JSON.stringify(resource)}, ${keySegment}${param}] as const,`
+        `  ${entry.key}: (${param}: Parameters<typeof ${entry.funcName}>[0]) => [${JSON.stringify(resource)}, ${keySegment}${param}] as const,`
       )
     } else if (entry.pathParams.length === 1 && entry.hasQueryParams) {
       // detail with query params
       const param = entry.pathParams[0]!
       lines.push(
-        `  ${entry.key}: (${param}: string, ${paramsArg}) => [${JSON.stringify(resource)}, ${keySegment}${param}, params] as const,`
+        `  ${entry.key}: (${param}: Parameters<typeof ${entry.funcName}>[0], ${paramsArg}) => [${JSON.stringify(resource)}, ${keySegment}${param}, params] as const,`
       )
     } else if (!entry.hasQueryParams) {
       // multiple path params, no query params
-      const paramList = entry.pathParams.map((p) => `${p}: string`).join(', ')
+      const paramList = entry.pathParams
+        .map((p, i) => `${p}: Parameters<typeof ${entry.funcName}>[${i}]`)
+        .join(', ')
       const paramValues = entry.pathParams.join(', ')
       lines.push(
         `  ${entry.key}: (${paramList}) => [${JSON.stringify(resource)}, ${keySegment}${paramValues}] as const,`
       )
     } else {
       // multiple path params + query params
-      const paramList = entry.pathParams.map((p) => `${p}: string`).join(', ')
+      const paramList = entry.pathParams
+        .map((p, i) => `${p}: Parameters<typeof ${entry.funcName}>[${i}]`)
+        .join(', ')
       const paramValues = entry.pathParams.join(', ')
       lines.push(
         `  ${entry.key}: (${paramList}, ${paramsArg}) => [${JSON.stringify(resource)}, ${keySegment}${paramValues}, params] as const,`
@@ -433,11 +437,13 @@ function buildQueryOptionsFactory(
   const paramsRequired = keyEntry.hasRequiredQueryParams
   const pathParams = op.pathParams
 
-  // Build parameter list (path params are plain strings here, no nullish widening)
+  // Build parameter list. Path param types are derived from the client function
+  // signature (Parameters<typeof fn>[i]) rather than hard-coded to string, so
+  // integer path params stay typed as number (#300). No nullish widening here.
   const sigParts: string[] = []
-  for (const p of pathParams) {
-    sigParts.push(`${p}: string`)
-  }
+  pathParams.forEach((p, i) => {
+    sigParts.push(`${p}: Parameters<typeof ${op.funcName}>[${i}]`)
+  })
   if (hasQueryParams) {
     const paramsToken = paramsRequired ? 'params' : 'params?'
     sigParts.push(`${paramsToken}: Parameters<typeof ${op.funcName}>[${pathParams.length}]`)
@@ -496,10 +502,11 @@ function buildQueryHook(
 
   // Build parameter list
   const sigParts: string[] = []
-  for (const p of pathParams) {
-    // Widen path param types to allow nullish values — enables auto-disable without !!id boilerplate
-    sigParts.push(`${p}: string | undefined | null`)
-  }
+  pathParams.forEach((p, i) => {
+    // Widen path param types to allow nullish values — enables auto-disable without !!id boilerplate.
+    // The base type is derived from the client function so integer params stay number (#300).
+    sigParts.push(`${p}: Parameters<typeof ${op.funcName}>[${i}] | undefined | null`)
+  })
   if (hasQueryParams) {
     const paramsToken = paramsRequired ? 'params' : 'params?'
     sigParts.push(`${paramsToken}: Parameters<typeof ${op.funcName}>[${pathParams.length}]`)
@@ -556,11 +563,12 @@ function buildSuspenseQueryHook(
   const paramsRequired = keyEntry.hasRequiredQueryParams
   const pathParams = op.pathParams
 
-  // Suspense hooks require path params (no nullish widening — suspense doesn't support enabled)
+  // Suspense hooks require path params (no nullish widening — suspense doesn't support enabled).
+  // Path param types are derived from the client function so integer params stay number (#300).
   const sigParts: string[] = []
-  for (const p of pathParams) {
-    sigParts.push(`${p}: string`)
-  }
+  pathParams.forEach((p, i) => {
+    sigParts.push(`${p}: Parameters<typeof ${op.funcName}>[${i}]`)
+  })
   if (hasQueryParams) {
     const paramsToken = paramsRequired ? 'params' : 'params?'
     sigParts.push(`${paramsToken}: Parameters<typeof ${op.funcName}>[${pathParams.length}]`)
@@ -734,32 +742,35 @@ function buildMutationVars(
     const param = pathParams[0]!
     if (!hasBody && !hasQueryParams) {
       return {
-        variablesType: 'string',
+        variablesType: `Parameters<typeof ${funcName}>[0]`,
         mutationFnBody: `(${param}) => ${funcName}(${param})`,
       }
     }
     if (!hasBody && hasQueryParams) {
       // 1 path param + params only
       return {
-        variablesType: `{ ${param}: string; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`,
+        variablesType: `{ ${param}: Parameters<typeof ${funcName}>[0]; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`,
         mutationFnBody: `({ ${param}, params }) => ${funcName}(${param}, params)`,
       }
     }
     if (hasBody && !hasQueryParams) {
       return {
-        variablesType: `{ ${param}: string; body: Parameters<typeof ${funcName}>[1] }`,
+        variablesType: `{ ${param}: Parameters<typeof ${funcName}>[0]; body: Parameters<typeof ${funcName}>[1] }`,
         mutationFnBody: `({ ${param}, body }) => ${funcName}(${param}, body)`,
       }
     }
     // 1 path param + body + params
     return {
-      variablesType: `{ ${param}: string; body: Parameters<typeof ${funcName}>[1]; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`,
+      variablesType: `{ ${param}: Parameters<typeof ${funcName}>[0]; body: Parameters<typeof ${funcName}>[1]; params: Parameters<typeof ${funcName}>[${paramsArgIndex}] }`,
       mutationFnBody: `({ ${param}, body, params }) => ${funcName}(${param}, body, params)`,
     }
   }
 
-  // Multiple path params
-  const fields = pathParams.map((p) => `${p}: string`).join('; ')
+  // Multiple path params. Each path param type is derived from its positional
+  // index in the client function so integer params stay number (#300).
+  const fields = pathParams
+    .map((p, i) => `${p}: Parameters<typeof ${funcName}>[${i}]`)
+    .join('; ')
   if (!hasBody && !hasQueryParams) {
     const destructured = pathParams.join(', ')
     return {

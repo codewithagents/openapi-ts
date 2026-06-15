@@ -6,6 +6,7 @@ import type {
   ApiKeyList,
   AssistantObject,
   Batch,
+  BatchFileExpirationAfter,
   Certificate,
   ChatCompletionDeleted,
   ChatCompletionList,
@@ -88,6 +89,7 @@ import type {
   GroupUserAssignment,
   GroupUserDeletedResource,
   ImagesResponse,
+  InputItem,
   Invite,
   InviteDeleteResponse,
   InviteListResponse,
@@ -110,6 +112,7 @@ import type {
   ListVectorStoreFilesResponse,
   ListVectorStoresResponse,
   MessageObject,
+  Metadata,
   Model,
   ModifyAssistantRequest,
   ModifyCertificateRequest,
@@ -468,7 +471,13 @@ export async function listBatches(
 }
 
 export async function createBatch(
-  body: Record<string, unknown>,
+  body: {
+    input_file_id: string
+    endpoint: string
+    completion_window: string
+    metadata?: Metadata
+    output_expires_after?: BatchFileExpirationAfter
+  },
   config?: Partial<ClientConfig>
 ): Promise<Batch> {
   const res = await _request('POST', '/batches', { body }, config)
@@ -531,7 +540,7 @@ export async function getChatCompletion(
 
 export async function updateChatCompletion(
   completionId: string,
-  body: Record<string, unknown>,
+  body: { metadata: Metadata },
   config?: Partial<ClientConfig>
 ): Promise<CreateChatCompletionResponse> {
   const res = await _request(
@@ -826,7 +835,7 @@ export async function getEval(evalId: string, config?: Partial<ClientConfig>): P
 
 export async function updateEval(
   evalId: string,
-  body: Record<string, unknown>,
+  body: { name?: string; metadata?: Metadata },
   config?: Partial<ClientConfig>
 ): Promise<Eval> {
   const res = await _request('POST', `/evals/${encodeURIComponent(evalId)}`, { body }, config)
@@ -839,7 +848,7 @@ export async function updateEval(
 export async function deleteEval(
   evalId: string,
   config?: Partial<ClientConfig>
-): Promise<Record<string, unknown>> {
+): Promise<{ object: string; deleted: boolean; eval_id: string }> {
   const res = await _request('DELETE', `/evals/${encodeURIComponent(evalId)}`, {}, config)
   return res.json()
 }
@@ -915,7 +924,7 @@ export async function deleteEvalRun(
   evalId: string,
   runId: string,
   config?: Partial<ClientConfig>
-): Promise<Record<string, unknown>> {
+): Promise<{ object?: string; deleted?: boolean; run_id?: string }> {
   const res = await _request(
     'DELETE',
     `/evals/${encodeURIComponent(evalId)}/runs/${encodeURIComponent(runId)}`,
@@ -1262,7 +1271,7 @@ export async function adminApiKeysList(
 }
 
 export async function adminApiKeysCreate(
-  body: Record<string, unknown>,
+  body: { name: string },
   config?: Partial<ClientConfig>
 ): Promise<AdminApiKeyCreateResponse> {
   const res = await _request('POST', '/organization/admin_api_keys', { body }, config)
@@ -1285,7 +1294,7 @@ export async function adminApiKeysGet(
 export async function adminApiKeysDelete(
   keyId: string,
   config?: Partial<ClientConfig>
-): Promise<Record<string, unknown>> {
+): Promise<{ id: string; object: string; deleted: boolean }> {
   const res = await _request(
     'DELETE',
     `/organization/admin_api_keys/${encodeURIComponent(keyId)}`,
@@ -1298,11 +1307,11 @@ export async function adminApiKeysDelete(
 export async function listAuditLogs(
   params?: {
     effectiveAt?: unknown
-    projectIds?: string[]
-    eventTypes?: string[]
-    actorIds?: string[]
-    actorEmails?: string[]
-    resourceIds?: string[]
+    'project_ids[]'?: string[]
+    'event_types[]'?: string[]
+    'actor_ids[]'?: string[]
+    'actor_emails[]'?: string[]
+    'resource_ids[]'?: string[]
     limit?: number
     after?: string
     before?: string
@@ -1311,20 +1320,20 @@ export async function listAuditLogs(
 ): Promise<ListAuditLogsResponse> {
   const searchParams = new URLSearchParams()
   if (params?.effectiveAt != null) searchParams.set('effective_at', String(params.effectiveAt))
-  if (params?.projectIds != null) {
-    for (const v of params.projectIds) searchParams.append('project_ids[]', String(v))
+  if (params?.['project_ids[]'] != null) {
+    for (const v of params['project_ids[]']) searchParams.append('project_ids[]', String(v))
   }
-  if (params?.eventTypes != null) {
-    for (const v of params.eventTypes) searchParams.append('event_types[]', String(v))
+  if (params?.['event_types[]'] != null) {
+    for (const v of params['event_types[]']) searchParams.append('event_types[]', String(v))
   }
-  if (params?.actorIds != null) {
-    for (const v of params.actorIds) searchParams.append('actor_ids[]', String(v))
+  if (params?.['actor_ids[]'] != null) {
+    for (const v of params['actor_ids[]']) searchParams.append('actor_ids[]', String(v))
   }
-  if (params?.actorEmails != null) {
-    for (const v of params.actorEmails) searchParams.append('actor_emails[]', String(v))
+  if (params?.['actor_emails[]'] != null) {
+    for (const v of params['actor_emails[]']) searchParams.append('actor_emails[]', String(v))
   }
-  if (params?.resourceIds != null) {
-    for (const v of params.resourceIds) searchParams.append('resource_ids[]', String(v))
+  if (params?.['resource_ids[]'] != null) {
+    for (const v of params['resource_ids[]']) searchParams.append('resource_ids[]', String(v))
   }
   if (params?.limit != null) searchParams.set('limit', String(params.limit))
   if (params?.after != null) searchParams.set('after', String(params.after))
@@ -3013,13 +3022,13 @@ export async function createRun(
   threadId: string,
   body: CreateRunRequest,
   params?: {
-    include?: string[]
+    'include[]'?: string[]
   },
   config?: Partial<ClientConfig>
 ): Promise<RunObject> {
   const searchParams = new URLSearchParams()
-  if (params?.include != null) {
-    for (const v of params.include) searchParams.append('include[]', String(v))
+  if (params?.['include[]'] != null) {
+    for (const v of params['include[]']) searchParams.append('include[]', String(v))
   }
   const res = await _request(
     'POST',
@@ -3081,7 +3090,7 @@ export async function listRunSteps(
     order?: 'asc' | 'desc'
     after?: string
     before?: string
-    include?: string[]
+    'include[]'?: string[]
   },
   config?: Partial<ClientConfig>
 ): Promise<ListRunStepsResponse> {
@@ -3090,8 +3099,8 @@ export async function listRunSteps(
   if (params?.order != null) searchParams.set('order', String(params.order))
   if (params?.after != null) searchParams.set('after', String(params.after))
   if (params?.before != null) searchParams.set('before', String(params.before))
-  if (params?.include != null) {
-    for (const v of params.include) searchParams.append('include[]', String(v))
+  if (params?.['include[]'] != null) {
+    for (const v of params['include[]']) searchParams.append('include[]', String(v))
   }
   const res = await _request(
     'GET',
@@ -3107,13 +3116,13 @@ export async function getRunStep(
   runId: string,
   stepId: string,
   params?: {
-    include?: string[]
+    'include[]'?: string[]
   },
   config?: Partial<ClientConfig>
 ): Promise<RunStepObject> {
   const searchParams = new URLSearchParams()
-  if (params?.include != null) {
-    for (const v of params.include) searchParams.append('include[]', String(v))
+  if (params?.['include[]'] != null) {
+    for (const v of params['include[]']) searchParams.append('include[]', String(v))
   }
   const res = await _request(
     'GET',

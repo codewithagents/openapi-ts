@@ -116,7 +116,7 @@ export async function getAgentSessions(
 }
 
 export async function createAgentSession(
-  body: Record<string, unknown>,
+  body: { title?: string; curated_data: string; s3_key?: string; tool_name?: string },
   config?: Partial<ClientConfig>
 ): Promise<AgentSessionIndex> {
   const res = await _request('POST', '/api/agent_sessions', { body }, config)
@@ -178,7 +178,7 @@ export async function getLatestArticles(
 }
 
 export async function getArticleById(
-  id: string,
+  id: number,
   config?: Partial<ClientConfig>
 ): Promise<Record<string, unknown>> {
   const res = await _request('GET', `/api/articles/${encodeURIComponent(id)}`, {}, config)
@@ -186,7 +186,7 @@ export async function getArticleById(
 }
 
 export async function updateArticle(
-  id: string,
+  id: number,
   body: Article,
   config?: Partial<ClientConfig>
 ): Promise<void> {
@@ -264,7 +264,7 @@ export async function getUserAllArticles(
 }
 
 export async function unpublishArticle(
-  id: string,
+  id: number,
   params?: {
     note?: string
   },
@@ -297,19 +297,19 @@ export async function createSegment(config?: Partial<ClientConfig>): Promise<voi
 }
 
 export async function getSegment(
-  id: string,
+  id: number,
   config?: Partial<ClientConfig>
 ): Promise<Record<string, unknown>> {
   const res = await _request('GET', `/api/segments/${encodeURIComponent(id)}`, {}, config)
   return res.json()
 }
 
-export async function deleteSegment(id: string, config?: Partial<ClientConfig>): Promise<void> {
+export async function deleteSegment(id: number, config?: Partial<ClientConfig>): Promise<void> {
   await _request('DELETE', `/api/segments/${encodeURIComponent(id)}`, {}, config)
 }
 
 export async function getUsersInSegment(
-  id: string,
+  id: number,
   params?: {
     perPage?: number
   },
@@ -327,7 +327,7 @@ export async function getUsersInSegment(
 }
 
 export async function addUsersToSegment(
-  id: string,
+  id: number,
   body: SegmentUserIds,
   config?: Partial<ClientConfig>
 ): Promise<void> {
@@ -335,7 +335,7 @@ export async function addUsersToSegment(
 }
 
 export async function removeUsersFromSegment(
-  id: string,
+  id: number,
   body: SegmentUserIds,
   config?: Partial<ClientConfig>
 ): Promise<void> {
@@ -356,14 +356,14 @@ export async function createApiBillboards(
 }
 
 export async function getApiBillboardsById(
-  id: string,
+  id: number,
   config?: Partial<ClientConfig>
 ): Promise<void> {
   await _request('GET', `/api/billboards/${encodeURIComponent(id)}`, {}, config)
 }
 
 export async function updateApiBillboardsById(
-  id: string,
+  id: number,
   body: Record<string, unknown>,
   config?: Partial<ClientConfig>
 ): Promise<Record<string, unknown>> {
@@ -372,7 +372,7 @@ export async function updateApiBillboardsById(
 }
 
 export async function updateApiBillboardsByIdUnpublish(
-  id: string,
+  id: number,
   config?: Partial<ClientConfig>
 ): Promise<void> {
   await _request('PUT', `/api/billboards/${encodeURIComponent(id)}/unpublish`, {}, config)
@@ -396,7 +396,7 @@ export async function getCommentsByArticleId(
   return res.json()
 }
 
-export async function getCommentById(id: string, config?: Partial<ClientConfig>): Promise<void> {
+export async function getCommentById(id: number, config?: Partial<ClientConfig>): Promise<void> {
   await _request('GET', `/api/comments/${encodeURIComponent(id)}`, {}, config)
 }
 
@@ -496,7 +496,7 @@ export async function createOrganization(
 }
 
 export async function getOrganizationById(
-  id: string,
+  id: number,
   config?: Partial<ClientConfig>
 ): Promise<Record<string, unknown>> {
   const res = await _request('GET', `/api/organizations/${encodeURIComponent(id)}`, {}, config)
@@ -504,7 +504,7 @@ export async function getOrganizationById(
 }
 
 export async function updateApiOrganizationsById(
-  id: string,
+  id: number,
   body: Organization,
   config?: Partial<ClientConfig>
 ): Promise<void> {
@@ -512,7 +512,7 @@ export async function updateApiOrganizationsById(
 }
 
 export async function deleteApiOrganizationsById(
-  id: string,
+  id: number,
   config?: Partial<ClientConfig>
 ): Promise<void> {
   await _request('DELETE', `/api/organizations/${encodeURIComponent(id)}`, {}, config)
@@ -524,19 +524,27 @@ export async function getApiPages(config?: Partial<ClientConfig>): Promise<Page[
 }
 
 export async function createApiPages(
-  body: Record<string, unknown>,
+  body: {
+    title?: string
+    slug?: string
+    description?: string
+    body_markdown?: string
+    body_json?: string
+    is_top_level_path?: boolean
+    template?: string
+  },
   config?: Partial<ClientConfig>
 ): Promise<void> {
   await _request('POST', '/api/pages', { body }, config)
 }
 
-export async function getApiPagesById(id: string, config?: Partial<ClientConfig>): Promise<Page> {
+export async function getApiPagesById(id: number, config?: Partial<ClientConfig>): Promise<Page> {
   const res = await _request('GET', `/api/pages/${encodeURIComponent(id)}`, {}, config)
   return res.json()
 }
 
 export async function updateApiPagesById(
-  id: string,
+  id: number,
   body: Page,
   config?: Partial<ClientConfig>
 ): Promise<Page> {
@@ -545,7 +553,7 @@ export async function updateApiPagesById(
 }
 
 export async function deleteApiPagesById(
-  id: string,
+  id: number,
   config?: Partial<ClientConfig>
 ): Promise<Page> {
   const res = await _request('DELETE', `/api/pages/${encodeURIComponent(id)}`, {}, config)
@@ -705,31 +713,31 @@ export async function getTags(
   return res.json()
 }
 
-export async function suspendUser(id: string, config?: Partial<ClientConfig>): Promise<void> {
+export async function suspendUser(id: number, config?: Partial<ClientConfig>): Promise<void> {
   await _request('PUT', `/api/users/${encodeURIComponent(id)}/suspend`, {}, config)
 }
 
-export async function limitUser(id: string, config?: Partial<ClientConfig>): Promise<void> {
+export async function limitUser(id: number, config?: Partial<ClientConfig>): Promise<void> {
   await _request('PUT', `/api/users/${encodeURIComponent(id)}/limited`, {}, config)
 }
 
-export async function unLimitUser(id: string, config?: Partial<ClientConfig>): Promise<void> {
+export async function unLimitUser(id: number, config?: Partial<ClientConfig>): Promise<void> {
   await _request('DELETE', `/api/users/${encodeURIComponent(id)}/limited`, {}, config)
 }
 
-export async function spamUser(id: string, config?: Partial<ClientConfig>): Promise<void> {
+export async function spamUser(id: number, config?: Partial<ClientConfig>): Promise<void> {
   await _request('PUT', `/api/users/${encodeURIComponent(id)}/spam`, {}, config)
 }
 
-export async function unSpamUser(id: string, config?: Partial<ClientConfig>): Promise<void> {
+export async function unSpamUser(id: number, config?: Partial<ClientConfig>): Promise<void> {
   await _request('DELETE', `/api/users/${encodeURIComponent(id)}/spam`, {}, config)
 }
 
-export async function trustUser(id: string, config?: Partial<ClientConfig>): Promise<void> {
+export async function trustUser(id: number, config?: Partial<ClientConfig>): Promise<void> {
   await _request('PUT', `/api/users/${encodeURIComponent(id)}/trusted`, {}, config)
 }
 
-export async function unTrustUser(id: string, config?: Partial<ClientConfig>): Promise<void> {
+export async function unTrustUser(id: number, config?: Partial<ClientConfig>): Promise<void> {
   await _request('DELETE', `/api/users/${encodeURIComponent(id)}/trusted`, {}, config)
 }
 
@@ -746,7 +754,7 @@ export async function getUser(
   return res.json()
 }
 
-export async function unpublishUser(id: string, config?: Partial<ClientConfig>): Promise<void> {
+export async function unpublishUser(id: number, config?: Partial<ClientConfig>): Promise<void> {
   await _request('PUT', `/api/users/${encodeURIComponent(id)}/unpublish`, {}, config)
 }
 
