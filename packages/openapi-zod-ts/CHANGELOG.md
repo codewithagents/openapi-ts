@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.0.0...openapi-zod-ts-v2.0.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* **generator:** type nullable array query params as arrays ([#303](https://github.com/codewithagents/openapi-zod-ts/issues/303)) ([#304](https://github.com/codewithagents/openapi-zod-ts/issues/304)) ([751d25b](https://github.com/codewithagents/openapi-zod-ts/commit/751d25b14afca874e5fd76fa726483f60cdb3e7e))
+
 ## [2.0.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v1.1.0...openapi-zod-ts-v2.0.0) (2026-06-15)
 
 
