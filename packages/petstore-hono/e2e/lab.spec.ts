@@ -571,3 +571,333 @@ test.fixme(
     expect((await labPost(request, 'inline-body', { title: 'hello' })).status).toBe(422) // required rank
   },
 )
+
+// ===========================================================================
+// PHASE 2 — Bug-hunt seams
+// For each seam: assert the CORRECT promised contract, then observe actual
+// behavior and mark failing assertions test.fixme with root-cause notes.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// P1: query min/max/pattern violations (already marked fixme in section H above)
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// P2: /lab/delimited-query — style/explode not deserialized
+// ---------------------------------------------------------------------------
+
+test.fixme(
+  'lab/delimited-query: csv/ssv/psv query arrays are split by delimiter (Phase 2: generator reads raw string, no splitting)',
+  async ({ request }) => {
+    // PROMISED: csv=a,b,c&ssv=x%20y%20z&psv=p|q|r are deserialized to string arrays.
+    // ACTUAL: generator emits c.req.query('csv') → raw string 'a,b,c' (not split).
+    // Root cause: router.ts emits paramExtract for array params as c.req.query(name)
+    // (a string), not c.req.queries(name) or manual split. Style/explode are ignored.
+    const res = await labGet(request, 'delimited-query?csv=a,b,c&ssv=x%20y%20z&psv=p|q|r')
+    expect(res.status).toBe(200)
+    const body = res.body as Record<string, unknown>
+    expect(body.csv).toEqual(['a', 'b', 'c'])
+    expect(body.ssv).toEqual(['x', 'y', 'z'])
+    expect(body.psv).toEqual(['p', 'q', 'r'])
+  },
+)
+
+test('lab/delimited-query: missing required array params → 422', async ({ request }) => {
+  // Required params absent → z.string() check fires → 422. This leg is active.
+  expect((await labGet(request, 'delimited-query')).status).toBe(422)
+  expect((await labGet(request, 'delimited-query?csv=a,b')).status).toBe(422) // missing ssv, psv
+})
+
+// ---------------------------------------------------------------------------
+// P3: /lab/deep-filter — deepObject not assembled
+// ---------------------------------------------------------------------------
+
+test.fixme(
+  'lab/deep-filter: filter[gte] and filter[lte] are assembled into a nested object (Phase 2: generator uses c.req.query("filter") which is undefined)',
+  async ({ request }) => {
+    // PROMISED: filter[gte]=10&filter[lte]=100 is assembled into { gte: 10, lte: 100 }.
+    // ACTUAL: c.req.query('filter') looks for key literally named 'filter' (not 'filter[gte]').
+    // This returns undefined → z.string() validation fails → 422 instead of 200.
+    // Root cause: router.ts emits c.req.query('filter') for deepObject params. The query
+    // key 'filter' does not exist; only 'filter[gte]' and 'filter[lte]' exist. The required
+    // string check fires → 422. A conformant implementation would read c.req.queries() and
+    // assemble the nested object from the bracket-notation keys.
+    const res = await labGet(request, 'deep-filter?filter[gte]=10&filter[lte]=100&filter[color]=blue')
+    expect(res.status).toBe(200)
+    const body = res.body as Record<string, unknown>
+    expect(body.gte).toBe(10)
+    expect(body.lte).toBe(100)
+    expect(body.color).toBe('blue')
+  },
+)
+
+// ---------------------------------------------------------------------------
+// P4: /lab/path/{score} — in-range active, out-of-range has no validation
+// ---------------------------------------------------------------------------
+
+test('lab/path/{score}: in-range integer path param round-trips as number', async ({ request }) => {
+  // In-range (10-20): the generator emits c.req.param('score') → string; handler does
+  // Number(score). This leg is active: returns 200 with { score: 15 }.
+  const res = await labGet(request, 'path/15')
+  expect(res.status).toBe(200)
+  const body = res.body as Record<string, unknown>
+  expect(body.score).toBe(15)
+  expect(typeof body.score).toBe('number')
+})
+
+test.fixme(
+  'lab/path/{score}: out-of-range integer path param → 422 (Phase 2: generator emits no path-param validation)',
+  async ({ request }) => {
+    // PROMISED: score=25 (exceeds maximum:20) → 422.
+    // ACTUAL: generator emits c.req.param('score') with NO range validation. The router
+    // calls service.labPath('25') directly → 200 with { score: 25 }.
+    // Root cause: router.ts path-param extraction has no Zod validation block for integer
+    // path params; only format validators (uuid, email, date-time, url) have special handling.
+    expect((await labGet(request, 'path/5')).status).toBe(422)  // below minimum:10
+    expect((await labGet(request, 'path/25')).status).toBe(422) // above maximum:20
+  },
+)
+
+// ---------------------------------------------------------------------------
+// P6: /lab/form-body — application/x-www-form-urlencoded not decoded
+// ---------------------------------------------------------------------------
+
+test.fixme(
+  'lab/form-body: form-urlencoded body is decoded and echoed (Phase 2: generator calls c.req.json() → 500)',
+  async ({ request }) => {
+    // PROMISED: POST with application/x-www-form-urlencoded body is decoded to { label, quantity }.
+    // ACTUAL: router emits const body = await c.req.json() which calls JSON.parse() on the
+    // URL-encoded string. JSON.parse('label=hello&quantity=5') throws a SyntaxError.
+    // Hono's default error handler catches this and returns 500 Internal Server Error.
+    // Root cause: getBodyInfo() in shared.ts only inspects content['application/json'];
+    // non-JSON content types get { typeName: undefined } → no schema, plain c.req.json() call.
+    const res = await request.post(`${LAB_BASE}/form-body`, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      data: 'label=hello&quantity=5',
+    })
+    expect(res.status()).toBe(200)
+    const body = await res.json()
+    expect(body).toEqual({ label: 'hello', quantity: 5 })
+  },
+)
+
+// ---------------------------------------------------------------------------
+// P7: /lab/gallery — multipart/form-data not decoded
+// ---------------------------------------------------------------------------
+
+test.fixme(
+  'lab/gallery: multipart photo upload returns count of uploaded files (Phase 2: generator calls c.req.json() → 500)',
+  async ({ request }) => {
+    // PROMISED: POST multipart/form-data with photos[] → 200 { count: 1 }.
+    // ACTUAL: router emits const body = await c.req.json() which throws for multipart body.
+    // Hono returns 500. Same root cause as /lab/form-body.
+    // Root cause: getBodyInfo() ignores multipart/form-data content type → c.req.json() called.
+    const res = await request.post(`${LAB_BASE}/gallery`, {
+      multipart: {
+        photos: {
+          name: 'photo.jpg',
+          mimeType: 'image/jpeg',
+          buffer: Buffer.from('fake-jpeg-bytes'),
+        },
+      },
+    })
+    expect(res.status()).toBe(200)
+    const body = await res.json()
+    expect((body as Record<string, unknown>).count).toBe(1)
+  },
+)
+
+// ---------------------------------------------------------------------------
+// P8: /lab/accepted — 202-only response; generator defaults to 200
+// ---------------------------------------------------------------------------
+
+test.fixme(
+  'lab/accepted: POST with only 202 declared → server returns 202 (Phase 2: generator returns 200)',
+  async ({ request }) => {
+    // PROMISED: spec declares only 202 Accepted. A conformant server returns 202.
+    // ACTUAL: getResponseStatus() in router.ts checks responses['201'], responses['204'],
+    // responses['200'] — all absent — then falls through to default { status: 200 }.
+    // The router calls c.json(await service.labAccepted(body)) with hardcoded 200.
+    // Root cause: packages/openapi-server/src/plugins/router.ts getResponseStatus() does not
+    // handle 202 (or any non-200/201/204 success code); falls through to default 200.
+    const res = await request.post(`${LAB_BASE}/accepted`, {
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      data: { baseField: 'b', extraField: 7 },
+    })
+    expect(res.status()).toBe(202)
+  },
+)
+
+// ---------------------------------------------------------------------------
+// P9: /lab/dual-status — handler cannot override response status
+// ---------------------------------------------------------------------------
+
+test.fixme(
+  'lab/dual-status: service cannot select 202 when both 200 and 202 are declared (Phase 2: always 200)',
+  async ({ request }) => {
+    // PROMISED: the service should be able to return 202 (still running) vs 200 (done).
+    // A conformant implementation would expose the status as a handler parameter.
+    // ACTUAL: generator always emits c.json(await service.labDualStatus()) which hardcodes
+    // status 200 regardless of the declared response variants. There is no API surface for
+    // the service to select a response status code.
+    // Root cause: the service interface method returns a value (not a status+value pair).
+    // The router always calls c.json(result) with default 200. Multi-status is not expressible.
+    const res = await labGet(request, 'dual-status')
+    // A conformant server would let the service signal 202 for a long-running task.
+    // We assert 202 here to document the promised contract; actual is 200.
+    expect(res.status).toBe(202)
+    expect((res.body as Record<string, unknown>).phase).toBe('done')
+  },
+)
+
+// ---------------------------------------------------------------------------
+// P10: /lab/plain-text and /lab/download — non-JSON response not expressible
+// ---------------------------------------------------------------------------
+
+test.fixme(
+  'lab/plain-text: GET returns Content-Type: text/plain with raw string body (Phase 2: generator calls c.json())',
+  async ({ request }) => {
+    // PROMISED: spec declares text/plain response → Content-Type: text/plain, raw string body.
+    // ACTUAL: getBodyInfo returns void for non-JSON response content types. The generator
+    // derives Promise<void> as the return type and calls c.json(await service.labPlainText())
+    // which is c.json(undefined) → JSON null with Content-Type: application/json.
+    // Root cause: router.ts always emits c.json() regardless of the spec response content type.
+    const res = await request.get(`${LAB_BASE}/plain-text`, {
+      headers: { Accept: 'text/plain' },
+    })
+    expect(res.status()).toBe(200)
+    expect(res.headers()['content-type']).toMatch(/text\/plain/)
+    const text = await res.text()
+    expect(text).toBe('lab plain text body')
+  },
+)
+
+test.fixme(
+  'lab/download: GET returns Content-Type: application/octet-stream with binary body (Phase 2: generator calls c.json())',
+  async ({ request }) => {
+    // PROMISED: spec declares application/octet-stream → binary download response.
+    // ACTUAL: same as plain-text: generator emits c.json(undefined) → JSON null.
+    // Root cause: router.ts always emits c.json() regardless of response content type.
+    const res = await request.get(`${LAB_BASE}/download`, {
+      headers: { Accept: 'application/octet-stream' },
+    })
+    expect(res.status()).toBe(200)
+    expect(res.headers()['content-type']).toMatch(/octet-stream/)
+  },
+)
+
+// ---------------------------------------------------------------------------
+// P11: /lab/int64 — min leg active; max bound loses precision in JavaScript
+// ---------------------------------------------------------------------------
+
+test('lab/int64: valid int64 (small) round-trips and negative value is rejected', async ({
+  request,
+}) => {
+  // Min leg: ledger >= 0 is validated via LabInt64Schema. These are active.
+  const ok = await labPost(request, 'int64', { ledger: 1_000_000 })
+  expect(ok.status).toBe(LAB_OK)
+  expect((ok.body as Record<string, unknown>).ledger).toBe(1_000_000)
+
+  // ledger < 0: LabInt64Schema.min(0) rejects it.
+  expect((await labPost(request, 'int64', { ledger: -1 })).status).toBe(422)
+})
+
+test.fixme(
+  'lab/int64: int64 value > MAX_SAFE_INTEGER is accepted and echoed (Phase 2: JS precision loss + Zod implicit int range)',
+  async ({ request }) => {
+    // PROMISED: ledger=9007199254740993 (2^53 + 1) is a valid spec value (minimum:0, no maximum).
+    // A conformant server should accept it and echo it precisely.
+    //
+    // ACTUAL observed (status 422): TWO compounding bugs.
+    //   (a) JavaScript number 9007199254740993 === 9007199254740992 (IEEE 754 can't represent 2^53+1).
+    //       Playwright sends 9007199254740992 in the JSON body (silent client-side precision loss).
+    //   (b) Zod v4 z.number().int() adds an implicit "integers must be within safe integer range"
+    //       constraint: maximum = 9007199254740991. The received value 9007199254740992 exceeds
+    //       this implicit bound → Zod rejects with 422 ("Too big: expected int to be <=9007199254740991").
+    //   Net result: large int64 values cannot be sent OR received without precision loss or Zod rejection.
+    //
+    // Root cause (server-side): z.number().int() in Zod v4 implicitly constrains to [-MAX_SAFE, MAX_SAFE].
+    // Root cause (client-side): JavaScript JSON cannot represent integers > 2^53 - 1.
+    const MAX_SAFE_PLUS_ONE = 9007199254740993 // === 9007199254740992 in JS
+    const res = await labPost(request, 'int64', { ledger: MAX_SAFE_PLUS_ONE })
+    // Promised: 200 with precise echo. Actual: 422 (Zod implicit int range + JS precision loss).
+    expect(res.status).toBe(LAB_OK)
+    const body = res.body as Record<string, unknown>
+    expect(body.ledger).toBe(MAX_SAFE_PLUS_ONE)
+  },
+)
+
+// ---------------------------------------------------------------------------
+// P12: DELETE /pets/{id} → 404 for nonexistent pet (service throws → Hono 500)
+// ---------------------------------------------------------------------------
+
+test.fixme(
+  'DELETE /pets/{id}: nonexistent ID → 404 Not Found (Phase 2: service throws Error → Hono returns 500)',
+  async ({ request }) => {
+    // PROMISED: spec declares 404 for deleting a nonexistent pet.
+    // ACTUAL: the service throws `new Error('Pet <id> not found')`. The generated router has
+    // no error-mapping middleware. Hono's default error handler catches any thrown Error
+    // and returns 500 Internal Server Error instead of the promised 404.
+    // Root cause: the service interface has no typed error-return mechanism. Throwing a
+    // generic Error cannot be mapped to a specific HTTP status by the generated router.
+    // A conformant implementation would use HTTPException(404) or a typed error union.
+    const nonexistentId = '00000000-0000-0000-0000-000000000000'
+    const res = await request.delete(`${API_BASE}/pets/${nonexistentId}`)
+    expect(res.status()).toBe(404)
+  },
+)
+
+// ---------------------------------------------------------------------------
+// P13: K1/K2 — malformed / empty JSON body → clean 4xx (actual: 500)
+// ---------------------------------------------------------------------------
+
+test.fixme(
+  'K1: malformed JSON body → 400 Bad Request (Phase 2: c.req.json() throws → Hono returns 500)',
+  async ({ request }) => {
+    // PROMISED: a conformant server returns 400 Bad Request for syntactically invalid JSON.
+    // ACTUAL: c.req.json() calls JSON.parse() on the raw body. A SyntaxError is thrown.
+    // Hono's default error handler catches it and returns 500 Internal Server Error.
+    // Root cause: the generated router wraps c.req.json() with no try/catch. Hono's
+    // onError hook catches it as an unhandled exception and returns 500.
+    const res = await request.post(`${LAB_BASE}/numeric`, {
+      headers: { 'Content-Type': 'application/json' },
+      data: '{bounded: 15, exclusive: 0.5, multiple: 25}', // invalid JSON (unquoted key)
+    })
+    expect(res.status()).toBe(400)
+  },
+)
+
+test.fixme(
+  'K2: empty request body → 400 Bad Request (Phase 2: c.req.json() throws → Hono returns 500)',
+  async ({ request }) => {
+    // PROMISED: empty body with Content-Type: application/json → 400.
+    // ACTUAL: JSON.parse('') throws SyntaxError → Hono 500.
+    // Same root cause as K1.
+    const res = await request.post(`${LAB_BASE}/numeric`, {
+      headers: { 'Content-Type': 'application/json' },
+      data: '',
+    })
+    expect(res.status()).toBe(400)
+  },
+)
+
+// ---------------------------------------------------------------------------
+// P14: K4/K5 — wrong Content-Type with valid JSON body
+// ---------------------------------------------------------------------------
+
+test.fixme(
+  'K4: JSON body sent as text/plain → 415 Unsupported Media Type (Phase 2: c.req.json() ignores Content-Type → 200)',
+  async ({ request }) => {
+    // PROMISED: a conformant server rejects JSON bodies sent with Content-Type: text/plain
+    // with 415 Unsupported Media Type.
+    // ACTUAL: Hono's c.req.json() ignores the Content-Type header and attempts to parse the
+    // raw body as JSON regardless. A valid JSON object sent as text/plain succeeds → 200.
+    // Root cause: c.req.json() in Hono parses the body unconditionally without checking the
+    // Content-Type header. A conformant implementation would inspect Content-Type first.
+    const res = await request.post(`${LAB_BASE}/numeric`, {
+      headers: { 'Content-Type': 'text/plain' },
+      data: JSON.stringify({ bounded: 15, exclusive: 0.5, multiple: 25 }),
+    })
+    expect(res.status()).toBe(415)
+  },
+)

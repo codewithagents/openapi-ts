@@ -61,7 +61,10 @@
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
-        "responses": { "204": { "description": "Deleted" } }
+        "responses": {
+          "204": { "description": "Deleted" },
+          "404": { "description": "Pet not found" }
+        }
       }
     },
     "/lab/numeric": {
@@ -523,6 +526,246 @@
           "422": { "description": "Validation exception" }
         }
       }
+    },
+    "/lab/delimited-query": {
+      "get": {
+        "operationId": "labDelimitedQuery",
+        "summary": "Echo CSV/SSV/PSV query parameters (style/explode serialization seam)",
+        "parameters": [
+          {
+            "name": "csv",
+            "in": "query",
+            "required": true,
+            "style": "form",
+            "explode": false,
+            "schema": { "type": "array", "items": { "type": "string" } }
+          },
+          {
+            "name": "ssv",
+            "in": "query",
+            "required": true,
+            "style": "spaceDelimited",
+            "explode": false,
+            "schema": { "type": "array", "items": { "type": "string" } }
+          },
+          {
+            "name": "psv",
+            "in": "query",
+            "required": true,
+            "style": "pipeDelimited",
+            "explode": false,
+            "schema": { "type": "array", "items": { "type": "string" } }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "echoed delimited params as arrays",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabDelimitedEcho" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/deep-filter": {
+      "get": {
+        "operationId": "labDeepFilter",
+        "summary": "Echo a deepObject filter parameter (style: deepObject)",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "required": true,
+            "style": "deepObject",
+            "explode": true,
+            "schema": {
+              "type": "object",
+              "required": ["gte", "lte"],
+              "properties": {
+                "gte": { "type": "number" },
+                "lte": { "type": "number" },
+                "color": { "type": "string" }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "echoed filter object",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabDeepFilterEcho" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/path/{score}": {
+      "get": {
+        "operationId": "labPath",
+        "summary": "Echo an integer path parameter with min/max constraints",
+        "parameters": [
+          {
+            "name": "score",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "minimum": 10, "maximum": 20 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "echoed score",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabPathEcho" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/form-body": {
+      "post": {
+        "operationId": "labFormBody",
+        "summary": "Echo a form-urlencoded body (application/x-www-form-urlencoded seam)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": ["label", "quantity"],
+                "properties": {
+                  "label": { "type": "string" },
+                  "quantity": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed form fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "label": { "type": "string" },
+                    "quantity": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
+    },
+    "/lab/gallery": {
+      "post": {
+        "operationId": "labGallery",
+        "summary": "Upload multiple photos via multipart/form-data (multipart seam)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["photos"],
+                "properties": {
+                  "photos": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "binary" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "upload acknowledgement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lab/accepted": {
+      "post": {
+        "operationId": "labAccepted",
+        "summary": "202-only success response (success-status seam: generator ignores 202)",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabAllOf" } } }
+        },
+        "responses": {
+          "202": {
+            "description": "accepted for async processing",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabAllOf" } } }
+          }
+        }
+      }
+    },
+    "/lab/dual-status": {
+      "get": {
+        "operationId": "labDualStatus",
+        "summary": "Handler cannot override response status (200+202 declared; generator always emits 200)",
+        "responses": {
+          "200": {
+            "description": "task complete",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabDualStatusEcho" } } }
+          },
+          "202": {
+            "description": "task still running",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabDualStatusEcho" } } }
+          }
+        }
+      }
+    },
+    "/lab/plain-text": {
+      "get": {
+        "operationId": "labPlainText",
+        "summary": "Return a plain-text response (non-JSON content-type seam)",
+        "responses": {
+          "200": {
+            "description": "plain text body",
+            "content": { "text/plain": { "schema": { "type": "string" } } }
+          }
+        }
+      }
+    },
+    "/lab/download": {
+      "get": {
+        "operationId": "labDownload",
+        "summary": "Return a binary download (non-JSON content-type seam)",
+        "responses": {
+          "200": {
+            "description": "binary file content",
+            "content": { "application/octet-stream": { "schema": { "type": "string", "format": "binary" } } }
+          }
+        }
+      }
+    },
+    "/lab/int64": {
+      "post": {
+        "operationId": "labInt64",
+        "summary": "Echo an int64 field; large values lose precision in JavaScript",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabInt64" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "echoed int64",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LabInt64" } } }
+          },
+          "422": { "description": "Validation exception" }
+        }
+      }
     }
   },
   "components": {
@@ -822,6 +1065,45 @@
         "required": ["token"],
         "properties": {
           "token": { "type": "string" }
+        }
+      },
+      "LabDelimitedEcho": {
+        "type": "object",
+        "required": ["csv", "ssv", "psv"],
+        "properties": {
+          "csv": { "type": "array", "items": { "type": "string" } },
+          "ssv": { "type": "array", "items": { "type": "string" } },
+          "psv": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "LabDeepFilterEcho": {
+        "type": "object",
+        "required": ["gte", "lte"],
+        "properties": {
+          "gte": { "type": "number" },
+          "lte": { "type": "number" },
+          "color": { "type": "string" }
+        }
+      },
+      "LabPathEcho": {
+        "type": "object",
+        "required": ["score"],
+        "properties": {
+          "score": { "type": "integer" }
+        }
+      },
+      "LabDualStatusEcho": {
+        "type": "object",
+        "required": ["phase"],
+        "properties": {
+          "phase": { "type": "string" }
+        }
+      },
+      "LabInt64": {
+        "type": "object",
+        "required": ["ledger"],
+        "properties": {
+          "ledger": { "type": "integer", "format": "int64", "minimum": 0 }
         }
       }
     }

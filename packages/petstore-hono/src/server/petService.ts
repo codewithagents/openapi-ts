@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import type { PetstoreService } from '../../generated/service.js'
-import type { Pet } from '../../generated/models.js'
+import type {
+  Pet,
+  LabDelimitedEcho,
+  LabDeepFilterEcho,
+} from '../../generated/models.js'
 
 const pets = new Map<string, Pet>()
 
@@ -23,6 +27,10 @@ export const petService: PetstoreService = {
     return pet
   },
   async deletePet(id) {
+    // Throw for missing pets. The spec declares 404 for this case; however, the generated
+    // router has no mechanism to map thrown Errors to 4xx responses. Hono catches any thrown
+    // Error and returns a 500 Internal Server Error instead of the promised 404.
+    if (!pets.has(id)) throw new Error(`Pet ${id} not found`)
     pets.delete(id)
   },
 
@@ -157,6 +165,71 @@ export const petService: PetstoreService = {
 
   async labInlineBody(body) {
     // Inline body: no Zod validation wired by the generator (inline schema, not a ref).
+    return body
+  },
+
+  // -------------------------------------------------------------------------
+  // Phase 2 echo handlers
+  // -------------------------------------------------------------------------
+
+  async labDelimitedQuery(params) {
+    // The generator extracts csv/ssv/psv as bare strings via c.req.query().
+    // The promised contract is arrays split by delimiter. We echo params as-is
+    // to reveal the bug: the values are raw delimited strings, not arrays.
+    return params as unknown as LabDelimitedEcho
+  },
+
+  async labDeepFilter(params) {
+    // The generator uses c.req.query('filter') which cannot read deepObject params.
+    // filter[gte]=10 is query key 'filter[gte]', not 'filter'. params.filter is undefined.
+    // This handler will not be reached (the router 422s before calling it).
+    return params as unknown as LabDeepFilterEcho
+  },
+
+  async labPath(score) {
+    // score is a raw path param string (e.g. '15'). No range validation is wired.
+    // The promised contract: { score: 15 } (number). Actual: string '15' cast to number.
+    return { score: Number(score) }
+  },
+
+  async labFormBody(body) {
+    // form-urlencoded body: the generator calls c.req.json() which will throw a
+    // SyntaxError on URL-encoded data. This handler is not reached; Hono returns 500.
+    return body
+  },
+
+  async labGallery(body) {
+    // multipart/form-data: the generator calls c.req.json() which throws for multipart.
+    // This handler is not reached; Hono returns 500.
+    return body
+  },
+
+  async labAccepted(body) {
+    // 202-only declared response. Generator defaults to 200 and Promise<void> return.
+    // The router calls c.json(undefined) so the response is JSON null at status 200.
+    void body
+  },
+
+  async labDualStatus() {
+    // GET with 200+202 declared. Generator picks 200. There is no mechanism for the
+    // service to signal 202; the router always calls c.json(await service.labDualStatus()).
+    return { phase: 'done' }
+  },
+
+  async labPlainText() {
+    // text/plain response. Generator derives Promise<void> (no json response type).
+    // Router calls c.json(undefined) → JSON null, Content-Type: application/json.
+    // The promised contract: Content-Type: text/plain, raw string body.
+  },
+
+  async labDownload() {
+    // application/octet-stream response. Same as plain-text: generator uses c.json(undefined).
+    // Promised: binary download with correct Content-Type. Actual: JSON null.
+  },
+
+  async labInt64(body) {
+    // int64 echo: min leg (ledger >= 0) is validated. For large int64 values
+    // (> Number.MAX_SAFE_INTEGER = 2^53 - 1), JavaScript JSON.parse loses precision.
     return body
   },
 }

@@ -179,3 +179,11 @@ export const LabQueryEchoSchema = z.object({
 export const LabHeaderEchoSchema = z.object({
   token: z.string(),
 })
+
+// Phase 2 schemas
+
+// Int64 echo: JavaScript numbers are IEEE 754 doubles (53-bit mantissa).
+// Large int64 values (> 2^53 - 1) will lose precision on round-trip.
+export const LabInt64Schema = z.object({
+  ledger: z.number().int().min(0),
+})
