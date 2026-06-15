@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { PetstoreService } from '../../generated/service.js'
+import { HttpError } from '../../generated/router.js'
 import type {
   Pet,
   LabDelimitedEcho,
@@ -23,14 +24,11 @@ export const petService: PetstoreService = {
   },
   async getPet(id) {
     const pet = pets.get(id)
-    if (!pet) throw new Error(`Pet ${id} not found`)
+    if (!pet) throw new HttpError(404, `Pet ${id} not found`)
     return pet
   },
   async deletePet(id) {
-    // Throw for missing pets. The spec declares 404 for this case; however, the generated
-    // router has no mechanism to map thrown Errors to 4xx responses. Hono catches any thrown
-    // Error and returns a 500 Internal Server Error instead of the promised 404.
-    if (!pets.has(id)) throw new Error(`Pet ${id} not found`)
+    if (!pets.has(id)) throw new HttpError(404, `Pet ${id} not found`)
     pets.delete(id)
   },
 
