@@ -478,7 +478,23 @@ function buildRouteHandler(op: RouteOperation, indent: string, schemaNames?: Set
   let bodyVarName = 'body'
   if (op.bodyInfo !== undefined) {
     const typeAnnotation = op.bodyInfo.typeName !== undefined ? `<${op.bodyInfo.typeName}>` : ''
-    lines.push(`${indent}  const body = await c.req.json${typeAnnotation}()`)
+    const typeDecl = op.bodyInfo.typeName !== undefined ? op.bodyInfo.typeName : 'unknown'
+    // Check Content-Type before attempting to parse: reject non-JSON with 415
+    lines.push(`${indent}  const _ct = c.req.header('content-type') ?? ''`)
+    lines.push(`${indent}  if (!_ct.toLowerCase().startsWith('application/json')) {`)
+    lines.push(`${indent}    return c.json({ error: 'Unsupported Media Type' }, 415)`)
+    lines.push(`${indent}  }`)
+    // Parse JSON body: return 400 on malformed or empty JSON.
+    // c.req.text() + JSON.parse() is used instead of c.req.json() because Hono's
+    // c.req.json() silently returns null for an empty body instead of throwing,
+    // which would pass the try/catch and reach Zod as null, causing a 422 rather
+    // than the correct 400. JSON.parse('') always throws SyntaxError.
+    lines.push(`${indent}  let body: ${typeDecl}`)
+    lines.push(`${indent}  try {`)
+    lines.push(`${indent}    body = JSON.parse(await c.req.text()) as ${typeDecl}`)
+    lines.push(`${indent}  } catch {`)
+    lines.push(`${indent}    return c.json({ error: 'Invalid JSON body' }, 400)`)
+    lines.push(`${indent}  }`)
 
     // Zod validation when schema is available
     const schemaName =
@@ -510,15 +526,25 @@ function buildRouteHandler(op: RouteOperation, indent: string, schemaNames?: Set
 
   const serviceCall = `service.${op.methodName}(${serviceArgs.join(', ')})`
 
-  // Response
+  // Response — wrap in try/catch to map HttpError to its status
+  lines.push(`${indent}  try {`)
   if (op.responseStatus.isVoid) {
-    lines.push(`${indent}  await ${serviceCall}`)
-    lines.push(`${indent}  return new Response(null, { status: ${op.responseStatus.status} })`)
+    lines.push(`${indent}    await ${serviceCall}`)
+    lines.push(`${indent}    return new Response(null, { status: ${op.responseStatus.status} })`)
   } else if (op.responseStatus.status === 201) {
-    lines.push(`${indent}  return c.json(await ${serviceCall}, 201)`)
+    lines.push(`${indent}    return c.json(await ${serviceCall}, 201)`)
   } else {
-    lines.push(`${indent}  return c.json(await ${serviceCall})`)
+    lines.push(`${indent}    return c.json(await ${serviceCall})`)
   }
+  lines.push(`${indent}  } catch (err) {`)
+  lines.push(`${indent}    if (err instanceof HttpError) {`)
+  lines.push(
+    `${indent}      return new Response(JSON.stringify({ error: err.message }), { status: err.status, headers: { 'content-type': 'application/json' } })`
+  )
+  lines.push(`${indent}    }`)
+  lines.push(`${indent}    throw err`)
+  lines.push(`${indent}  }`)
+
 
   lines.push(`${indent}})`)
   return lines.join('\n')
@@ -623,15 +649,22 @@ function buildExpressRouteHandler(
 
   const serviceCall = `service.${op.methodName}(${serviceArgs.join(', ')})`
 
-  // Response
+  // Response — wrap in try/catch to map HttpError to its status
+  lines.push(`${indent}  try {`)
   if (op.responseStatus.isVoid) {
-    lines.push(`${indent}  await ${serviceCall}`)
-    lines.push(`${indent}  res.status(${op.responseStatus.status}).end()`)
+    lines.push(`${indent}    await ${serviceCall}`)
+    lines.push(`${indent}    res.status(${op.responseStatus.status}).end()`)
   } else if (op.responseStatus.status === 201) {
-    lines.push(`${indent}  res.status(201).json(await ${serviceCall})`)
+    lines.push(`${indent}    res.status(201).json(await ${serviceCall})`)
   } else {
-    lines.push(`${indent}  res.json(await ${serviceCall})`)
+    lines.push(`${indent}    res.json(await ${serviceCall})`)
   }
+  lines.push(`${indent}  } catch (err) {`)
+  lines.push(`${indent}    if (err instanceof HttpError) {`)
+  lines.push(`${indent}      return void res.status(err.status).json({ error: err.message })`)
+  lines.push(`${indent}    }`)
+  lines.push(`${indent}    throw err`)
+  lines.push(`${indent}  }`)
 
   lines.push(`${indent}})`)
   return lines.join('\n')
@@ -752,19 +785,44 @@ function buildFastifyRouteHandler(
 
   const serviceCall = `service.${op.methodName}(${serviceArgs.join(', ')})`
 
-  // Response
+  // Response — wrap in try/catch to map HttpError to its status
+  lines.push(`${indent}  try {`)
   if (op.responseStatus.isVoid) {
-    lines.push(`${indent}  await ${serviceCall}`)
-    lines.push(`${indent}  reply.status(${op.responseStatus.status}).send()`)
+    lines.push(`${indent}    await ${serviceCall}`)
+    lines.push(`${indent}    reply.status(${op.responseStatus.status}).send()`)
   } else if (op.responseStatus.status === 201) {
-    lines.push(`${indent}  reply.status(201)`)
-    lines.push(`${indent}  return ${serviceCall}`)
+    lines.push(`${indent}    reply.status(201)`)
+    lines.push(`${indent}    return ${serviceCall}`)
   } else {
-    lines.push(`${indent}  return ${serviceCall}`)
+    lines.push(`${indent}    return ${serviceCall}`)
   }
+  lines.push(`${indent}  } catch (err) {`)
+  lines.push(`${indent}    if (err instanceof HttpError) {`)
+  lines.push(`${indent}      return reply.status(err.status).send({ error: err.message })`)
+  lines.push(`${indent}    }`)
+  lines.push(`${indent}    throw err`)
+  lines.push(`${indent}  }`)
 
   lines.push(`${indent}})`)
   return lines.join('\n')
+}
+
+// ── HttpError class ───────────────────────────────────────────────────────────
+
+/**
+ * Lines that emit the exported HttpError class into a generated router file.
+ * Services throw `new HttpError(404, 'Not found')` and the generated router
+ * catches it, returning the matching HTTP status instead of a generic 500.
+ */
+function httpErrorClassLines(): string[] {
+  return [
+    'export class HttpError extends Error {',
+    '  constructor(public readonly status: number, message: string) {',
+    '    super(message)',
+    "    this.name = 'HttpError'",
+    '  }',
+    '}',
+  ]
 }
 
 // ── Zod import helpers ────────────────────────────────────────────────────────
@@ -813,6 +871,8 @@ export function generateExpressRouter(
     lines.push(`import { ${sortedUsedSchemas.join(', ')} } from '${options.schemaImportPath}'`)
   }
   lines.push('')
+  for (const l of httpErrorClassLines()) lines.push(l)
+  lines.push('')
   lines.push(`export function createRouter(service: ${serviceName}): Router {`)
   lines.push('  const router = Router()')
   lines.push('')
@@ -859,6 +919,8 @@ export function generateFastifyRouter(
     lines.push(`import { ${sortedUsedSchemas.join(', ')} } from '${options.schemaImportPath}'`)
   }
   lines.push('')
+  for (const l of httpErrorClassLines()) lines.push(l)
+  lines.push('')
   lines.push(`export function createRouter(app: FastifyInstance, service: ${serviceName}): void {`)
 
   for (const op of operations) {
@@ -898,6 +960,8 @@ export function generateRouter(spec: OpenAPIV3_1.Document, options?: RouterOptio
     const sortedUsedSchemas = Array.from(usedSchemaNames).sort()
     lines.push(`import { ${sortedUsedSchemas.join(', ')} } from '${options.schemaImportPath}'`)
   }
+  lines.push('')
+  for (const l of httpErrorClassLines()) lines.push(l)
   lines.push('')
   lines.push(`export function createRouter(service: ${serviceName}): Hono {`)
   lines.push('  const app = new Hono()')

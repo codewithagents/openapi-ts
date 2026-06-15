@@ -152,7 +152,7 @@ describe('generateRouter', () => {
     expect(result.content).toContain('Number(')
   })
 
-  it('POST extracts JSON body with typed generic', () => {
+  it('POST extracts JSON body via JSON.parse(c.req.text()) cast to typed type', () => {
     const spec = makeSpec({
       '/pets': {
         post: {
@@ -168,7 +168,7 @@ describe('generateRouter', () => {
       },
     })
     const result = generateRouter(spec)
-    expect(result.content).toContain('c.req.json<CreatePetRequest>()')
+    expect(result.content).toContain('JSON.parse(await c.req.text()) as CreatePetRequest')
   })
 
   it('imports body type from models.js when typed body used', () => {
@@ -1308,5 +1308,194 @@ describe('generateFastifyRouter with schemaNames (Zod validation)', () => {
     const result = generateFastifyRouter(postSpec)
     expect(result.content).not.toContain('safeParse')
     expect(result.content).toContain('service.createPet(req.body')
+  })
+})
+
+// ── Bug-fix tests: Bug 1 — malformed body returns 400 ─────────────────────────
+// Verifies that the Hono generator uses JSON.parse(c.req.text()) instead of
+// c.req.json() — because Hono's c.req.json() silently returns null for an empty
+// body instead of throwing, causing a 422 from Zod instead of the correct 400.
+// JSON.parse('') always throws SyntaxError, so empty and malformed bodies both
+// hit the catch block and return 400.
+
+describe('Bug 1 — Hono: malformed/empty JSON body returns 400 instead of 500/422', () => {
+  const postSpec = makeSpec({
+    '/pets': {
+      post: {
+        operationId: 'createPet',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } },
+          },
+        },
+        responses: { '201': { description: 'created' } },
+      },
+    },
+  })
+
+  it('Hono: body extraction uses JSON.parse(c.req.text()) wrapped in try/catch', () => {
+    const { content } = generateRouter(postSpec)
+    expect(content).toContain('try {')
+    expect(content).toContain('body = JSON.parse(await c.req.text()) as CreatePetRequest')
+    expect(content).toContain('} catch {')
+    expect(content).toContain("return c.json({ error: 'Invalid JSON body' }, 400)")
+  })
+
+  it('Hono: body is declared with let before the try block (not const)', () => {
+    const { content } = generateRouter(postSpec)
+    expect(content).toContain('let body: CreatePetRequest')
+    expect(content).not.toContain('const body =')
+  })
+
+  it('Hono: untyped inline body also uses JSON.parse(c.req.text()) wrapped in try/catch', () => {
+    const inlineSpec = makeSpec({
+      '/items': {
+        post: {
+          operationId: 'createItem',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateRouter(inlineSpec)
+    expect(content).toContain('let body: unknown')
+    expect(content).toContain('body = JSON.parse(await c.req.text()) as unknown')
+    expect(content).toContain("return c.json({ error: 'Invalid JSON body' }, 400)")
+  })
+
+  it('Hono: GET routes without a body do not emit the body try/catch', () => {
+    const getSpec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateRouter(getSpec)
+    expect(content).not.toContain('Invalid JSON body')
+    expect(content).not.toContain('let body:')
+  })
+})
+
+// ── Bug-fix tests: Bug 2 — wrong Content-Type returns 415 ────────────────────
+// Verifies that the Hono generator emits a Content-Type guard that rejects
+// requests whose Content-Type does not start with application/json with 415.
+
+describe('Bug 2 — Hono: non-JSON Content-Type returns 415 instead of parsing anyway', () => {
+  const postSpec = makeSpec({
+    '/pets': {
+      post: {
+        operationId: 'createPet',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } },
+          },
+        },
+        responses: { '201': { description: 'created' } },
+      },
+    },
+  })
+
+  it('Hono: emits Content-Type check using c.req.header("content-type")', () => {
+    const { content } = generateRouter(postSpec)
+    expect(content).toContain("c.req.header('content-type')")
+    expect(content).toContain("startsWith('application/json')")
+    expect(content).toContain("return c.json({ error: 'Unsupported Media Type' }, 415)")
+  })
+
+  it('Hono: Content-Type check appears before the body try/catch', () => {
+    const { content } = generateRouter(postSpec)
+    const ctPos = content.indexOf("startsWith('application/json')")
+    const tryPos = content.indexOf('JSON.parse(await c.req.text())')
+    expect(ctPos).toBeGreaterThan(0)
+    expect(tryPos).toBeGreaterThan(0)
+    expect(ctPos).toBeLessThan(tryPos)
+  })
+
+  it('Hono: GET routes do not emit Content-Type check', () => {
+    const getSpec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateRouter(getSpec)
+    expect(content).not.toContain('Unsupported Media Type')
+    expect(content).not.toContain('_ct')
+  })
+})
+
+// ── Bug-fix tests: Bug 3 — HttpError maps to declared status ─────────────────
+// Verifies that all three framework generators emit an exported HttpError class
+// and wrap service calls in try/catch to map HttpError instances to their status.
+
+describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps to status', () => {
+  const spec = makeSpec({
+    '/pets/{id}': {
+      get: {
+        operationId: 'getPet',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { '200': { description: 'ok' } },
+      },
+      delete: {
+        operationId: 'deletePet',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { '204': { description: 'deleted' } },
+      },
+    },
+  })
+
+  it('Hono: emits exported HttpError class', () => {
+    const { content } = generateRouter(spec)
+    expect(content).toContain('export class HttpError extends Error')
+    expect(content).toContain('public readonly status: number')
+    expect(content).toContain("this.name = 'HttpError'")
+  })
+
+  it('Hono: GET service call wrapped in try/catch with HttpError mapping', () => {
+    const { content } = generateRouter(spec)
+    expect(content).toContain('if (err instanceof HttpError)')
+    expect(content).toContain("{ status: err.status, headers: { 'content-type': 'application/json' } }")
+    expect(content).toContain('throw err')
+  })
+
+  it('Hono: 204 void route also wrapped in try/catch', () => {
+    const { content } = generateRouter(spec)
+    expect(content).toContain('new Response(null, { status: 204 })')
+    expect(content).toContain('if (err instanceof HttpError)')
+  })
+
+  it('Express: emits exported HttpError class', () => {
+    const { content } = generateExpressRouter(spec)
+    expect(content).toContain('export class HttpError extends Error')
+    expect(content).toContain('public readonly status: number')
+  })
+
+  it('Express: GET service call wrapped in try/catch with HttpError mapping', () => {
+    const { content } = generateExpressRouter(spec)
+    expect(content).toContain('if (err instanceof HttpError)')
+    expect(content).toContain('return void res.status(err.status).json({ error: err.message })')
+    expect(content).toContain('throw err')
+  })
+
+  it('Fastify: emits exported HttpError class', () => {
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain('export class HttpError extends Error')
+    expect(content).toContain('public readonly status: number')
+  })
+
+  it('Fastify: GET service call wrapped in try/catch with HttpError mapping', () => {
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain('if (err instanceof HttpError)')
+    expect(content).toContain('return reply.status(err.status).send({ error: err.message })')
+    expect(content).toContain('throw err')
   })
 })

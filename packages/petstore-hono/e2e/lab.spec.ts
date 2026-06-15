@@ -831,73 +831,42 @@ test.fixme(
 // P12: DELETE /pets/{id} → 404 for nonexistent pet (service throws → Hono 500)
 // ---------------------------------------------------------------------------
 
-test.fixme(
-  'DELETE /pets/{id}: nonexistent ID → 404 Not Found (Phase 2: service throws Error → Hono returns 500)',
-  async ({ request }) => {
-    // PROMISED: spec declares 404 for deleting a nonexistent pet.
-    // ACTUAL: the service throws `new Error('Pet <id> not found')`. The generated router has
-    // no error-mapping middleware. Hono's default error handler catches any thrown Error
-    // and returns 500 Internal Server Error instead of the promised 404.
-    // Root cause: the service interface has no typed error-return mechanism. Throwing a
-    // generic Error cannot be mapped to a specific HTTP status by the generated router.
-    // A conformant implementation would use HTTPException(404) or a typed error union.
-    const nonexistentId = '00000000-0000-0000-0000-000000000000'
-    const res = await request.delete(`${API_BASE}/pets/${nonexistentId}`)
-    expect(res.status()).toBe(404)
-  },
-)
+test('DELETE /pets/{id}: nonexistent ID → 404 Not Found', async ({ request }) => {
+  const nonexistentId = '00000000-0000-0000-0000-000000000000'
+  const res = await request.delete(`${API_BASE}/pets/${nonexistentId}`)
+  expect(res.status()).toBe(404)
+})
 
 // ---------------------------------------------------------------------------
 // P13: K1/K2 — malformed / empty JSON body → clean 4xx (actual: 500)
 // ---------------------------------------------------------------------------
 
-test.fixme(
-  'K1: malformed JSON body → 400 Bad Request (Phase 2: c.req.json() throws → Hono returns 500)',
-  async ({ request }) => {
-    // PROMISED: a conformant server returns 400 Bad Request for syntactically invalid JSON.
-    // ACTUAL: c.req.json() calls JSON.parse() on the raw body. A SyntaxError is thrown.
-    // Hono's default error handler catches it and returns 500 Internal Server Error.
-    // Root cause: the generated router wraps c.req.json() with no try/catch. Hono's
-    // onError hook catches it as an unhandled exception and returns 500.
-    const res = await request.post(`${LAB_BASE}/numeric`, {
-      headers: { 'Content-Type': 'application/json' },
-      data: '{bounded: 15, exclusive: 0.5, multiple: 25}', // invalid JSON (unquoted key)
-    })
-    expect(res.status()).toBe(400)
-  },
-)
+test('K1: malformed JSON body → 400 Bad Request', async ({ request }) => {
+  // Buffer bypasses Playwright's string-to-JSON serialization, sending raw bytes.
+  const res = await request.post(`${LAB_BASE}/numeric`, {
+    headers: { 'Content-Type': 'application/json' },
+    data: Buffer.from('{bounded: 15, exclusive: 0.5, multiple: 25}'), // invalid JSON (unquoted key)
+  })
+  expect(res.status()).toBe(400)
+})
 
-test.fixme(
-  'K2: empty request body → 400 Bad Request (Phase 2: c.req.json() throws → Hono returns 500)',
-  async ({ request }) => {
-    // PROMISED: empty body with Content-Type: application/json → 400.
-    // ACTUAL: JSON.parse('') throws SyntaxError → Hono 500.
-    // Same root cause as K1.
-    const res = await request.post(`${LAB_BASE}/numeric`, {
-      headers: { 'Content-Type': 'application/json' },
-      data: '',
-    })
-    expect(res.status()).toBe(400)
-  },
-)
+test('K2: empty request body → 400 Bad Request', async ({ request }) => {
+  // Buffer.alloc(0) sends a truly-empty body, bypassing Playwright string serialization.
+  const res = await request.post(`${LAB_BASE}/numeric`, {
+    headers: { 'Content-Type': 'application/json' },
+    data: Buffer.alloc(0),
+  })
+  expect(res.status()).toBe(400)
+})
 
 // ---------------------------------------------------------------------------
 // P14: K4/K5 — wrong Content-Type with valid JSON body
 // ---------------------------------------------------------------------------
 
-test.fixme(
-  'K4: JSON body sent as text/plain → 415 Unsupported Media Type (Phase 2: c.req.json() ignores Content-Type → 200)',
-  async ({ request }) => {
-    // PROMISED: a conformant server rejects JSON bodies sent with Content-Type: text/plain
-    // with 415 Unsupported Media Type.
-    // ACTUAL: Hono's c.req.json() ignores the Content-Type header and attempts to parse the
-    // raw body as JSON regardless. A valid JSON object sent as text/plain succeeds → 200.
-    // Root cause: c.req.json() in Hono parses the body unconditionally without checking the
-    // Content-Type header. A conformant implementation would inspect Content-Type first.
-    const res = await request.post(`${LAB_BASE}/numeric`, {
-      headers: { 'Content-Type': 'text/plain' },
-      data: JSON.stringify({ bounded: 15, exclusive: 0.5, multiple: 25 }),
-    })
-    expect(res.status()).toBe(415)
-  },
-)
+test('K4: JSON body sent as text/plain → 415 Unsupported Media Type', async ({ request }) => {
+  const res = await request.post(`${LAB_BASE}/numeric`, {
+    headers: { 'Content-Type': 'text/plain' },
+    data: JSON.stringify({ bounded: 15, exclusive: 0.5, multiple: 25 }),
+  })
+  expect(res.status()).toBe(415)
+})
