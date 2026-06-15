@@ -264,6 +264,34 @@ describe('generateRouter', () => {
     expect(result.content).toContain(', 202)')
   })
 
+  it('Bug #10 — GET with 200+202 declared emits envelope dispatch: c.json(_envelope.body, _envelope.status)', () => {
+    // Bug #10: when multiple 2xx are declared, the service returns { status, body }
+    // and the router forwards both to c.json so the handler can select the status at runtime.
+    const spec = makeSpec({
+      '/tasks/{id}': {
+        get: {
+          operationId: 'getTask',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'done',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+            '202': {
+              description: 'still running',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateRouter(spec)
+    expect(result.content).toContain('const _envelope = await service.getTask(')
+    expect(result.content).toContain('c.json(_envelope.body, _envelope.status')
+    // Must NOT use the old single-status path
+    expect(result.content).not.toContain('c.json(await service.getTask(')
+  })
+
   it('returns empty Hono app when no operations', () => {
     const spec = makeSpec({})
     const result = generateRouter(spec)
@@ -917,6 +945,34 @@ describe('generateExpressRouter', () => {
     expect(result.content).toContain('res.status(202).json(await service.enqueueJob(')
   })
 
+  it('Bug #10 — GET with 200+202 declared emits envelope dispatch: res.status(_envelope.status).json(_envelope.body)', () => {
+    // Bug #10: when multiple 2xx are declared, the service returns { status, body }
+    // and the router forwards both so the handler can select the status at runtime.
+    const spec = makeSpec({
+      '/tasks/{id}': {
+        get: {
+          operationId: 'getTask',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'done',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+            '202': {
+              description: 'still running',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateExpressRouter(spec)
+    expect(result.content).toContain('const _envelope = await service.getTask(')
+    expect(result.content).toContain('res.status(_envelope.status).json(_envelope.body)')
+    // Must NOT use the old single-status path
+    expect(result.content).not.toContain('res.json(await service.getTask(')
+  })
+
   it('GET with 200 uses res.json()', () => {
     const spec = makeSpec({
       '/pets': {
@@ -1194,6 +1250,35 @@ describe('generateFastifyRouter', () => {
     const result = generateFastifyRouter(spec)
     expect(result.content).toContain('reply.status(202)')
     expect(result.content).toContain('return service.enqueueJob(')
+  })
+
+  it('Bug #10 — GET with 200+202 declared emits envelope dispatch: reply.status(_envelope.status).send(_envelope.body)', () => {
+    // Bug #10: when multiple 2xx are declared, the service returns { status, body }
+    // and the router forwards both so the handler can select the status at runtime.
+    const spec = makeSpec({
+      '/tasks/{id}': {
+        get: {
+          operationId: 'getTask',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'done',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+            '202': {
+              description: 'still running',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateFastifyRouter(spec)
+    expect(result.content).toContain('const _envelope = await service.getTask(')
+    expect(result.content).toContain('reply.status(_envelope.status).send(_envelope.body)')
+    // Must NOT use the old single-status path
+    expect(result.content).not.toContain('reply.status(200)')
+    expect(result.content).not.toContain('reply.status(202)')
   })
 
   it('GET with 200 uses return (Fastify auto-serializes)', () => {

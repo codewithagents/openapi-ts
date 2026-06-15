@@ -401,6 +401,13 @@ interface ResponseStatus {
    * Defaults to 'application/json' for JSON and void responses.
    */
   responseContentType: 'application/json' | 'text/plain' | 'application/octet-stream'
+  /**
+   * True when the operation declares more than one 2xx success response.
+   * The service method returns { status: number; body: T } and the router
+   * forwards result.status and result.body verbatim, letting the handler
+   * choose the appropriate status code at runtime.
+   */
+  isMultiStatus?: boolean
 }
 
 function response200IsVoid(resp: ResponseObject | ReferenceObject): boolean {
@@ -441,6 +448,22 @@ function getResponseStatus(
       : { status: 200, isVoid: false, responseContentType: 'application/json' }
   }
 
+  // Multi-status: more than one 2xx response with a body (excluding 204/void).
+  // Must be checked before individual 200/201/204 branches so that e.g. 200+202
+  // is not absorbed by the responses['200'] early return.
+  // The handler selects the status at runtime via a { status, body } envelope.
+  const contentfulTwoxxKeys = Object.keys(responses)
+    .filter((k) => /^2\d\d$/.test(k) && k !== '204')
+    .sort()
+  if (contentfulTwoxxKeys.length > 1) {
+    return {
+      status: 200,
+      isVoid: false,
+      responseContentType: 'application/json',
+      isMultiStatus: true,
+    }
+  }
+
   if (responses['201'] !== undefined) {
     return {
       status: 201,
@@ -464,7 +487,6 @@ function getResponseStatus(
   }
 
   // Single non-200/201/204 2xx declared: honor that exact status code.
-  // Multi-2xx is bug #10 (out of scope); fall through to default in that case.
   const twoxxKeys = Object.keys(responses).filter(
     (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
   )
@@ -748,6 +770,10 @@ function buildRouteHandler(op: RouteOperation, indent: string, schemaNames?: Set
   if (op.responseStatus.isVoid) {
     lines.push(`${indent}    await ${serviceCall}`)
     lines.push(`${indent}    return new Response(null, { status: ${op.responseStatus.status} })`)
+  } else if (op.responseStatus.isMultiStatus === true) {
+    // Multi-status: service returns { status: number; body: T }; router forwards both.
+    lines.push(`${indent}    const _envelope = await ${serviceCall}`)
+    lines.push(`${indent}    return c.json(_envelope.body, _envelope.status as any)`)
   } else if (op.responseStatus.responseContentType === 'text/plain') {
     if (op.responseStatus.status === 200) {
       lines.push(`${indent}    return c.text(await ${serviceCall})`)
@@ -905,6 +931,10 @@ function buildExpressRouteHandler(
   if (op.responseStatus.isVoid) {
     lines.push(`${indent}    await ${serviceCall}`)
     lines.push(`${indent}    res.status(${op.responseStatus.status}).end()`)
+  } else if (op.responseStatus.isMultiStatus === true) {
+    // Multi-status: service returns { status: number; body: T }; router forwards both.
+    lines.push(`${indent}    const _envelope = await ${serviceCall}`)
+    lines.push(`${indent}    res.status(_envelope.status).json(_envelope.body)`)
   } else if (op.responseStatus.responseContentType === 'text/plain') {
     if (op.responseStatus.status === 200) {
       lines.push(`${indent}    res.type('text/plain').send(await ${serviceCall})`)
@@ -1114,6 +1144,10 @@ function buildFastifyRouteHandler(
   if (op.responseStatus.isVoid) {
     lines.push(`${indent}    await ${serviceCall}`)
     lines.push(`${indent}    reply.status(${op.responseStatus.status}).send()`)
+  } else if (op.responseStatus.isMultiStatus === true) {
+    // Multi-status: service returns { status: number; body: T }; router forwards both.
+    lines.push(`${indent}    const _envelope = await ${serviceCall}`)
+    lines.push(`${indent}    return reply.status(_envelope.status).send(_envelope.body)`)
   } else if (op.responseStatus.responseContentType === 'text/plain') {
     if (op.responseStatus.status === 200) {
       lines.push(`${indent}    return reply.type('text/plain').send(await ${serviceCall})`)

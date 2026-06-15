@@ -305,6 +305,38 @@ describe('generateService', () => {
     expect(content).toContain('enqueueJob(body: Job): Promise<Job>')
   })
 
+  it('Bug #10 — GET with 200+202 declared produces envelope return type Promise<{ status: number; body: T }>', () => {
+    // Bug #10: when multiple 2xx are declared, the service method returns a discriminated
+    // envelope so the handler can choose the status code at runtime.
+    const spec = makeSpec({
+      '/tasks/{id}': {
+        get: {
+          operationId: 'getTask',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'done',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/Task' } },
+              },
+            },
+            '202': {
+              description: 'still running',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/Task' } },
+              },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    // The return type must be an envelope, not a plain Task
+    expect(content).toContain('getTask(id: string): Promise<{ status: number; body: Task }>')
+    // Must NOT produce plain Promise<Task> (that would bypass status selection)
+    expect(content).not.toContain('getTask(id: string): Promise<Task>')
+  })
+
   it('multiple operations produce multiple methods', () => {
     const spec = makeSpec({
       '/pets': {

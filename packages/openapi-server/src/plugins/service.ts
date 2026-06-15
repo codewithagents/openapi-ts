@@ -30,6 +30,25 @@ interface ReturnInfo {
    * When set, typeName is undefined and the type is NOT imported from models.ts.
    */
   primitiveType?: string
+  /**
+   * True when the operation declares more than one 2xx success response.
+   * The service method returns a discriminated envelope { status: number; body: T }
+   * so the handler can select the appropriate status code at runtime.
+   * The body type T is inferred from the first 2xx response that has JSON content.
+   */
+  isMultiStatus?: boolean
+}
+
+/**
+ * Collect all 2xx response codes from an operation's responses object, sorted numerically.
+ * Excludes 204 (void) since those carry no body.
+ */
+function collectContentfulTwoxxCodes(
+  responses: Record<string, ResponseObject | ReferenceObject>
+): string[] {
+  return Object.keys(responses)
+    .filter((k) => /^2\d\d$/.test(k) && k !== '204')
+    .sort()
 }
 
 function getReturnInfo(operation: OperationObject): ReturnInfo {
@@ -37,6 +56,10 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
     | Record<string, ResponseObject | ReferenceObject>
     | undefined
   if (responses === undefined) return { typeName: undefined, isArray: false, isVoid: true }
+
+  // Detect multi-status: more than one 2xx response code (excluding 204).
+  const contentfulCodes = collectContentfulTwoxxCodes(responses)
+  const isMultiStatus = contentfulCodes.length > 1
 
   // Check 2xx responses in priority order: 200, 201, then any other 2xx with content.
   // 204 (void) and multi-2xx cases are handled below.
@@ -62,6 +85,7 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
           typeName: refToName((schema as ReferenceObject).$ref),
           isArray: false,
           isVoid: false,
+          isMultiStatus,
         }
       }
 
@@ -73,12 +97,13 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
             typeName: refToName((items as ReferenceObject).$ref),
             isArray: true,
             isVoid: false,
+            isMultiStatus,
           }
         }
-        return { typeName: undefined, isArray: true, isVoid: false }
+        return { typeName: undefined, isArray: true, isVoid: false, isMultiStatus }
       }
 
-      return { typeName: undefined, isArray: false, isVoid: false }
+      return { typeName: undefined, isArray: false, isVoid: false, isMultiStatus }
     }
 
     // text/plain response: service returns a plain string.
@@ -103,6 +128,16 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
 function buildReturnType(info: ReturnInfo): string {
   if (info.isVoid) return 'Promise<void>'
   if (info.primitiveType !== undefined) return `Promise<${info.primitiveType}>`
+  // Multi-status: wrap in discriminated envelope { status: number; body: T }
+  if (info.isMultiStatus === true) {
+    let bodyType: string
+    if (info.typeName !== undefined) {
+      bodyType = info.isArray ? `${info.typeName}[]` : info.typeName
+    } else {
+      bodyType = info.isArray ? 'unknown[]' : 'unknown'
+    }
+    return `Promise<{ status: number; body: ${bodyType} }>`
+  }
   if (info.typeName !== undefined) {
     return info.isArray ? `Promise<${info.typeName}[]>` : `Promise<${info.typeName}>`
   }
