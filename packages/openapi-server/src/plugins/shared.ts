@@ -173,8 +173,43 @@ export function schemaToTsType(
 
 export interface QueryParam {
   name: string
+  /** Raw parameter name as it appears in the spec (before normalizeParamName). */
+  rawName: string
   tsType: string
   required: boolean
+  /** Allowed values from the schema enum constraint. */
+  enum?: string[]
+  /** Inclusive minimum from schema.minimum. */
+  minimum?: number
+  /** Inclusive maximum from schema.maximum. */
+  maximum?: number
+  /** Exclusive minimum from schema.exclusiveMinimum (numeric form, OpenAPI 3.1). */
+  exclusiveMinimum?: number
+  /** Exclusive maximum from schema.exclusiveMaximum (numeric form, OpenAPI 3.1). */
+  exclusiveMaximum?: number
+  /** Minimum string length from schema.minLength. */
+  minLength?: number
+  /** Maximum string length from schema.maxLength. */
+  maxLength?: number
+  /** Regex pattern from schema.pattern. */
+  pattern?: string
+  /**
+   * Delimiter style for array query params with explode:false.
+   * 'csv' = comma (style:form + explode:false), 'ssv' = space, 'psv' = pipe.
+   * When set, the raw query string value must be split on the delimiter before Zod validation.
+   */
+  delimiterStyle?: 'csv' | 'ssv' | 'psv'
+  /**
+   * When true, this param uses style:deepObject (e.g. filter[gte]=10&filter[lte]=20).
+   * The router must collect all name[key]=value query entries and assemble them into a
+   * nested object before Zod validation.
+   */
+  isDeepObject?: boolean
+  /**
+   * For deepObject params: property names and their types from the schema object.
+   * Used to emit typed coercion (e.g. z.coerce.number()) per property.
+   */
+  deepObjectProperties?: Array<{ key: string; tsType: string }>
 }
 
 export function getQueryParams(
@@ -189,12 +224,63 @@ export function getQueryParams(
     const resolved = resolveParam(p, spec)
     if (resolved === undefined || resolved.in !== 'query') continue
 
-    const schema = resolved.schema as OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
-    result.push({
+    const schema = resolved.schema as OpenAPIV3_1.SchemaObject | undefined
+    const resolvedStyle = (resolved as { style?: string }).style as string | undefined
+    const resolvedExplode = (resolved as { explode?: boolean }).explode as boolean | undefined
+    const param: QueryParam = {
       name: normalizeParamName(resolved.name),
+      rawName: resolved.name,
       tsType: schemaToTsType(schema),
       required: resolved.required === true,
-    })
+    }
+
+    // Detect deepObject style: all name[key]=value entries must be assembled before validation.
+    if (resolvedStyle === 'deepObject' && schema !== undefined && !isRef(schema)) {
+      const s = schema as OpenAPIV3_1.SchemaObject
+      if (s.type === 'object' && s.properties !== undefined) {
+        param.isDeepObject = true
+        param.deepObjectProperties = Object.entries(s.properties).map(([key, propSchema]) => ({
+          key,
+          tsType: schemaToTsType(propSchema as OpenAPIV3_1.SchemaObject | undefined),
+        }))
+      }
+    }
+
+    // Detect delimited array styles with explode:false: value arrives as a single string.
+    if (
+      !param.isDeepObject &&
+      schema !== undefined &&
+      !isRef(schema) &&
+      (schema as OpenAPIV3_1.SchemaObject).type === 'array' &&
+      resolvedExplode === false
+    ) {
+      if (resolvedStyle === 'spaceDelimited') {
+        param.delimiterStyle = 'ssv'
+      } else if (resolvedStyle === 'pipeDelimited') {
+        param.delimiterStyle = 'psv'
+      } else {
+        // style:form with explode:false = CSV (also the default for arrays when explode:false)
+        param.delimiterStyle = 'csv'
+      }
+    }
+
+    if (schema !== undefined && !isRef(schema)) {
+      const s = schema as OpenAPIV3_1.SchemaObject & {
+        exclusiveMinimum?: number | boolean
+        exclusiveMaximum?: number | boolean
+      }
+      if (Array.isArray(s.enum)) param.enum = s.enum as string[]
+      if (typeof s.minimum === 'number') param.minimum = s.minimum
+      if (typeof s.maximum === 'number') param.maximum = s.maximum
+      // OpenAPI 3.1 uses numeric exclusiveMinimum/exclusiveMaximum; 3.0 uses boolean.
+      if (typeof s.exclusiveMinimum === 'number') param.exclusiveMinimum = s.exclusiveMinimum
+      if (typeof s.exclusiveMaximum === 'number') param.exclusiveMaximum = s.exclusiveMaximum
+      if (typeof s.minLength === 'number') param.minLength = s.minLength
+      if (typeof s.maxLength === 'number') param.maxLength = s.maxLength
+      if (typeof s.pattern === 'string') param.pattern = s.pattern
+    }
+
+    result.push(param)
   }
   return result
 }
@@ -203,26 +289,96 @@ export function getQueryParams(
 
 export interface BodyInfo {
   typeName: string | undefined
+  /** The request body content type that was matched. Drives parser choice in the router. */
+  contentType: 'application/json' | 'application/x-www-form-urlencoded' | 'multipart/form-data'
+  /**
+   * True when typeName was synthesized from the operationId (inline schema, no $ref).
+   * Synthesized names exist only for schema lookup (XxxSchema.safeParse) and are NOT
+   * emitted as a TypeScript model type import — they have no entry in models.ts.
+   */
+  isSynthesized: boolean
 }
 
 export function getBodyInfo(operation: OpenAPIV3_1.OperationObject): BodyInfo | undefined {
   const requestBody = operation.requestBody as RequestBodyObject | ReferenceObject | undefined
   if (requestBody === undefined) return undefined
-  if (isRef(requestBody)) return { typeName: undefined }
+  if (isRef(requestBody)) {
+    return { typeName: undefined, contentType: 'application/json', isSynthesized: false }
+  }
 
   const rb = requestBody as RequestBodyObject
   const content = rb.content as
     | Record<string, { schema?: OpenAPIV3_1.SchemaObject | ReferenceObject }>
     | undefined
-  if (content === undefined) return { typeName: undefined }
-
-  const jsonContent = content['application/json']
-  if (jsonContent === undefined || jsonContent.schema === undefined) return { typeName: undefined }
-
-  const schema = jsonContent.schema
-  if (isRef(schema)) {
-    return { typeName: refToName((schema as ReferenceObject).$ref) }
+  if (content === undefined) {
+    return { typeName: undefined, contentType: 'application/json', isSynthesized: false }
   }
 
-  return { typeName: undefined }
+  // Check application/json first.
+  const jsonContent = content['application/json']
+  if (jsonContent !== undefined && jsonContent.schema !== undefined) {
+    const schema = jsonContent.schema
+    if (isRef(schema)) {
+      return {
+        typeName: refToName((schema as ReferenceObject).$ref),
+        contentType: 'application/json',
+        isSynthesized: false,
+      }
+    }
+    // Inline JSON schema: synthesize a stable name from the operationId so the router
+    // can wire safeParse against a user-defined schema in schemas.ts.
+    const operationId = operation.operationId
+    if (operationId !== undefined && operationId.length > 0) {
+      return { typeName: toTypeName(operationId), contentType: 'application/json', isSynthesized: true }
+    }
+    return { typeName: undefined, contentType: 'application/json', isSynthesized: false }
+  }
+
+  // Check application/x-www-form-urlencoded.
+  const formContent = content['application/x-www-form-urlencoded']
+  if (formContent !== undefined) {
+    const schema = formContent.schema
+    if (schema !== undefined && isRef(schema)) {
+      return {
+        typeName: refToName((schema as ReferenceObject).$ref),
+        contentType: 'application/x-www-form-urlencoded',
+        isSynthesized: false,
+      }
+    }
+    // Inline form schema: synthesize a stable name from the operationId.
+    const operationId = operation.operationId
+    if (operationId !== undefined && operationId.length > 0) {
+      return {
+        typeName: toTypeName(operationId),
+        contentType: 'application/x-www-form-urlencoded',
+        isSynthesized: true,
+      }
+    }
+    return { typeName: undefined, contentType: 'application/x-www-form-urlencoded', isSynthesized: false }
+  }
+
+  // Check multipart/form-data.
+  const multipartContent = content['multipart/form-data']
+  if (multipartContent !== undefined) {
+    const schema = multipartContent.schema
+    if (schema !== undefined && isRef(schema)) {
+      return {
+        typeName: refToName((schema as ReferenceObject).$ref),
+        contentType: 'multipart/form-data',
+        isSynthesized: false,
+      }
+    }
+    // Inline multipart schema: synthesize a stable name from the operationId.
+    const operationId = operation.operationId
+    if (operationId !== undefined && operationId.length > 0) {
+      return {
+        typeName: toTypeName(operationId),
+        contentType: 'multipart/form-data',
+        isSynthesized: true,
+      }
+    }
+    return { typeName: undefined, contentType: 'multipart/form-data', isSynthesized: false }
+  }
+
+  return { typeName: undefined, contentType: 'application/json', isSynthesized: false }
 }

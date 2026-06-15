@@ -24,6 +24,31 @@ interface ReturnInfo {
   typeName: string | undefined
   isArray: boolean
   isVoid: boolean
+  /**
+   * For non-JSON success responses: the TypeScript primitive type to use as the
+   * return type. 'string' for text/plain; 'Uint8Array' for application/octet-stream.
+   * When set, typeName is undefined and the type is NOT imported from models.ts.
+   */
+  primitiveType?: string
+  /**
+   * True when the operation declares more than one 2xx success response.
+   * The service method returns a discriminated envelope { status: number; body: T }
+   * so the handler can select the appropriate status code at runtime.
+   * The body type T is inferred from the first 2xx response that has JSON content.
+   */
+  isMultiStatus?: boolean
+}
+
+/**
+ * Collect all 2xx response codes from an operation's responses object, sorted numerically.
+ * Excludes 204 (void) since those carry no body.
+ */
+function collectContentfulTwoxxCodes(
+  responses: Record<string, ResponseObject | ReferenceObject>
+): string[] {
+  return Object.keys(responses)
+    .filter((k) => /^2\d\d$/.test(k) && k !== '204')
+    .sort()
 }
 
 function getReturnInfo(operation: OperationObject): ReturnInfo {
@@ -32,8 +57,16 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
     | undefined
   if (responses === undefined) return { typeName: undefined, isArray: false, isVoid: true }
 
-  // Check for 200 or 201 response first
-  for (const code of ['200', '201']) {
+  // Detect multi-status: more than one 2xx response code (excluding 204).
+  const contentfulCodes = collectContentfulTwoxxCodes(responses)
+  const isMultiStatus = contentfulCodes.length > 1
+
+  // Check 2xx responses in priority order: 200, 201, then any other 2xx with content.
+  // 204 (void) and multi-2xx cases are handled below.
+  const twoxxCodes = ['200', '201', ...Object.keys(responses).filter(
+    (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
+  )]
+  for (const code of twoxxCodes) {
     const response = responses[code]
     if (response === undefined) continue
     if (isRef(response)) continue
@@ -45,31 +78,43 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
     if (content === undefined) continue
 
     const jsonContent = content['application/json']
-    if (jsonContent === undefined || jsonContent.schema === undefined) continue
-
-    const schema = jsonContent.schema
-    if (isRef(schema)) {
-      return {
-        typeName: refToName((schema as ReferenceObject).$ref),
-        isArray: false,
-        isVoid: false,
-      }
-    }
-
-    const s = schema as OpenAPIV3_1.SchemaObject
-    if (s.type === 'array') {
-      const items = s.items as OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
-      if (items !== undefined && isRef(items)) {
+    if (jsonContent !== undefined && jsonContent.schema !== undefined) {
+      const schema = jsonContent.schema
+      if (isRef(schema)) {
         return {
-          typeName: refToName((items as ReferenceObject).$ref),
-          isArray: true,
+          typeName: refToName((schema as ReferenceObject).$ref),
+          isArray: false,
           isVoid: false,
+          isMultiStatus,
         }
       }
-      return { typeName: undefined, isArray: true, isVoid: false }
+
+      const s = schema as OpenAPIV3_1.SchemaObject
+      if (s.type === 'array') {
+        const items = s.items as OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
+        if (items !== undefined && isRef(items)) {
+          return {
+            typeName: refToName((items as ReferenceObject).$ref),
+            isArray: true,
+            isVoid: false,
+            isMultiStatus,
+          }
+        }
+        return { typeName: undefined, isArray: true, isVoid: false, isMultiStatus }
+      }
+
+      return { typeName: undefined, isArray: false, isVoid: false, isMultiStatus }
     }
 
-    return { typeName: undefined, isArray: false, isVoid: false }
+    // text/plain response: service returns a plain string.
+    if (content['text/plain'] !== undefined) {
+      return { typeName: undefined, isArray: false, isVoid: false, primitiveType: 'string' }
+    }
+
+    // application/octet-stream response: service returns raw bytes.
+    if (content['application/octet-stream'] !== undefined) {
+      return { typeName: undefined, isArray: false, isVoid: false, primitiveType: 'Uint8Array' }
+    }
   }
 
   // Check for 204 explicitly
@@ -82,6 +127,17 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
 
 function buildReturnType(info: ReturnInfo): string {
   if (info.isVoid) return 'Promise<void>'
+  if (info.primitiveType !== undefined) return `Promise<${info.primitiveType}>`
+  // Multi-status: wrap in discriminated envelope { status: number; body: T }
+  if (info.isMultiStatus === true) {
+    let bodyType: string
+    if (info.typeName !== undefined) {
+      bodyType = info.isArray ? `${info.typeName}[]` : info.typeName
+    } else {
+      bodyType = info.isArray ? 'unknown[]' : 'unknown'
+    }
+    return `Promise<{ status: number; body: ${bodyType} }>`
+  }
   if (info.typeName !== undefined) {
     return info.isArray ? `Promise<${info.typeName}[]>` : `Promise<${info.typeName}>`
   }
@@ -139,9 +195,14 @@ function buildMethodSignature(op: OperationInfo): string {
     args.push(`${sanitizeOperationId(p)}: string`)
   }
 
-  // Body arg
+  // Body arg: synthesized names (inline schemas, not $ref) live only in schemas.ts
+  // for Zod safeParse — they have no corresponding model type in models.ts.
+  // Use 'unknown' for synthesized bodies so service.ts does not emit a dangling import.
   if (op.bodyInfo !== undefined) {
-    const typeName = op.bodyInfo.typeName ?? 'unknown'
+    const typeName =
+      op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized
+        ? op.bodyInfo.typeName
+        : 'unknown'
     args.push(`body: ${typeName}`)
   }
 
@@ -164,10 +225,12 @@ export function generateService(spec: OpenAPIV3_1.Document): GeneratedFile {
   const serviceName = deriveServiceName(spec)
   const operations = collectOperations(spec)
 
-  // Collect import types: body types and return types that are named identifiers
+  // Collect import types: body types and return types that are named identifiers.
+  // Synthesized body names (inline schemas, isSynthesized:true) are excluded: they have
+  // no entry in models.ts and emitting them as imports would cause a dangling TS error.
   const importTypes = new Set<string>()
   for (const op of operations) {
-    if (op.bodyInfo?.typeName !== undefined) {
+    if (op.bodyInfo?.typeName !== undefined && !op.bodyInfo.isSynthesized) {
       importTypes.add(op.bodyInfo.typeName)
     }
     if (op.returnInfo.typeName !== undefined) {

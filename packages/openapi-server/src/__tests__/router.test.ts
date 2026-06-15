@@ -152,7 +152,7 @@ describe('generateRouter', () => {
     expect(result.content).toContain('Number(')
   })
 
-  it('POST extracts JSON body with typed generic', () => {
+  it('POST extracts JSON body via JSON.parse(c.req.text()) cast to typed type', () => {
     const spec = makeSpec({
       '/pets': {
         post: {
@@ -168,7 +168,7 @@ describe('generateRouter', () => {
       },
     })
     const result = generateRouter(spec)
-    expect(result.content).toContain('c.req.json<CreatePetRequest>()')
+    expect(result.content).toContain('JSON.parse(await c.req.text()) as CreatePetRequest')
   })
 
   it('imports body type from models.js when typed body used', () => {
@@ -238,6 +238,58 @@ describe('generateRouter', () => {
     })
     const result = generateRouter(spec)
     expect(result.content).toContain('new Response(null, { status: 204 })')
+  })
+
+  it('POST with only 202 declared emits c.json(result, 202)', () => {
+    // Bug #9: when the single declared 2xx is not 200/201/204, honor that code.
+    const spec = makeSpec({
+      '/jobs': {
+        post: {
+          operationId: 'enqueueJob',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: {
+            '202': {
+              description: 'accepted',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Job' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateRouter(spec)
+    expect(result.content).toContain('c.json(await service.enqueueJob(')
+    expect(result.content).toContain(', 202)')
+  })
+
+  it('Bug #10 — GET with 200+202 declared emits envelope dispatch: c.json(_envelope.body, _envelope.status)', () => {
+    // Bug #10: when multiple 2xx are declared, the service returns { status, body }
+    // and the router forwards both to c.json so the handler can select the status at runtime.
+    const spec = makeSpec({
+      '/tasks/{id}': {
+        get: {
+          operationId: 'getTask',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'done',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+            '202': {
+              description: 'still running',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateRouter(spec)
+    expect(result.content).toContain('const _envelope = await service.getTask(')
+    expect(result.content).toContain('c.json(_envelope.body, _envelope.status')
+    // Must NOT use the old single-status path
+    expect(result.content).not.toContain('c.json(await service.getTask(')
   })
 
   it('returns empty Hono app when no operations', () => {
@@ -870,6 +922,57 @@ describe('generateExpressRouter', () => {
     expect(result.content).toContain('res.status(204).end()')
   })
 
+  it('POST with only 202 declared emits res.status(202).json()', () => {
+    // Bug #9: when the single declared 2xx is not 200/201/204, honor that code.
+    const spec = makeSpec({
+      '/jobs': {
+        post: {
+          operationId: 'enqueueJob',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: {
+            '202': {
+              description: 'accepted',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Job' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateExpressRouter(spec)
+    expect(result.content).toContain('res.status(202).json(await service.enqueueJob(')
+  })
+
+  it('Bug #10 — GET with 200+202 declared emits envelope dispatch: res.status(_envelope.status).json(_envelope.body)', () => {
+    // Bug #10: when multiple 2xx are declared, the service returns { status, body }
+    // and the router forwards both so the handler can select the status at runtime.
+    const spec = makeSpec({
+      '/tasks/{id}': {
+        get: {
+          operationId: 'getTask',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'done',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+            '202': {
+              description: 'still running',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateExpressRouter(spec)
+    expect(result.content).toContain('const _envelope = await service.getTask(')
+    expect(result.content).toContain('res.status(_envelope.status).json(_envelope.body)')
+    // Must NOT use the old single-status path
+    expect(result.content).not.toContain('res.json(await service.getTask(')
+  })
+
   it('GET with 200 uses res.json()', () => {
     const spec = makeSpec({
       '/pets': {
@@ -1125,6 +1228,59 @@ describe('generateFastifyRouter', () => {
     expect(result.content).toContain('reply.status(204).send()')
   })
 
+  it('POST with only 202 declared emits reply.status(202) then return', () => {
+    // Bug #9: when the single declared 2xx is not 200/201/204, honor that code.
+    const spec = makeSpec({
+      '/jobs': {
+        post: {
+          operationId: 'enqueueJob',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: {
+            '202': {
+              description: 'accepted',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Job' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateFastifyRouter(spec)
+    expect(result.content).toContain('reply.status(202)')
+    expect(result.content).toContain('return service.enqueueJob(')
+  })
+
+  it('Bug #10 — GET with 200+202 declared emits envelope dispatch: reply.status(_envelope.status).send(_envelope.body)', () => {
+    // Bug #10: when multiple 2xx are declared, the service returns { status, body }
+    // and the router forwards both so the handler can select the status at runtime.
+    const spec = makeSpec({
+      '/tasks/{id}': {
+        get: {
+          operationId: 'getTask',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'done',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+            '202': {
+              description: 'still running',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateFastifyRouter(spec)
+    expect(result.content).toContain('const _envelope = await service.getTask(')
+    expect(result.content).toContain('reply.status(_envelope.status).send(_envelope.body)')
+    // Must NOT use the old single-status path
+    expect(result.content).not.toContain('reply.status(200)')
+    expect(result.content).not.toContain('reply.status(202)')
+  })
+
   it('GET with 200 uses return (Fastify auto-serializes)', () => {
     const spec = makeSpec({
       '/pets': {
@@ -1308,5 +1464,537 @@ describe('generateFastifyRouter with schemaNames (Zod validation)', () => {
     const result = generateFastifyRouter(postSpec)
     expect(result.content).not.toContain('safeParse')
     expect(result.content).toContain('service.createPet(req.body')
+  })
+})
+
+// ── Bug-fix tests: Bug 1 — malformed body returns 400 ─────────────────────────
+// Verifies that the Hono generator uses JSON.parse(c.req.text()) instead of
+// c.req.json() — because Hono's c.req.json() silently returns null for an empty
+// body instead of throwing, causing a 422 from Zod instead of the correct 400.
+// JSON.parse('') always throws SyntaxError, so empty and malformed bodies both
+// hit the catch block and return 400.
+
+describe('Bug 1 — Hono: malformed/empty JSON body returns 400 instead of 500/422', () => {
+  const postSpec = makeSpec({
+    '/pets': {
+      post: {
+        operationId: 'createPet',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } },
+          },
+        },
+        responses: { '201': { description: 'created' } },
+      },
+    },
+  })
+
+  it('Hono: body extraction uses JSON.parse(c.req.text()) wrapped in try/catch', () => {
+    const { content } = generateRouter(postSpec)
+    expect(content).toContain('try {')
+    expect(content).toContain('body = JSON.parse(await c.req.text()) as CreatePetRequest')
+    expect(content).toContain('} catch {')
+    expect(content).toContain("return c.json({ error: 'Invalid JSON body' }, 400)")
+  })
+
+  it('Hono: body is declared with let before the try block (not const)', () => {
+    const { content } = generateRouter(postSpec)
+    expect(content).toContain('let body: CreatePetRequest')
+    expect(content).not.toContain('const body =')
+  })
+
+  it('Hono: untyped inline body also uses JSON.parse(c.req.text()) wrapped in try/catch', () => {
+    const inlineSpec = makeSpec({
+      '/items': {
+        post: {
+          operationId: 'createItem',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateRouter(inlineSpec)
+    expect(content).toContain('let body: unknown')
+    expect(content).toContain('body = JSON.parse(await c.req.text()) as unknown')
+    expect(content).toContain("return c.json({ error: 'Invalid JSON body' }, 400)")
+  })
+
+  it('Hono: GET routes without a body do not emit the body try/catch', () => {
+    const getSpec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateRouter(getSpec)
+    expect(content).not.toContain('Invalid JSON body')
+    expect(content).not.toContain('let body:')
+  })
+})
+
+// ── Bug-fix tests: Bug 2 — wrong Content-Type returns 415 ────────────────────
+// Verifies that the Hono generator emits a Content-Type guard that rejects
+// requests whose Content-Type does not start with application/json with 415.
+
+describe('Bug 2 — Hono: non-JSON Content-Type returns 415 instead of parsing anyway', () => {
+  const postSpec = makeSpec({
+    '/pets': {
+      post: {
+        operationId: 'createPet',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } },
+          },
+        },
+        responses: { '201': { description: 'created' } },
+      },
+    },
+  })
+
+  it('Hono: emits Content-Type check using c.req.header("content-type")', () => {
+    const { content } = generateRouter(postSpec)
+    expect(content).toContain("c.req.header('content-type')")
+    expect(content).toContain("startsWith('application/json')")
+    expect(content).toContain("return c.json({ error: 'Unsupported Media Type' }, 415)")
+  })
+
+  it('Hono: Content-Type check appears before the body try/catch', () => {
+    const { content } = generateRouter(postSpec)
+    const ctPos = content.indexOf("startsWith('application/json')")
+    const tryPos = content.indexOf('JSON.parse(await c.req.text())')
+    expect(ctPos).toBeGreaterThan(0)
+    expect(tryPos).toBeGreaterThan(0)
+    expect(ctPos).toBeLessThan(tryPos)
+  })
+
+  it('Hono: GET routes do not emit Content-Type check', () => {
+    const getSpec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateRouter(getSpec)
+    expect(content).not.toContain('Unsupported Media Type')
+    expect(content).not.toContain('_ct')
+  })
+})
+
+// ── Bug-fix tests: Bug 3 — HttpError maps to declared status ─────────────────
+// Verifies that all three framework generators emit an exported HttpError class
+// and wrap service calls in try/catch to map HttpError instances to their status.
+
+describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps to status', () => {
+  const spec = makeSpec({
+    '/pets/{id}': {
+      get: {
+        operationId: 'getPet',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { '200': { description: 'ok' } },
+      },
+      delete: {
+        operationId: 'deletePet',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { '204': { description: 'deleted' } },
+      },
+    },
+  })
+
+  it('Hono: emits exported HttpError class', () => {
+    const { content } = generateRouter(spec)
+    expect(content).toContain('export class HttpError extends Error')
+    expect(content).toContain('public readonly status: number')
+    expect(content).toContain("this.name = 'HttpError'")
+  })
+
+  it('Hono: GET service call wrapped in try/catch with HttpError mapping', () => {
+    const { content } = generateRouter(spec)
+    expect(content).toContain('if (err instanceof HttpError)')
+    expect(content).toContain("{ status: err.status, headers: { 'content-type': 'application/json' } }")
+    expect(content).toContain('throw err')
+  })
+
+  it('Hono: 204 void route also wrapped in try/catch', () => {
+    const { content } = generateRouter(spec)
+    expect(content).toContain('new Response(null, { status: 204 })')
+    expect(content).toContain('if (err instanceof HttpError)')
+  })
+
+  it('Express: emits exported HttpError class', () => {
+    const { content } = generateExpressRouter(spec)
+    expect(content).toContain('export class HttpError extends Error')
+    expect(content).toContain('public readonly status: number')
+  })
+
+  it('Express: GET service call wrapped in try/catch with HttpError mapping', () => {
+    const { content } = generateExpressRouter(spec)
+    expect(content).toContain('if (err instanceof HttpError)')
+    expect(content).toContain('return void res.status(err.status).json({ error: err.message })')
+    expect(content).toContain('throw err')
+  })
+
+  it('Fastify: emits exported HttpError class', () => {
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain('export class HttpError extends Error')
+    expect(content).toContain('public readonly status: number')
+  })
+
+  it('Fastify: GET service call wrapped in try/catch with HttpError mapping', () => {
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain('if (err instanceof HttpError)')
+    expect(content).toContain('return reply.status(err.status).send({ error: err.message })')
+    expect(content).toContain('throw err')
+  })
+})
+
+// ── Bug #1: inline (non-$ref) JSON request body gets safeParse wired ─────────
+
+describe('bug #1 fix: inline JSON request body synthesizes schema name from operationId', () => {
+  const inlineSpec = makeSpec({
+    '/lab/inline-body': {
+      post: {
+        operationId: 'labInlineBody',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title', 'rank'],
+                properties: {
+                  title: { type: 'string', minLength: 2 },
+                  rank: { type: 'integer', minimum: 1, maximum: 5 },
+                },
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'echoed' } },
+      },
+    },
+  })
+
+  it('Hono: synthesizes LabInlineBodySchema name and wires safeParse when schema present', () => {
+    const { content } = generateRouter(inlineSpec, {
+      schemaNames: new Set(['LabInlineBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('LabInlineBodySchema.safeParse(body)')
+    expect(content).toContain('parseResult.success')
+    expect(content).toContain('422')
+    // Synthesized name must NOT appear in model type import (no models.ts entry)
+    expect(content).not.toContain("import type { LabInlineBody }")
+  })
+
+  it('Hono: body variable is typed as unknown (synthesized, not a model type)', () => {
+    const { content } = generateRouter(inlineSpec, {
+      schemaNames: new Set(['LabInlineBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    // Type declaration for the body parse variable must be unknown, not LabInlineBody
+    expect(content).toContain('let body: unknown')
+    expect(content).not.toContain('let body: LabInlineBody')
+  })
+
+  it('Hono: uses validatedBody in service call when inline schema is matched', () => {
+    const { content } = generateRouter(inlineSpec, {
+      schemaNames: new Set(['LabInlineBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('service.labInlineBody(validatedBody')
+  })
+
+  it('Hono: no safeParse emitted when LabInlineBodySchema not in schemaNames', () => {
+    const { content } = generateRouter(inlineSpec)
+    expect(content).not.toContain('safeParse')
+    expect(content).toContain('service.labInlineBody(body')
+  })
+
+  it('Express: synthesizes LabInlineBodySchema name and wires safeParse when schema present', () => {
+    const { content } = generateExpressRouter(inlineSpec, {
+      schemaNames: new Set(['LabInlineBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('LabInlineBodySchema.safeParse(req.body)')
+    expect(content).toContain('422')
+    expect(content).not.toContain("import type { LabInlineBody }")
+  })
+
+  it('Fastify: synthesizes LabInlineBodySchema name and wires safeParse when schema present', () => {
+    const { content } = generateFastifyRouter(inlineSpec, {
+      schemaNames: new Set(['LabInlineBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('LabInlineBodySchema.safeParse(req.body)')
+    expect(content).toContain('422')
+    // Synthesized name must not leak into Fastify generic type (uses unknown instead)
+    expect(content).not.toContain('Body: LabInlineBody')
+    expect(content).toContain('Body: unknown')
+  })
+})
+
+// ── Bug #7 fix: application/x-www-form-urlencoded body decoded via parseBody() ─
+
+describe('bug #7 fix: form-urlencoded request body uses parseBody() not JSON.parse()', () => {
+  const formSpec = makeSpec({
+    '/lab/form-body': {
+      post: {
+        operationId: 'labFormBody',
+        requestBody: {
+          required: true,
+          content: {
+            'application/x-www-form-urlencoded': {
+              schema: {
+                type: 'object',
+                required: ['label', 'quantity'],
+                properties: {
+                  label: { type: 'string' },
+                  quantity: { type: 'integer' },
+                },
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'echoed' } },
+      },
+    },
+  })
+
+  it('Hono: emits parseBody() for form-urlencoded body, not JSON.parse()', () => {
+    const { content } = generateRouter(formSpec)
+    expect(content).toContain('c.req.parseBody()')
+    expect(content).not.toContain('JSON.parse(await c.req.text())')
+  })
+
+  it('Hono: checks for application/x-www-form-urlencoded Content-Type', () => {
+    const { content } = generateRouter(formSpec)
+    expect(content).toContain('application/x-www-form-urlencoded')
+    expect(content).not.toContain("startsWith('application/json')")
+  })
+
+  it('Hono: synthesizes LabFormBodySchema name and wires safeParse when schema present', () => {
+    const { content } = generateRouter(formSpec, {
+      schemaNames: new Set(['LabFormBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('LabFormBodySchema.safeParse(body)')
+    expect(content).toContain('parseResult.success')
+    expect(content).toContain('422')
+    // Synthesized name must NOT appear in model type import
+    expect(content).not.toContain("import type { LabFormBody }")
+  })
+
+  it('Hono: uses validatedBody in service call when form schema is matched', () => {
+    const { content } = generateRouter(formSpec, {
+      schemaNames: new Set(['LabFormBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('service.labFormBody(validatedBody')
+  })
+
+  it('Express: form-urlencoded body uses req.body (pre-parsed by express.urlencoded middleware)', () => {
+    const { content } = generateExpressRouter(formSpec, {
+      schemaNames: new Set(['LabFormBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    // Express pre-parses form body into req.body — same code path as JSON
+    expect(content).toContain('LabFormBodySchema.safeParse(req.body)')
+    expect(content).toContain('422')
+  })
+
+  it('Fastify: form-urlencoded body uses req.body (pre-parsed by fastify plugin)', () => {
+    const { content } = generateFastifyRouter(formSpec, {
+      schemaNames: new Set(['LabFormBodySchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('LabFormBodySchema.safeParse(req.body)')
+    expect(content).toContain('422')
+  })
+})
+
+// ── Bug #11 fix: non-JSON responses (text/plain + octet-stream) ───────────────
+
+describe('bug #11 fix: text/plain and application/octet-stream responses', () => {
+  const textSpec = makeSpec({
+    '/lab/plain-text': {
+      get: {
+        operationId: 'labPlainText',
+        responses: {
+          '200': {
+            description: 'plain text',
+            content: { 'text/plain': { schema: { type: 'string' } } },
+          },
+        },
+      },
+    },
+  })
+
+  const binarySpec = makeSpec({
+    '/lab/download': {
+      get: {
+        operationId: 'labDownload',
+        responses: {
+          '200': {
+            description: 'binary download',
+            content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+          },
+        },
+      },
+    },
+  })
+
+  // ── text/plain ──────────────────────────────────────────────────────────────
+
+  it('Hono: text/plain response emits c.text() not c.json()', () => {
+    const { content } = generateRouter(textSpec)
+    expect(content).toContain('c.text(')
+    expect(content).not.toContain('c.json(await service.labPlainText')
+  })
+
+  it('Hono: text/plain response does NOT call c.json()', () => {
+    const { content } = generateRouter(textSpec)
+    // No c.json call for the service result
+    expect(content).not.toContain('c.json(await service.labPlainText')
+  })
+
+  it('Express: text/plain response emits res.type("text/plain").send()', () => {
+    const { content } = generateExpressRouter(textSpec)
+    expect(content).toContain("res.type('text/plain')")
+    expect(content).not.toContain('res.json(')
+  })
+
+  it('Fastify: text/plain response emits reply.type("text/plain").send()', () => {
+    const { content } = generateFastifyRouter(textSpec)
+    expect(content).toContain("reply.type('text/plain')")
+    expect(content).not.toContain('return service.labPlainText')
+  })
+
+  // ── application/octet-stream ───────────────────────────────────────────────
+
+  it('Hono: octet-stream response emits new Response with application/octet-stream header', () => {
+    const { content } = generateRouter(binarySpec)
+    expect(content).toContain('application/octet-stream')
+    expect(content).not.toContain('c.json(await service.labDownload')
+  })
+
+  it('Express: octet-stream response emits setHeader + Buffer.from().send()', () => {
+    const { content } = generateExpressRouter(binarySpec)
+    expect(content).toContain("setHeader('Content-Type', 'application/octet-stream')")
+    expect(content).toContain('Buffer.from(')
+    expect(content).not.toContain('res.json(')
+  })
+
+  it('Fastify: octet-stream response emits reply.type("application/octet-stream").send()', () => {
+    const { content } = generateFastifyRouter(binarySpec)
+    expect(content).toContain("reply.type('application/octet-stream')")
+    expect(content).toContain('Buffer.from(')
+  })
+
+  // ── JSON path unaffected ───────────────────────────────────────────────────
+
+  it('Hono: JSON response still uses c.json()', () => {
+    const jsonSpec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: {
+                'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Pet' } } },
+              },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateRouter(jsonSpec)
+    expect(content).toContain('c.json(await service.listPets')
+    expect(content).not.toContain('c.text(')
+  })
+})
+
+// ── Bug #8 fix: multipart/form-data request bodies decoded via parseBody({ all: true }) ──
+
+describe('bug #8 fix: multipart/form-data request body uses parseBody({ all: true })', () => {
+  const multipartSpec = makeSpec({
+    '/lab/gallery': {
+      post: {
+        operationId: 'labGallery',
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['photos'],
+                properties: {
+                  photos: {
+                    type: 'array',
+                    items: { type: 'string', format: 'binary' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'upload ack' } },
+      },
+    },
+  })
+
+  it('Hono: emits parseBody({ all: true }) for multipart body, not JSON.parse()', () => {
+    const { content } = generateRouter(multipartSpec)
+    expect(content).toContain('parseBody({ all: true })')
+    expect(content).not.toContain('JSON.parse(await c.req.text())')
+  })
+
+  it('Hono: does NOT check for application/json Content-Type for multipart body', () => {
+    const { content } = generateRouter(multipartSpec)
+    expect(content).not.toContain("startsWith('application/json')")
+  })
+
+  it('Hono: does NOT emit the Unsupported Media Type 415 guard for multipart body', () => {
+    const { content } = generateRouter(multipartSpec)
+    // The multipart path skips the content-type check entirely; no 415 guard
+    // should be emitted for this operation.
+    const gallerySection = content.slice(content.indexOf('/lab/gallery'))
+    expect(gallerySection.slice(0, gallerySection.indexOf('\n  })'))).not.toContain('415')
+  })
+
+  it('Hono: forwards multipart body to the service call', () => {
+    const { content } = generateRouter(multipartSpec)
+    expect(content).toContain('service.labGallery(body)')
+  })
+
+  it('Express: multipart body uses req.files + req.body merge (assumes multer middleware)', () => {
+    const { content } = generateExpressRouter(multipartSpec)
+    expect(content).toContain('req.files')
+    expect(content).toContain('req.body')
+    // Should not attempt JSON parsing
+    expect(content).not.toContain('JSON.parse')
+  })
+
+  it('Fastify: multipart body uses req.body (assumes @fastify/multipart plugin)', () => {
+    const { content } = generateFastifyRouter(multipartSpec)
+    // Should reference req.body for the service call
+    expect(content).toContain('req.body')
+    // Should not attempt JSON parsing
+    expect(content).not.toContain('JSON.parse')
+  })
+
+  it('all three frameworks generate without throwing', () => {
+    expect(() => generateRouter(multipartSpec)).not.toThrow()
+    expect(() => generateExpressRouter(multipartSpec)).not.toThrow()
+    expect(() => generateFastifyRouter(multipartSpec)).not.toThrow()
   })
 })

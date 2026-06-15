@@ -278,6 +278,65 @@ describe('generateService', () => {
     expect(content).toContain('deletePet(id: string): Promise<void>')
   })
 
+  it('POST with only 202 declared infers return type from 202 content schema', () => {
+    // Bug #9: getReturnInfo() must check non-200/201 2xx codes for response content.
+    const spec = makeSpec({
+      '/jobs': {
+        post: {
+          operationId: 'enqueueJob',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/Job' } },
+            },
+          },
+          responses: {
+            '202': {
+              description: 'accepted',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/Job' } },
+              },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('enqueueJob(body: Job): Promise<Job>')
+  })
+
+  it('Bug #10 — GET with 200+202 declared produces envelope return type Promise<{ status: number; body: T }>', () => {
+    // Bug #10: when multiple 2xx are declared, the service method returns a discriminated
+    // envelope so the handler can choose the status code at runtime.
+    const spec = makeSpec({
+      '/tasks/{id}': {
+        get: {
+          operationId: 'getTask',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'done',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/Task' } },
+              },
+            },
+            '202': {
+              description: 'still running',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/Task' } },
+              },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    // The return type must be an envelope, not a plain Task
+    expect(content).toContain('getTask(id: string): Promise<{ status: number; body: Task }>')
+    // Must NOT produce plain Promise<Task> (that would bypass status selection)
+    expect(content).not.toContain('getTask(id: string): Promise<Task>')
+  })
+
   it('multiple operations produce multiple methods', () => {
     const spec = makeSpec({
       '/pets': {
@@ -584,5 +643,191 @@ describe('coverage: resolveParamRef — component parameter that is itself a $re
     const { content } = generateService(spec)
     // The operation is still generated, just without the unresolvable query param
     expect(content).toContain('listItems(')
+  })
+})
+
+// ── Bug #11 fix: non-JSON response types in service interface ─────────────────
+
+describe('bug #11 fix: text/plain and octet-stream return types in service interface', () => {
+  it('text/plain response maps to Promise<string> return type', () => {
+    const spec = makeSpec({
+      '/lab/plain-text': {
+        get: {
+          operationId: 'labPlainText',
+          responses: {
+            '200': {
+              description: 'plain text',
+              content: { 'text/plain': { schema: { type: 'string' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('labPlainText(): Promise<string>')
+  })
+
+  it('application/octet-stream response maps to Promise<Uint8Array> return type', () => {
+    const spec = makeSpec({
+      '/lab/download': {
+        get: {
+          operationId: 'labDownload',
+          responses: {
+            '200': {
+              description: 'binary download',
+              content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('labDownload(): Promise<Uint8Array>')
+  })
+
+  it('text/plain return type is NOT imported from models.ts', () => {
+    const spec = makeSpec({
+      '/lab/plain-text': {
+        get: {
+          operationId: 'labPlainText',
+          responses: {
+            '200': {
+              description: 'plain text',
+              content: { 'text/plain': { schema: { type: 'string' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    // Primitive types must not appear as model imports
+    expect(content).not.toContain("import type { string }")
+    expect(content).not.toContain("import type {")
+  })
+
+  it('JSON response still maps to Promise<ModelType> and imports from models.ts', () => {
+    const spec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('listPets(): Promise<Pet>')
+    expect(content).toContain("import type { Pet } from './models.js'")
+  })
+})
+
+// ── Synthesized body types: no dangling model imports ─────────────────────────
+
+describe('service: synthesized body types use unknown — no dangling model imports', () => {
+  it('inline JSON body: body param is unknown, synthesized name not imported from models', () => {
+    const spec = makeSpec({
+      '/lab/inline-body': {
+        post: {
+          operationId: 'labInlineBody',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { type: 'object', properties: { title: { type: 'string' } } },
+              },
+            },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    // Synthesized name LabInlineBody must NOT appear as an import
+    expect(content).not.toContain('LabInlineBody')
+    // Body param must use unknown
+    expect(content).toContain('body: unknown')
+  })
+
+  it('form-urlencoded inline body: body param is unknown, synthesized name not imported', () => {
+    const spec = makeSpec({
+      '/lab/form-body': {
+        post: {
+          operationId: 'labFormBody',
+          requestBody: {
+            required: true,
+            content: {
+              'application/x-www-form-urlencoded': {
+                schema: {
+                  type: 'object',
+                  properties: { label: { type: 'string' }, quantity: { type: 'integer' } },
+                },
+              },
+            },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).not.toContain('LabFormBody')
+    expect(content).toContain('body: unknown')
+  })
+
+  it('multipart/form-data inline body: body param is unknown, synthesized name not imported', () => {
+    const spec = makeSpec({
+      '/lab/gallery': {
+        post: {
+          operationId: 'labGallery',
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  required: ['photos'],
+                  properties: {
+                    photos: { type: 'array', items: { type: 'string', format: 'binary' } },
+                  },
+                },
+              },
+            },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).not.toContain('LabGallery')
+    expect(content).toContain('body: unknown')
+    // No dangling import from models.ts
+    expect(content).not.toContain("import type { LabGallery }")
+  })
+
+  it('$ref body: named type IS imported from models and used in param', () => {
+    const spec = makeSpec({
+      '/pets': {
+        post: {
+          operationId: 'createPet',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CreatePetRequest' },
+              },
+            },
+          },
+          responses: { '200': { description: 'ok', content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } } } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('body: CreatePetRequest')
+    expect(content).toContain('CreatePetRequest')
+    // Named type is imported
+    expect(content).toContain("import type {")
   })
 })
