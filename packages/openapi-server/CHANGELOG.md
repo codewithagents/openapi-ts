@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.8.0...openapi-server-v1.9.0) (2026-06-15)
+
+
+### Features
+
+* **petstore-hono + openapi-server:** battle-tested e2e contract suite + 14 generator fixes ([#307](https://github.com/codewithagents/openapi-zod-ts/issues/307)) ([405a924](https://github.com/codewithagents/openapi-zod-ts/commit/405a924a0cc9314a034c11f0bb4fd484ba90731a))
+
 ## [1.8.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.7.0...openapi-server-v1.8.0) (2026-06-10)
 
 
