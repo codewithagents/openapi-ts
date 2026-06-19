@@ -181,8 +181,8 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
       ) {
         console.warn(
           `${methodName} (${method.toUpperCase()} ${path}): response type is unknown, ` +
-            'no response schema found in the spec. ' +
-            'Add a response schema to get a typed return type and enable runtime validation.'
+            'no named response schema could be resolved from the spec. ' +
+            'Add a named $ref response schema to get a typed return type and enable runtime validation.'
         )
       }
 
