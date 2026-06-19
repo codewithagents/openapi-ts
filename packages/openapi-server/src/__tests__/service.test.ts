@@ -922,7 +922,7 @@ describe('issue #312: warn on untyped service responses', () => {
       expect(msg).toContain('listWidgets')
       expect(msg).toContain('GET /widgets')
       expect(msg).toContain('response type is unknown')
-      expect(msg).toContain('no response schema found in the spec')
+      expect(msg).toContain('no named response schema could be resolved from the spec')
     } finally {
       warnSpy.mockRestore()
     }

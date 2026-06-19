@@ -2085,6 +2085,18 @@ describe('context type option (issue #310)', () => {
       const { content } = generateExpressRouter(petSpec, { contextType: 'RequestContext' })
       expect(content).toContain('service.listPets(req)')
     })
+
+    it('path-param route passes path param then req: service.getPet(req.params[id]!, req)', () => {
+      const { content } = generateExpressRouter(petSpec, { contextType: 'RequestContext' })
+      // Path comes first, ctx (req) is last
+      expect(content).toContain("service.getPet(req.params['id']!, req)")
+    })
+
+    it('body route passes body then req: service.createPet(body, req)', () => {
+      const { content } = generateExpressRouter(petSpec, { contextType: 'RequestContext' })
+      // Body comes before ctx (req)
+      expect(content).toContain('service.createPet(body, req)')
+    })
   })
 
   describe('Express — no contextType (backward compat)', () => {
@@ -2107,6 +2119,12 @@ describe('context type option (issue #310)', () => {
       const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
       expect(content).toContain('service.listPets(req)')
     })
+
+    it('path-param route passes path param then req: service.getPet(req.params.id, req)', () => {
+      const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
+      // Fastify uses dot notation for path params; ctx (req) is appended last
+      expect(content).toContain('service.getPet(req.params.id, req)')
+    })
   })
 
   describe('Fastify — no contextType (backward compat)', () => {
@@ -2114,6 +2132,41 @@ describe('context type option (issue #310)', () => {
       const { content } = generateFastifyRouter(petSpec)
       // GET /pets has no path params, body, or query — service call has no args
       expect(content).toContain('service.listPets()')
+    })
+  })
+
+  describe('context arg ordering: path + body + query simultaneously with contextType', () => {
+    // A route that has ALL three input kinds at once. The generated service call must
+    // follow the fixed order: path params, body, query params (as params), then ctx.
+    const fullArgSpec = makeSpec({
+      '/pets/{id}': {
+        patch: {
+          operationId: 'updatePet',
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+            { name: 'dryRun', in: 'query', required: false, schema: { type: 'string' } },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/UpdatePetRequest' } },
+            },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+
+    it('Express: arg order is path, body, query params, req', () => {
+      const { content } = generateExpressRouter(fullArgSpec, { contextType: 'RequestContext' })
+      // Full call: service.updatePet(req.params['id']!, body, params, req)
+      expect(content).toContain("service.updatePet(req.params['id']!, body, params, req)")
+    })
+
+    it('Fastify: arg order is path, body, query params, req', () => {
+      const { content } = generateFastifyRouter(fullArgSpec, { contextType: 'RequestContext' })
+      // Fastify dot notation for path param; body is req.body; query bundle is params; ctx is req
+      expect(content).toContain('service.updatePet(req.params.id, req.body, params, req)')
     })
   })
 })
