@@ -1136,19 +1136,23 @@ function buildExpressRouteHandler(
 
 /**
  * Build the route options object literal string for a Fastify route registration.
- * Returns undefined when no options are needed (no response schema available),
- * in which case the caller emits the two-argument form app.method(path, handler).
- * When a response schema is available in schemaNames, returns an object literal
- * with schema.response so Fastify validates the response against the Zod schema.
- * Multi-status operations are excluded from response schema wiring.
+ * Always includes config.operationId so onRequest hooks can identify the operation
+ * via request.routeOptions.config.operationId (issue #309).
+ * When a response schema is available in schemaNames, also includes schema.response
+ * so Fastify validates the response against the Zod schema (issue #308).
+ * Both properties are merged into a single options object literal when both apply.
  */
 function buildFastifyRouteOptions(
   op: RouteOperation,
   schemaNames?: Set<string>
-): string | undefined {
+): string {
+  const parts: string[] = []
   const responseSchemaExpr = buildFastifyResponseSchemaExpr(op, schemaNames)
-  if (responseSchemaExpr === undefined) return undefined
-  return `{ schema: { response: { ${op.responseStatus.status}: ${responseSchemaExpr} } } }`
+  if (responseSchemaExpr !== undefined) {
+    parts.push(`schema: { response: { ${op.responseStatus.status}: ${responseSchemaExpr} } }`)
+  }
+  parts.push(`config: { operationId: '${op.methodName}' }`)
+  return `{ ${parts.join(', ')} }`
 }
 
 /**
@@ -1219,11 +1223,8 @@ function buildFastifyRouteHandler(
 
   const generic = genericParts.length > 0 ? `<{ ${genericParts.join('; ')} }>` : ''
   const routeOpts = buildFastifyRouteOptions(op, schemaNames)
-  const routeArgs = routeOpts !== undefined
-    ? `${JSON.stringify(op.honoPath)}, ${routeOpts},`
-    : `${JSON.stringify(op.honoPath)},`
   lines.push(
-    `${indent}app.${op.httpMethod}${generic}(${routeArgs} async (req, reply) => {`
+    `${indent}app.${op.httpMethod}${generic}(${JSON.stringify(op.honoPath)}, ${routeOpts}, async (req, reply) => {`
   )
 
   // Path param format validation (e.g. uuid)
