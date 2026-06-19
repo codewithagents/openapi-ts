@@ -2117,3 +2117,262 @@ describe('context type option (issue #310)', () => {
     })
   })
 })
+
+// ── Issue #308: Fastify schema.response for runtime response validation ─────────
+
+describe('issue #308: Fastify schema.response wiring', () => {
+  const getPetSpec = makeSpec({
+    '/pets/{id}': {
+      get: {
+        operationId: 'getPet',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'ok',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+          },
+        },
+      },
+    },
+  })
+
+  const listPetsSpec = makeSpec({
+    '/pets': {
+      get: {
+        operationId: 'listPets',
+        responses: {
+          '200': {
+            description: 'ok',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/Pet' } },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+
+  const noSchemaSpec = makeSpec({
+    '/pets/{id}': {
+      get: {
+        operationId: 'getPet',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'ok',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+          },
+        },
+      },
+    },
+  })
+
+  it('direct $ref response: emits schema.response with TypeSchema when schema is in schemaNames', () => {
+    const { content } = generateFastifyRouter(getPetSpec, {
+      schemaNames: new Set(['PetSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('schema: { response: { 200: PetSchema } }')
+  })
+
+  it('direct $ref response: schema.response appears in the route registration options', () => {
+    const { content } = generateFastifyRouter(getPetSpec, {
+      schemaNames: new Set(['PetSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    // The options object must be between the path and the handler
+    expect(content).toMatch(/app\.get<[^>]+>\("\/pets\/:id", \{ schema:/)
+  })
+
+  it('array-of-$ref response: emits z.array(TypeSchema) in schema.response', () => {
+    const { content } = generateFastifyRouter(listPetsSpec, {
+      schemaNames: new Set(['PetSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('schema: { response: { 200: z.array(PetSchema) } }')
+  })
+
+  it('array response schema: imports z from zod for z.array() expression', () => {
+    const { content } = generateFastifyRouter(listPetsSpec, {
+      schemaNames: new Set(['PetSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain("import { z } from 'zod'")
+  })
+
+  it('no schema in schemaNames: route uses two-argument form without options object', () => {
+    const { content } = generateFastifyRouter(noSchemaSpec, {
+      schemaNames: new Set(['SomeOtherSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).not.toContain('schema: { response:')
+    // Route registration must still work without options
+    expect(content).toContain('app.get<')
+    expect(content).toContain('"/pets/:id",')
+  })
+
+  it('no schemaNames option: no schema.response added', () => {
+    const { content } = generateFastifyRouter(getPetSpec)
+    expect(content).not.toContain('schema: { response:')
+  })
+
+  it('response schema import is added to the generated file', () => {
+    const { content } = generateFastifyRouter(getPetSpec, {
+      schemaNames: new Set(['PetSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain("import { PetSchema } from './schemas.js'")
+  })
+
+  it('response schema and body schema share a single import statement', () => {
+    const postGetSpec = makeSpec({
+      '/pets': {
+        post: {
+          operationId: 'createPet',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'created',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(postGetSpec, {
+      schemaNames: new Set(['CreatePetRequestSchema', 'PetSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    // Both must appear in a single import line
+    const importMatch = content.match(/^import \{ ([^}]+) \} from '\.\/schemas\.js'/m)
+    expect(importMatch).not.toBeNull()
+    expect(importMatch![1]).toContain('CreatePetRequestSchema')
+    expect(importMatch![1]).toContain('PetSchema')
+  })
+
+  it('setSerializerCompiler is added when response schemas are used', () => {
+    const { content } = generateFastifyRouter(getPetSpec, {
+      schemaNames: new Set(['PetSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('app.setSerializerCompiler(')
+    expect(content).toContain('zodSchema.parse(data)')
+  })
+
+  it('setSerializerCompiler is NOT added when no response schemas are matched', () => {
+    const { content } = generateFastifyRouter(getPetSpec, {
+      schemaNames: new Set(['SomeOtherSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).not.toContain('app.setSerializerCompiler(')
+  })
+
+  it('setSerializerCompiler is NOT added when schemaNames is not provided', () => {
+    const { content } = generateFastifyRouter(getPetSpec)
+    expect(content).not.toContain('app.setSerializerCompiler(')
+  })
+
+  it('void (DELETE 204) operation: no schema.response added', () => {
+    const deleteSpec = makeSpec({
+      '/pets/{id}': {
+        delete: {
+          operationId: 'deletePet',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { '204': { description: 'deleted' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(deleteSpec, {
+      schemaNames: new Set(['PetSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).not.toContain('schema: { response:')
+  })
+
+  it('multi-status operation (200+202): no schema.response added', () => {
+    const multiStatusSpec = makeSpec({
+      '/tasks/{id}': {
+        get: {
+          operationId: 'getTask',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'done',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+            '202': {
+              description: 'still running',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(multiStatusSpec, {
+      schemaNames: new Set(['TaskSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).not.toContain('schema: { response:')
+  })
+
+  it('201 response: schema.response uses status code 201', () => {
+    const postSpec = makeSpec({
+      '/pets': {
+        post: {
+          operationId: 'createPet',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'created',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(postSpec, {
+      schemaNames: new Set(['CreatePetRequestSchema', 'PetSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    expect(content).toContain('schema: { response: { 201: PetSchema } }')
+  })
+
+  it('response schema without body schema: no z import needed for direct $ref', () => {
+    // Direct $ref response uses PetSchema directly, no z.array() needed — no z import
+    const { content } = generateFastifyRouter(getPetSpec, {
+      schemaNames: new Set(['PetSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    // z is NOT needed for direct $ref responses (only for array responses or param validation)
+    // This test verifies we don't import z unnecessarily for the simple case
+    expect(content).not.toMatch(/^import \{ z \} from 'zod'/m)
+  })
+
+  it('Hono and Express generators are unaffected by response schema options', () => {
+    const honoContent = generateRouter(getPetSpec, {
+      schemaNames: new Set(['PetSchema']),
+      schemaImportPath: './schemas.js',
+    }).content
+    expect(honoContent).not.toContain('schema: { response:')
+    expect(honoContent).not.toContain('setSerializerCompiler')
+
+    const expressContent = generateExpressRouter(getPetSpec, {
+      schemaNames: new Set(['PetSchema']),
+      schemaImportPath: './schemas.js',
+    }).content
+    expect(expressContent).not.toContain('schema: { response:')
+    expect(expressContent).not.toContain('setSerializerCompiler')
+  })
+})
