@@ -392,13 +392,14 @@ function emitHeaderValidation(
   const rawFields = headerParams
     .map((h) => {
       const key = JSON.stringify(h.rawName)
+      const lookupKey = JSON.stringify(h.rawName.toLowerCase())
       let access: string
       if (framework === 'hono') {
         access = `c.req.header(${key})`
       } else if (framework === 'express') {
-        access = `req.headers[${key}] as string | undefined`
+        access = `req.headers[${lookupKey}] as string | undefined`
       } else {
-        access = `req.headers[${key}]`
+        access = `req.headers[${lookupKey}]`
       }
       return `${fieldIndent}${key}: ${access}`
     })
