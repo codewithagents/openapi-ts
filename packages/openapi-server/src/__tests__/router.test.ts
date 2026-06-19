@@ -2610,3 +2610,67 @@ describe('issue #309: Fastify config.operationId in every route', () => {
     expect(expressContent).not.toContain('config: { operationId:')
   })
 })
+
+// ── Issue #318: octet-stream REQUEST body parser (Fastify) ────────────────────
+
+describe('issue #318: Fastify octet-stream request body parser', () => {
+  const octetRequestSpec = makeSpec({
+    '/upload': {
+      post: {
+        operationId: 'uploadBinary',
+        requestBody: {
+          required: true,
+          content: {
+            'application/octet-stream': { schema: { type: 'string', format: 'binary' } },
+          },
+        },
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  const jsonOnlySpec = makeSpec({
+    '/pets': {
+      post: {
+        operationId: 'createPet',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } },
+          },
+        },
+        responses: { '201': { description: 'created' } },
+      },
+    },
+  })
+
+  it('emits addContentTypeParser for octet-stream when an operation has an octet-stream request body', () => {
+    const { content } = generateFastifyRouter(octetRequestSpec)
+    expect(content).toContain("app.addContentTypeParser('application/octet-stream'")
+    expect(content).toContain("parseAs: 'buffer'")
+    expect(content).toContain('done(null, body)')
+  })
+
+  it('does NOT emit addContentTypeParser when no operation has an octet-stream request body', () => {
+    const { content } = generateFastifyRouter(jsonOnlySpec)
+    expect(content).not.toContain('addContentTypeParser')
+  })
+
+  it('emits a comment about the octet-stream buffer parser in the route handler', () => {
+    const { content } = generateFastifyRouter(octetRequestSpec)
+    expect(content).toContain('application/octet-stream: req.body is a Buffer')
+  })
+
+  it('file header includes form-urlencoded plugin requirement comment', () => {
+    const { content } = generateFastifyRouter(jsonOnlySpec)
+    expect(content).toContain('@fastify/formbody')
+  })
+
+  it('Hono and Express generators do NOT emit addContentTypeParser', () => {
+    const honoContent = generateRouter(octetRequestSpec).content
+    expect(honoContent).not.toContain('addContentTypeParser')
+
+    const expressContent = generateExpressRouter(octetRequestSpec).content
+    expect(expressContent).not.toContain('addContentTypeParser')
+  })
+})

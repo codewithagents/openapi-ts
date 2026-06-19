@@ -297,7 +297,11 @@ export function getQueryParams(
 export interface BodyInfo {
   typeName: string | undefined
   /** The request body content type that was matched. Drives parser choice in the router. */
-  contentType: 'application/json' | 'application/x-www-form-urlencoded' | 'multipart/form-data'
+  contentType:
+    | 'application/json'
+    | 'application/x-www-form-urlencoded'
+    | 'multipart/form-data'
+    | 'application/octet-stream'
   /**
    * True when typeName was synthesized from the operationId (inline schema, no $ref).
    * Synthesized names exist only for schema lookup (XxxSchema.safeParse) and are NOT
@@ -385,6 +389,12 @@ export function getBodyInfo(operation: OpenAPIV3_1.OperationObject): BodyInfo | 
       }
     }
     return { typeName: undefined, contentType: 'multipart/form-data', isSynthesized: false }
+  }
+
+  // Check application/octet-stream request body.
+  const octetContent = content['application/octet-stream']
+  if (octetContent !== undefined) {
+    return { typeName: undefined, contentType: 'application/octet-stream', isSynthesized: false }
   }
 
   return { typeName: undefined, contentType: 'application/json', isSynthesized: false }

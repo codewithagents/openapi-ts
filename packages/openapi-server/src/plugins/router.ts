@@ -1496,16 +1496,27 @@ function buildFastifyRouteHandler(
   }
 
   // Body handling, with optional Zod validation.
-  // Fastify pre-parses req.body for both JSON and form-urlencoded bodies via plugins.
-  // For multipart/form-data: assumes @fastify/multipart (or equivalent) plugin is registered
-  // so that req.body contains the parsed fields and file parts.
+  // Fastify natively parses only application/json and text/plain.
+  // For application/x-www-form-urlencoded: register @fastify/formbody before this router
+  // so that req.body is populated.
+  // For multipart/form-data: register @fastify/multipart with attachFieldsToBody: true before
+  // this router so that req.body is populated with parsed fields. Without attachFieldsToBody,
+  // @fastify/multipart v10 exposes files via async iterators (request.parts()), not req.body.
   let bodyVarName = 'req.body'
   if (op.bodyInfo !== undefined) {
     if (op.bodyInfo.contentType === 'multipart/form-data') {
-      // Multipart assumption: @fastify/multipart plugin has populated req.body before this
-      // handler runs. The body is forwarded to the service as-is.
+      // multipart/form-data: @fastify/multipart must be registered with attachFieldsToBody: true.
+      // Without that option, files are only accessible via async iterators (request.parts()),
+      // NOT via req.body. The consumer must register the plugin before creating this router.
       lines.push(
-        `${indent}  // multipart/form-data: assumes @fastify/multipart plugin has populated req.body.`
+        `${indent}  // multipart/form-data: requires @fastify/multipart registered with { attachFieldsToBody: true }.`
+      )
+      // bodyVarName stays 'req.body'
+    } else if (op.bodyInfo.contentType === 'application/octet-stream') {
+      // application/octet-stream: req.body is a Buffer (parsed by the addContentTypeParser
+      // registration emitted in the createRouter body above). Forward it to the service as-is.
+      lines.push(
+        `${indent}  // application/octet-stream: req.body is a Buffer from the registered content-type parser.`
       )
       // bodyVarName stays 'req.body'
     } else {
@@ -1702,8 +1713,22 @@ export function generateFastifyRouter(
   // Merge body and response schema imports into a single sorted import list.
   const allUsedSchemaNames = new Set([...usedSchemaNames, ...usedResponseSchemaNames])
 
+  // Detect operations that need the octet-stream request body parser.
+  const hasOctetStreamRequestBody = operations.some(
+    (op) => op.bodyInfo?.contentType === 'application/octet-stream'
+  )
+
   const lines: string[] = []
   lines.push('// This file is auto-generated. Do not edit manually.')
+  lines.push(
+    '// Fastify natively parses only application/json and text/plain request bodies.'
+  )
+  lines.push(
+    '// For application/x-www-form-urlencoded bodies, register @fastify/formbody before this router.'
+  )
+  lines.push(
+    '// For multipart/form-data bodies, register @fastify/multipart with { attachFieldsToBody: true } before this router.'
+  )
   lines.push('')
   const ctx = options?.contextType
   const serviceRef = ctx !== undefined ? `${serviceName}<${ctx}>` : serviceName
@@ -1723,6 +1748,16 @@ export function generateFastifyRouter(
   for (const l of httpErrorClassLines()) lines.push(l)
   lines.push('')
   lines.push(`export function createRouter(app: FastifyInstance, service: ${serviceRef}): void {`)
+
+  // Register a built-in content-type parser for application/octet-stream so that
+  // req.body is a Buffer. Fastify 5 does not parse octet-stream natively; without
+  // this registration the framework returns a 415 before the handler runs.
+  // addContentTypeParser is a core Fastify API and requires no extra dependency.
+  if (hasOctetStreamRequestBody) {
+    lines.push(
+      "  app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
+    )
+  }
 
   // Wire a Zod-aware serializer compiler when response schemas are present.
   // Fastify's default serializer does not understand Zod schemas; this compiler
