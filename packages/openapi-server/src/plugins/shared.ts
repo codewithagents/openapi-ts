@@ -166,6 +166,7 @@ export function schemaToTsType(
   const s = schema as OpenAPIV3_1.SchemaObject
   if (s.type === 'number' || s.type === 'integer') return 'number'
   if (s.type === 'boolean') return 'boolean'
+  if (s.type === 'array') return 'string[]'
   return 'string'
 }
 
@@ -243,6 +244,12 @@ export function getQueryParams(
           key,
           tsType: schemaToTsType(propSchema as OpenAPIV3_1.SchemaObject | undefined),
         }))
+        // Build the TypeScript object shape for use in the service interface.
+        // Properties are always optional (their presence is governed by the outer param's required flag).
+        const propFields = param.deepObjectProperties
+          .map((p) => `${p.key}?: ${p.tsType}`)
+          .join('; ')
+        param.tsType = `{ ${propFields} }`
       }
     }
 

@@ -889,7 +889,12 @@ function buildRouteHandler(
         `${indent}    return c.json({ error: 'Invalid request body', issues: parseResult.error.issues }, 422)`
       )
       lines.push(`${indent}  }`)
-      lines.push(`${indent}  const validatedBody = parseResult.data`)
+      // Forward the validated/coerced data (parseResult.data), NOT the raw parsed body,
+      // so Zod coercion is preserved (e.g. form-urlencoded numeric fields via
+      // z.coerce.number()). Cast to the declared model type so the service-call type
+      // stays correct even when the schema infers a narrower shape (e.g. z.unknown()
+      // for inline-union properties); safeParse above guarantees runtime safety.
+      lines.push(`${indent}  const validatedBody = parseResult.data as ${typeDecl}`)
       bodyVarName = 'validatedBody'
     }
   }
@@ -903,7 +908,11 @@ function buildRouteHandler(
     serviceArgs.push(bodyVarName)
   }
   if (op.queryParams.length > 0) {
-    serviceArgs.push('params')
+    // After successful Zod validation _qv.data carries the correct required/typed
+    // values (e.g. string[] for delimited arrays, object shape for deepObject params,
+    // and non-optional values for required scalar params). Use _qv.data when validation
+    // was applied; fall back to params when no validation is needed.
+    serviceArgs.push(queryParamsNeedValidation(op.queryParams) ? '_qv.data' : 'params')
   }
   // Context arg: pass the Hono Context object (c) as the final argument when contextType is set.
   if (contextType !== undefined) {
@@ -1058,7 +1067,15 @@ function buildExpressRouteHandler(
           `${indent}    return void res.status(422).json({ error: 'Invalid request body', issues: parseResult.error.issues })`
         )
         lines.push(`${indent}  }`)
-        lines.push(`${indent}  const validatedBody = parseResult.data`)
+        // Cast parseResult.data to the declared model type so the service call receives
+        // the correct TypeScript type even when the Zod schema infers a narrower or
+        // different shape (e.g. z.unknown() for inline-union properties). The cast is
+        // safe because safeParse already confirmed the value is structurally valid.
+        const typeDecl =
+          op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized
+            ? op.bodyInfo.typeName
+            : 'unknown'
+        lines.push(`${indent}  const validatedBody = parseResult.data as ${typeDecl}`)
         bodyVarName = 'validatedBody'
       } else {
         // Synthesized names (inline schemas) have no model type — use plain cast to unknown.
@@ -1080,7 +1097,11 @@ function buildExpressRouteHandler(
     serviceArgs.push(bodyVarName)
   }
   if (op.queryParams.length > 0) {
-    serviceArgs.push('params')
+    // After successful Zod validation _qv.data carries the correct required/typed
+    // values (e.g. string[] for delimited arrays, object shape for deepObject params,
+    // and non-optional values for required scalar params). Use _qv.data when validation
+    // was applied; fall back to params when no validation is needed.
+    serviceArgs.push(queryParamsNeedValidation(op.queryParams) ? '_qv.data' : 'params')
   }
   // Context arg: pass the Express Request object (req) as the final argument when contextType is set.
   if (contextType !== undefined) {
@@ -1336,7 +1357,17 @@ function buildFastifyRouteHandler(
           `${indent}    return reply.status(422).send({ error: 'Invalid request body', issues: parseResult.error.issues })`
         )
         lines.push(`${indent}  }`)
-        bodyVarName = 'parseResult.data'
+        // Forward the validated/coerced data (parseResult.data), NOT the raw req.body,
+        // so Zod coercion is preserved (e.g. form-urlencoded numeric fields via
+        // z.coerce.number()). Cast to the declared model type so the service-call type
+        // stays correct even when the schema infers a narrower shape (e.g. z.unknown()
+        // for inline-union properties); safeParse above guarantees runtime safety.
+        const bodyCastType =
+          op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized
+            ? op.bodyInfo.typeName
+            : 'unknown'
+        lines.push(`${indent}  const validatedBody = parseResult.data as ${bodyCastType}`)
+        bodyVarName = 'validatedBody'
       }
     }
   }
@@ -1350,7 +1381,11 @@ function buildFastifyRouteHandler(
     serviceArgs.push(bodyVarName)
   }
   if (op.queryParams.length > 0) {
-    serviceArgs.push('params')
+    // After successful Zod validation _qv.data carries the correct required/typed
+    // values (e.g. string[] for delimited arrays, object shape for deepObject params,
+    // and non-optional values for required scalar params). Use _qv.data when validation
+    // was applied; fall back to params when no validation is needed.
+    serviceArgs.push(queryParamsNeedValidation(op.queryParams) ? '_qv.data' : 'params')
   }
   // Context arg: pass the Fastify Request object (req) as the final argument when contextType is set.
   if (contextType !== undefined) {
