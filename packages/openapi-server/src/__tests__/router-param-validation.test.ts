@@ -130,7 +130,7 @@ describe('path param with format:uuid generates Zod validation', () => {
 
   it("Express: _pv.safeParse passes req.params['id']", () => {
     const { content } = generateExpressRouter(uuidSpec)
-    expect(content).toContain('req.params["id"]')
+    expect(content).toContain('req.params["id"] as string')
     expect(content).toContain('_pv.success')
   })
 
@@ -156,7 +156,7 @@ describe('path param with format:uuid generates Zod validation', () => {
 
   it('Fastify: returns 422 via reply.status(422).send() on failure', () => {
     const { content } = generateFastifyRouter(uuidSpec)
-    expect(content).toContain('reply.status(422).send(')
+    expect(content).toContain('(reply as FastifyReply).status(422).send(')
     expect(content).toContain("error: 'Invalid path parameters'")
     expect(content).toContain('_pv.error.issues')
   })
@@ -226,7 +226,7 @@ describe('required query param generates Zod validation', () => {
 
   it('Fastify: returns 422 via reply.status(422).send() on failure', () => {
     const { content } = generateFastifyRouter(requiredQuerySpec)
-    expect(content).toContain('reply.status(422).send(')
+    expect(content).toContain('(reply as FastifyReply).status(422).send(')
     expect(content).toContain("error: 'Invalid query parameters'")
   })
 })
@@ -380,7 +380,7 @@ describe('required header param generates Zod validation', () => {
 
   it('Fastify: returns 422 via reply.status(422).send() on header failure', () => {
     const { content } = generateFastifyRouter(headerSpec)
-    expect(content).toContain('reply.status(422).send(')
+    expect(content).toContain('(reply as FastifyReply).status(422).send(')
     expect(content).toContain("error: 'Invalid request headers'")
     expect(content).toContain('_hv.error.issues')
   })
@@ -511,9 +511,9 @@ describe('path param with hyphens uses quoted key in Zod object', () => {
     expect(content).toContain('c.req.param("job-id")')
   })
 
-  it('Express: uses req.params["job-id"] in safeParse', () => {
+  it('Express: uses req.params["job-id"] as string in safeParse', () => {
     const { content } = generateExpressRouter(hyphenSpec)
-    expect(content).toContain('req.params["job-id"]')
+    expect(content).toContain('req.params["job-id"] as string')
   })
 
   it('Fastify: uses req.params["job-id"] (bracket notation for hyphenated name)', () => {
@@ -1154,7 +1154,7 @@ describe('required cookie param generates Zod validation', () => {
 
   it('Fastify: returns 422 via reply.status(422).send() on cookie failure', () => {
     const { content } = generateFastifyRouter(cookieSpec)
-    expect(content).toContain('reply.status(422).send(')
+    expect(content).toContain('(reply as FastifyReply).status(422).send(')
     expect(content).toContain("error: 'Invalid request cookies'")
     expect(content).toContain('_ckv.error.issues')
   })

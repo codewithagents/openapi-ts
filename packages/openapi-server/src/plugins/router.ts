@@ -417,7 +417,9 @@ function emitPathValidation(
       if (framework === 'hono') {
         access = `c.req.param(${JSON.stringify(v.rawName)})`
       } else if (framework === 'express') {
-        access = `req.params[${JSON.stringify(v.rawName)}]`
+        // Cast to string: Express 5 types req.params values as string | string[],
+        // but path params are always single strings in practice.
+        access = `req.params[${JSON.stringify(v.rawName)}] as string`
       } else {
         access = /[^a-zA-Z0-9_$]/.test(v.rawName)
           ? `req.params[${JSON.stringify(v.rawName)}]`
@@ -1237,7 +1239,9 @@ function buildExpressRouteHandler(
   // Build service call args
   const serviceArgs: string[] = []
   for (const p of op.pathParams) {
-    serviceArgs.push(`req.params['${p}']!`)
+    // Cast to string: Express 5 types req.params values as string | string[],
+    // but path params are always single strings in practice.
+    serviceArgs.push(`(req.params['${p}'] as string)`)
   }
   if (op.bodyInfo !== undefined) {
     serviceArgs.push(bodyVarName)
@@ -1398,7 +1402,7 @@ function buildFastifyRouteHandler(
   if (op.pathParamValidations.length > 0) {
     emitPathValidation(lines, op.pathParamValidations, indent, 'fastify')
     lines.push(`${indent}  if (!_pv.success) {`)
-    lines.push(`${indent}    return reply.status(422).send({`)
+    lines.push(`${indent}    return (reply as FastifyReply).status(422).send({`)
     lines.push(`${indent}      error: 'Invalid path parameters',`)
     lines.push(`${indent}      issues: _pv.error.issues,`)
     lines.push(`${indent}    })`)
@@ -1464,7 +1468,7 @@ function buildFastifyRouteHandler(
     if (queryParamsNeedValidation(op.queryParams)) {
       emitQueryValidation(lines, op.queryParams, indent)
       lines.push(`${indent}  if (!_qv.success) {`)
-      lines.push(`${indent}    return reply.status(422).send({`)
+      lines.push(`${indent}    return (reply as FastifyReply).status(422).send({`)
       lines.push(`${indent}      error: 'Invalid query parameters',`)
       lines.push(`${indent}      issues: _qv.error.issues,`)
       lines.push(`${indent}    })`)
@@ -1476,7 +1480,7 @@ function buildFastifyRouteHandler(
   if (op.headerParams.length > 0) {
     emitHeaderValidation(lines, op.headerParams, indent, 'fastify')
     lines.push(`${indent}  if (!_hv.success) {`)
-    lines.push(`${indent}    return reply.status(422).send({`)
+    lines.push(`${indent}    return (reply as FastifyReply).status(422).send({`)
     lines.push(`${indent}      error: 'Invalid request headers',`)
     lines.push(`${indent}      issues: _hv.error.issues,`)
     lines.push(`${indent}    })`)
@@ -1488,7 +1492,7 @@ function buildFastifyRouteHandler(
   if (op.cookieParams.length > 0) {
     emitCookieValidation(lines, op.cookieParams, indent, 'fastify')
     lines.push(`${indent}  if (!_ckv.success) {`)
-    lines.push(`${indent}    return reply.status(422).send({`)
+    lines.push(`${indent}    return (reply as FastifyReply).status(422).send({`)
     lines.push(`${indent}      error: 'Invalid request cookies',`)
     lines.push(`${indent}      issues: _ckv.error.issues,`)
     lines.push(`${indent}    })`)
@@ -1530,7 +1534,7 @@ function buildFastifyRouteHandler(
         lines.push(`${indent}  const parseResult = ${schemaName}.safeParse(req.body)`)
         lines.push(`${indent}  if (!parseResult.success) {`)
         lines.push(
-          `${indent}    return reply.status(422).send({ error: 'Invalid request body', issues: parseResult.error.issues })`
+          `${indent}    return (reply as FastifyReply).status(422).send({ error: 'Invalid request body', issues: parseResult.error.issues })`
         )
         lines.push(`${indent}  }`)
         // Forward the validated/coerced data (parseResult.data), NOT the raw req.body,
@@ -1599,7 +1603,7 @@ function buildFastifyRouteHandler(
   }
   lines.push(`${indent}  } catch (err) {`)
   lines.push(`${indent}    if (err instanceof HttpError) {`)
-  lines.push(`${indent}      return reply.status(err.status).send({ error: err.message })`)
+  lines.push(`${indent}      return (reply as FastifyReply).status(err.status).send({ error: err.message })`)
   lines.push(`${indent}    }`)
   lines.push(`${indent}    throw err`)
   lines.push(`${indent}  }`)
@@ -1732,7 +1736,7 @@ export function generateFastifyRouter(
   lines.push('')
   const ctx = options?.contextType
   const serviceRef = ctx !== undefined ? `${serviceName}<${ctx}>` : serviceName
-  lines.push("import type { FastifyInstance } from 'fastify'")
+  lines.push("import type { FastifyInstance, FastifyReply } from 'fastify'")
   if (sortedBodyTypes.length > 0) {
     lines.push(`import type { ${sortedBodyTypes.join(', ')} } from './models.js'`)
   }
@@ -1744,6 +1748,15 @@ export function generateFastifyRouter(
     const sortedUsedSchemas = Array.from(allUsedSchemaNames).sort()
     lines.push(`import { ${sortedUsedSchemas.join(', ')} } from '${options.schemaImportPath}'`)
   }
+  lines.push('')
+  // Augment FastifyContextConfig so that config: { operationId } on each route is type-safe.
+  // Without this, TypeScript rejects the operationId property because FastifyContextConfig
+  // is empty by default. The augmentation is scoped to the generated router module.
+  lines.push("declare module 'fastify' {")
+  lines.push('  interface FastifyContextConfig {')
+  lines.push('    operationId?: string')
+  lines.push('  }')
+  lines.push('}')
   lines.push('')
   for (const l of httpErrorClassLines()) lines.push(l)
   lines.push('')

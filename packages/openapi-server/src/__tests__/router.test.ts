@@ -789,7 +789,7 @@ describe('generateExpressRouter', () => {
       },
     })
     const result = generateExpressRouter(spec)
-    expect(result.content).toContain("req.params['id']!")
+    expect(result.content).toContain("(req.params['id'] as string)")
   })
 
   it('query params extracted via req.query bracket notation', () => {
@@ -1022,7 +1022,7 @@ describe('generateFastifyRouter', () => {
   it('imports FastifyInstance from fastify', () => {
     const spec = makeSpec({})
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain("import type { FastifyInstance } from 'fastify'")
+    expect(result.content).toContain("import type { FastifyInstance, FastifyReply } from 'fastify'")
   })
 
   it('exports createRouter function with void return type', () => {
@@ -1448,7 +1448,7 @@ describe('generateFastifyRouter with schemaNames (Zod validation)', () => {
       schemaNames: new Set(['CreatePetRequestSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(result.content).toContain('return reply.status(422).send(')
+    expect(result.content).toContain('return (reply as FastifyReply).status(422).send(')
     expect(result.content).toContain("error: 'Invalid request body'")
     expect(result.content).toContain('parseResult.error.issues')
   })
@@ -1662,7 +1662,7 @@ describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps 
   it('Fastify: GET service call wrapped in try/catch with HttpError mapping', () => {
     const { content } = generateFastifyRouter(spec)
     expect(content).toContain('if (err instanceof HttpError)')
-    expect(content).toContain('return reply.status(err.status).send({ error: err.message })')
+    expect(content).toContain('return (reply as FastifyReply).status(err.status).send({ error: err.message })')
     expect(content).toContain('throw err')
   })
 
@@ -2144,7 +2144,7 @@ describe('context type option (issue #310)', () => {
     it('path-param route passes path param then req: service.getPet(req.params[id]!, req)', () => {
       const { content } = generateExpressRouter(petSpec, { contextType: 'RequestContext' })
       // Path comes first, ctx (req) is last
-      expect(content).toContain("service.getPet(req.params['id']!, req)")
+      expect(content).toContain("service.getPet((req.params['id'] as string), req)")
     })
 
     it('body route passes body then req: service.createPet(body, req)', () => {
@@ -2214,8 +2214,8 @@ describe('context type option (issue #310)', () => {
 
     it('Express: arg order is path, body, query params, req', () => {
       const { content } = generateExpressRouter(fullArgSpec, { contextType: 'RequestContext' })
-      // Full call: service.updatePet(req.params['id']!, body, params, req)
-      expect(content).toContain("service.updatePet(req.params['id']!, body, params, req)")
+      // Full call: service.updatePet((req.params['id'] as string), body, params, req)
+      expect(content).toContain("service.updatePet((req.params['id'] as string), body, params, req)")
     })
 
     it('Fastify: arg order is path, body, query params, req', () => {
