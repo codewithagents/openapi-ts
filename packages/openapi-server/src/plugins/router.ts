@@ -529,6 +529,52 @@ function getResponseStatus(
     : { status: 200, isVoid: false, responseContentType: 'application/json' }
 }
 
+/**
+ * Resolve the response type name and shape for Fastify schema.response wiring.
+ * Returns the PascalCase type name of the first JSON 2xx response if it is a
+ * direct $ref or an array-of-$ref. Returns undefined for inline schemas, void,
+ * text/plain, or octet-stream responses.
+ *
+ * Priority order mirrors service.ts getReturnInfo: 200, 201, then other 2xx codes.
+ */
+function getResponseTypeName(
+  operation: OperationObject
+): { typeName: string; isArray: boolean } | undefined {
+  const responses = operation.responses as
+    | Record<string, ResponseObject | ReferenceObject>
+    | undefined
+  if (responses === undefined) return undefined
+
+  const priority = ['200', '201', ...Object.keys(responses).filter(
+    (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
+  )]
+
+  for (const code of priority) {
+    const response = responses[code]
+    if (response === undefined || isRef(response)) continue
+    const resp = response as ResponseObject
+    const content = resp.content as
+      | Record<string, { schema?: OpenAPIV3_1.SchemaObject | ReferenceObject }>
+      | undefined
+    if (content === undefined) continue
+    const jsonContent = content['application/json']
+    if (jsonContent === undefined || jsonContent.schema === undefined) continue
+    const schema = jsonContent.schema
+    if (isRef(schema)) {
+      return { typeName: refToName((schema as ReferenceObject).$ref), isArray: false }
+    }
+    const s = schema as OpenAPIV3_1.SchemaObject
+    if (s.type === 'array' && s.items !== undefined && isRef(s.items)) {
+      return {
+        typeName: refToName((s.items as ReferenceObject).$ref),
+        isArray: true,
+      }
+    }
+  }
+
+  return undefined
+}
+
 interface RouteOperation {
   methodName: string
   httpMethod: SupportedMethod
@@ -540,6 +586,18 @@ interface RouteOperation {
   headerParams: HeaderParam[]
   bodyInfo: BodyInfo | undefined
   responseStatus: ResponseStatus
+  /**
+   * The PascalCase type name of the primary JSON response schema, if it is a
+   * direct component $ref (e.g. 'Pet' for schema: { $ref: '#/components/schemas/Pet' }).
+   * Undefined for inline schemas, void responses, text/plain, or octet-stream.
+   * Used by the Fastify generator to wire schema.response validation.
+   */
+  responseTypeName?: string
+  /**
+   * True when the primary JSON response is an array whose items are a component $ref.
+   * In this case responseTypeName holds the items type name, not the array wrapper.
+   */
+  responseIsArray?: boolean
 }
 
 function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
@@ -560,6 +618,7 @@ function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
       const headerParams = getHeaderParams(operation, spec)
       const bodyInfo = getBodyInfo(operation)
       const responseStatus = getResponseStatus(operation, method)
+      const responseTypeInfo = getResponseTypeName(operation)
 
       operations.push({
         methodName,
@@ -572,6 +631,8 @@ function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
         headerParams,
         bodyInfo,
         responseStatus,
+        responseTypeName: responseTypeInfo?.typeName,
+        responseIsArray: responseTypeInfo?.isArray,
       })
     }
   }
@@ -602,6 +663,7 @@ interface RouterOptions {
 interface GeneratorSetup {
   sortedBodyTypes: string[]
   usedSchemaNames: Set<string>
+  usedResponseSchemaNames: Set<string>
   needsZod: boolean
 }
 
@@ -635,6 +697,27 @@ function collectUsedSchemaNames(
 }
 
 /**
+ * Collect the subset of schemaNames used as Fastify response schemas.
+ * Only operations with a resolvable $ref response type (direct or array-of-$ref)
+ * and a matching schema in schemaNames are included.
+ * Multi-status operations are excluded because they cannot be mapped to a single
+ * status code in schema.response at generation time.
+ */
+function collectUsedResponseSchemaNames(
+  operations: RouteOperation[],
+  schemaNames: Set<string>
+): Set<string> {
+  const used = new Set<string>()
+  for (const op of operations) {
+    if (op.responseTypeName === undefined) continue
+    if (op.responseStatus.isMultiStatus === true) continue
+    const schemaName = `${op.responseTypeName}Schema`
+    if (schemaNames.has(schemaName)) used.add(schemaName)
+  }
+  return used
+}
+
+/**
  * Collect body type names, used schema names, and whether Zod is needed.
  * Shared by all three generator functions to avoid duplication.
  */
@@ -647,10 +730,25 @@ function collectGeneratorSetup(
     options?.schemaNames !== undefined
       ? collectUsedSchemaNames(operations, options.schemaNames)
       : new Set<string>()
+  const usedResponseSchemaNames =
+    options?.schemaNames !== undefined
+      ? collectUsedResponseSchemaNames(operations, options.schemaNames)
+      : new Set<string>()
+  // Zod is needed for param validation, body schema validation, or array response schemas.
+  // Array response schemas emit z.array(XSchema) which requires the z import.
+  const hasArrayResponseSchema =
+    usedResponseSchemaNames.size > 0 &&
+    operations.some(
+      (op) =>
+        op.responseIsArray === true &&
+        op.responseTypeName !== undefined &&
+        usedResponseSchemaNames.has(`${op.responseTypeName}Schema`)
+    )
   const needsZod =
     (usedSchemaNames.size > 0 && options?.schemaImportPath !== undefined) ||
-    operationsNeedZodForParams(operations)
-  return { sortedBodyTypes, usedSchemaNames, needsZod }
+    operationsNeedZodForParams(operations) ||
+    (usedResponseSchemaNames.size > 0 && options?.schemaImportPath !== undefined && hasArrayResponseSchema)
+  return { sortedBodyTypes, usedSchemaNames, usedResponseSchemaNames, needsZod }
 }
 
 // ── Hono route handler ────────────────────────────────────────────────────────
@@ -1036,6 +1134,42 @@ function buildExpressRouteHandler(
 
 // ── Fastify route handler ─────────────────────────────────────────────────────
 
+/**
+ * Build the route options object literal string for a Fastify route registration.
+ * Returns undefined when no options are needed (no response schema available),
+ * in which case the caller emits the two-argument form app.method(path, handler).
+ * When a response schema is available in schemaNames, returns an object literal
+ * with schema.response so Fastify validates the response against the Zod schema.
+ * Multi-status operations are excluded from response schema wiring.
+ */
+function buildFastifyRouteOptions(
+  op: RouteOperation,
+  schemaNames?: Set<string>
+): string | undefined {
+  const responseSchemaExpr = buildFastifyResponseSchemaExpr(op, schemaNames)
+  if (responseSchemaExpr === undefined) return undefined
+  return `{ schema: { response: { ${op.responseStatus.status}: ${responseSchemaExpr} } } }`
+}
+
+/**
+ * Build the Zod schema expression for a Fastify schema.response entry.
+ * Returns undefined when no schema is available or the operation is multi-status.
+ * Direct $ref response: 'PetSchema'
+ * Array-of-$ref response: 'z.array(PetSchema)'
+ */
+function buildFastifyResponseSchemaExpr(
+  op: RouteOperation,
+  schemaNames?: Set<string>
+): string | undefined {
+  if (schemaNames === undefined) return undefined
+  if (op.responseTypeName === undefined) return undefined
+  if (op.responseStatus.isMultiStatus === true) return undefined
+  if (op.responseStatus.isVoid) return undefined
+  const schemaName = `${op.responseTypeName}Schema`
+  if (!schemaNames.has(schemaName)) return undefined
+  return op.responseIsArray === true ? `z.array(${schemaName})` : schemaName
+}
+
 // fallow-ignore-next-line complexity
 function buildFastifyRouteHandler(
   op: RouteOperation,
@@ -1084,8 +1218,12 @@ function buildFastifyRouteHandler(
   }
 
   const generic = genericParts.length > 0 ? `<{ ${genericParts.join('; ')} }>` : ''
+  const routeOpts = buildFastifyRouteOptions(op, schemaNames)
+  const routeArgs = routeOpts !== undefined
+    ? `${JSON.stringify(op.honoPath)}, ${routeOpts},`
+    : `${JSON.stringify(op.honoPath)},`
   lines.push(
-    `${indent}app.${op.httpMethod}${generic}(${JSON.stringify(op.honoPath)}, async (req, reply) => {`
+    `${indent}app.${op.httpMethod}${generic}(${routeArgs} async (req, reply) => {`
   )
 
   // Path param format validation (e.g. uuid)
@@ -1301,6 +1439,7 @@ export function generateExpressRouter(
   const serviceName = deriveServiceName(spec)
   const operations = collectOperations(spec)
   const { sortedBodyTypes, usedSchemaNames, needsZod } = collectGeneratorSetup(operations, options)
+  // usedResponseSchemaNames is Fastify-only; not used in Express generator.
 
   const lines: string[] = []
   lines.push('// This file is auto-generated. Do not edit manually.')
@@ -1354,7 +1493,11 @@ export function generateFastifyRouter(
 ): GeneratedFile {
   const serviceName = deriveServiceName(spec)
   const operations = collectOperations(spec)
-  const { sortedBodyTypes, usedSchemaNames, needsZod } = collectGeneratorSetup(operations, options)
+  const { sortedBodyTypes, usedSchemaNames, usedResponseSchemaNames, needsZod } =
+    collectGeneratorSetup(operations, options)
+
+  // Merge body and response schema imports into a single sorted import list.
+  const allUsedSchemaNames = new Set([...usedSchemaNames, ...usedResponseSchemaNames])
 
   const lines: string[] = []
   lines.push('// This file is auto-generated. Do not edit manually.')
@@ -1369,14 +1512,31 @@ export function generateFastifyRouter(
   if (needsZod) {
     lines.push(`import { z } from 'zod'`)
   }
-  if (usedSchemaNames.size > 0 && options?.schemaImportPath !== undefined) {
-    const sortedUsedSchemas = Array.from(usedSchemaNames).sort()
+  if (allUsedSchemaNames.size > 0 && options?.schemaImportPath !== undefined) {
+    const sortedUsedSchemas = Array.from(allUsedSchemaNames).sort()
     lines.push(`import { ${sortedUsedSchemas.join(', ')} } from '${options.schemaImportPath}'`)
   }
   lines.push('')
   for (const l of httpErrorClassLines()) lines.push(l)
   lines.push('')
   lines.push(`export function createRouter(app: FastifyInstance, service: ${serviceRef}): void {`)
+
+  // Wire a Zod-aware serializer compiler when response schemas are present.
+  // Fastify's default serializer does not understand Zod schemas; this compiler
+  // detects any Zod schema by its .parse method and validates before serializing.
+  if (usedResponseSchemaNames.size > 0 && options?.schemaImportPath !== undefined) {
+    lines.push('  app.setSerializerCompiler(({ schema }) => {')
+    lines.push(
+      "    if (schema !== null && typeof schema === 'object' && 'parse' in schema) {"
+    )
+    lines.push(
+      '      const zodSchema = schema as { parse: (data: unknown) => unknown }'
+    )
+    lines.push('      return (data: unknown) => JSON.stringify(zodSchema.parse(data))')
+    lines.push('    }')
+    lines.push('    return (data: unknown) => JSON.stringify(data)')
+    lines.push('  })')
+  }
 
   for (const op of operations) {
     lines.push('')
