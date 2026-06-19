@@ -831,3 +831,63 @@ describe('service: synthesized body types use unknown — no dangling model impo
     expect(content).toContain("import type {")
   })
 })
+
+// ── Context type (issue #310) ─────────────────────────────────────────────────
+
+describe('generateService with contextType option', () => {
+  it('without contextType: interface has no generic and no ctx arg (backward compat)', () => {
+    const spec = makeSpec({
+      '/pets': { get: makeGetOp({ operationId: 'listPets', responseRef: 'Pet', responseArray: true }) },
+    })
+    const { content } = generateService(spec)
+    // No generic on the interface
+    expect(content).not.toContain('<Ctx')
+    // No ctx arg in method
+    expect(content).not.toContain('ctx:')
+  })
+
+  it('with contextType: interface declaration includes <Ctx = never>', () => {
+    const spec = makeSpec({
+      '/pets': { get: makeGetOp({ operationId: 'listPets', responseRef: 'Pet', responseArray: true }) },
+    })
+    const { content } = generateService(spec, { contextType: 'RequestContext' })
+    // makeSpec uses title 'Test API' which derives to TestAPIService
+    expect(content).toContain('export interface TestAPIService<Ctx = never> {')
+  })
+
+  it('with contextType: each method receives a ctx: Ctx final arg', () => {
+    const spec = makeSpec({
+      '/pets': {
+        get: makeGetOp({ operationId: 'listPets', responseRef: 'Pet', responseArray: true }),
+        post: makePostOp({ operationId: 'createPet', bodyRef: 'CreatePetRequest', responseRef: 'Pet' }),
+      },
+    })
+    const { content } = generateService(spec, { contextType: 'RequestContext' })
+    expect(content).toContain('listPets(ctx: Ctx): Promise<Pet[]>')
+    expect(content).toContain('createPet(body: CreatePetRequest, ctx: Ctx): Promise<Pet>')
+  })
+
+  it('with contextType: ctx is placed after path params, body and query params', () => {
+    const spec = makeSpec({
+      '/pets/{id}': {
+        get: makeGetOp({
+          operationId: 'getPet',
+          pathParams: ['id'],
+          queryParams: [{ name: 'format', required: false }],
+          responseRef: 'Pet',
+        }),
+      },
+    })
+    const { content } = generateService(spec, { contextType: 'RequestContext' })
+    // ctx must be after id, after params
+    expect(content).toContain('getPet(id: string, params?: { format?: string }, ctx: Ctx)')
+  })
+
+  it('with contextType: ctx is present even on void-return operations', () => {
+    const spec = makeSpec({
+      '/pets/{id}': { delete: makeDeleteOp('deletePet') },
+    })
+    const { content } = generateService(spec, { contextType: 'UserCtx' })
+    expect(content).toContain('deletePet(id: string, ctx: Ctx): Promise<void>')
+  })
+})

@@ -17,6 +17,15 @@ export interface ServerConfig {
   framework?: 'hono' | 'express' | 'fastify' | 'none'
   /** Path to user-owned Zod schema file (same file as openapi-zod-ts's input_schema). Optional. */
   input_schema?: string
+  /**
+   * Optional TypeScript type name for a caller context threaded through every service method.
+   * When set, the generated interface becomes `XService<Ctx = never>` and each method
+   * receives a final `ctx: Ctx` argument. The generated router passes the framework's
+   * native request/context object (Hono: c, Express: req, Fastify: req) as ctx.
+   *
+   * Example: `"context_type": "RequestContext"`
+   */
+  context_type?: string
 }
 
 function parseServerConfig(
@@ -39,10 +48,17 @@ function parseServerConfig(
   ) {
     throw new Error('"input_schema" must be a non-empty string path to your Zod schema file')
   }
+  if (
+    raw['context_type'] !== undefined &&
+    (typeof raw['context_type'] !== 'string' || !raw['context_type'])
+  ) {
+    throw new Error('"context_type" must be a non-empty string TypeScript type name')
+  }
   return {
     ...base,
     framework: framework as 'hono' | 'express' | 'fastify' | 'none' | undefined,
     input_schema: raw['input_schema'] as string | undefined,
+    context_type: raw['context_type'] as string | undefined,
   }
 }
 

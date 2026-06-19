@@ -3,7 +3,7 @@ import { join, relative, resolve } from 'node:path'
 import { parseSpec } from 'openapi-zod-ts'
 import { runProjects } from 'openapi-zod-ts/config-core'
 import { loadConfigs, type ServerConfig } from './config.js'
-import { generateService } from './plugins/service.js'
+import { generateService, type ServiceOptions } from './plugins/service.js'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from './plugins/router.js'
 
 async function formatTs(content: string, filePath: string): Promise<string> {
@@ -33,10 +33,16 @@ async function generateOne(cwd: string, config: ServerConfig, label?: string): P
   console.log(`${prefix}Parsing spec: ${inputPath}`)
   const spec = await parseSpec(inputPath)
 
-  const generatedFiles = [generateService(spec)]
+  const serviceOptions: ServiceOptions | undefined =
+    config.context_type !== undefined ? { contextType: config.context_type } : undefined
+  const generatedFiles = [generateService(spec, serviceOptions)]
 
   if (framework !== 'none') {
-    generatedFiles.push(buildRouterFile(spec, framework))
+    generatedFiles.push(
+      buildRouterFile(spec, framework, {
+        contextType: config.context_type,
+      })
+    )
   }
 
   console.log(`${prefix}Writing output to: ${outputDir}`)
@@ -89,6 +95,7 @@ async function generateSchemaEnhancedRouter(
   const routerFile = buildRouterFile(spec, framework, {
     schemaNames: exportedSchemas,
     schemaImportPath: schemaImportPathJs,
+    contextType: config.context_type,
   })
   const routerPath = join(outputDir, routerFile.filename)
   await writeFile(routerPath, await formatTs(routerFile.content, routerPath), 'utf-8')

@@ -186,7 +186,24 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
   return operations
 }
 
-function buildMethodSignature(op: OperationInfo): string {
+/** Options for the service generator. */
+export interface ServiceOptions {
+  /**
+   * When set, the generated interface becomes `XService<Ctx = never>` and each method
+   * receives a final `ctx: Ctx` argument. Use this to thread a caller principal
+   * (auth context, request metadata, etc.) into service methods without coupling
+   * the service interface to any specific framework type.
+   *
+   * Example: `contextType: 'RequestContext'`
+   * Result:  `export interface PetstoreService<Ctx = never> { listPets(ctx: Ctx): Promise<Pet[]> }`
+   *
+   * When not set (the default), the interface is generated without a generic parameter
+   * and all existing code remains unchanged.
+   */
+  contextType?: string
+}
+
+function buildMethodSignature(op: OperationInfo, options?: ServiceOptions): string {
   const args: string[] = []
 
   // Path params as positional string args (in template order).
@@ -216,12 +233,20 @@ function buildMethodSignature(op: OperationInfo): string {
     args.push(`${paramsToken}: { ${fields} }`)
   }
 
+  // Context arg: appended last so all existing positional args remain in place.
+  if (options?.contextType !== undefined) {
+    args.push('ctx: Ctx')
+  }
+
   const returnType = buildReturnType(op.returnInfo)
   const argStr = args.join(', ')
   return `${op.methodName}(${argStr}): ${returnType}`
 }
 
-export function generateService(spec: OpenAPIV3_1.Document): GeneratedFile {
+export function generateService(
+  spec: OpenAPIV3_1.Document,
+  options?: ServiceOptions
+): GeneratedFile {
   const serviceName = deriveServiceName(spec)
   const operations = collectOperations(spec)
 
@@ -249,11 +274,17 @@ export function generateService(spec: OpenAPIV3_1.Document): GeneratedFile {
     lines.push('')
   }
 
-  lines.push(`export interface ${serviceName} {`)
+  // When a context type is configured, emit the interface with a generic Ctx parameter.
+  // The default `Ctx = never` keeps the interface usable without specifying a type argument.
+  const interfaceDecl =
+    options?.contextType !== undefined
+      ? `export interface ${serviceName}<Ctx = never> {`
+      : `export interface ${serviceName} {`
+  lines.push(interfaceDecl)
 
   for (const op of operations) {
     lines.push(`  /** ${op.httpMethod.toUpperCase()} ${op.path} */`)
-    lines.push(`  ${buildMethodSignature(op)}`)
+    lines.push(`  ${buildMethodSignature(op, options)}`)
   }
 
   lines.push('}')
