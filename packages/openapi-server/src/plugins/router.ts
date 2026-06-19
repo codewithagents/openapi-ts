@@ -1426,10 +1426,10 @@ function buildFastifyRouteHandler(
       lines.push(`${indent}    return reply.status(${op.responseStatus.status}).type('application/octet-stream').send(Buffer.from(await ${serviceCall}))`)
     }
   } else if (op.responseStatus.status === 200) {
-    lines.push(`${indent}    return ${serviceCall}`)
+    lines.push(`${indent}    return await ${serviceCall}`)
   } else {
     lines.push(`${indent}    reply.status(${op.responseStatus.status})`)
-    lines.push(`${indent}    return ${serviceCall}`)
+    lines.push(`${indent}    return await ${serviceCall}`)
   }
   lines.push(`${indent}  } catch (err) {`)
   lines.push(`${indent}    if (err instanceof HttpError) {`)
