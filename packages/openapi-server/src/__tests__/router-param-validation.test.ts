@@ -233,7 +233,7 @@ describe('required query param generates Zod validation', () => {
 
 // ── Query param: integer coercion validation ──────────────────────────────────
 
-describe('integer query param generates z.number() validation', () => {
+describe('integer query param generates z.coerce.number() validation', () => {
   const intQuerySpec = makeSpec({
     '/books': {
       get: {
@@ -247,11 +247,11 @@ describe('integer query param generates z.number() validation', () => {
     },
   })
 
-  it('Hono: generates _qv with z.number().optional() for optional integer', () => {
+  it('Hono: generates _qv with z.coerce.number().optional() for optional integer', () => {
     const { content } = generateRouter(intQuerySpec)
     expect(content).toContain('_qv')
-    expect(content).toContain('limit: z.number().optional()')
-    expect(content).toContain('page: z.number()')
+    expect(content).toContain('limit: z.coerce.number().optional()')
+    expect(content).toContain('page: z.coerce.number()')
   })
 
   it('Hono: still uses Number() coercion in params extraction', () => {
@@ -262,11 +262,50 @@ describe('integer query param generates z.number() validation', () => {
   it.each([
     ['Express', generateExpressRouter] as const,
     ['Fastify', generateFastifyRouter] as const,
-  ])('%s: generates _qv for integer params', (_, gen) => {
+  ])('%s: generates _qv with z.coerce.number() for integer params', (_, gen) => {
     const { content } = gen(intQuerySpec)
     expect(content).toContain('_qv')
-    expect(content).toContain('limit: z.number().optional()')
-    expect(content).toContain('page: z.number()')
+    expect(content).toContain('limit: z.coerce.number().optional()')
+    expect(content).toContain('page: z.coerce.number()')
+  })
+})
+
+// ── Query param: boolean coercion (#314) ─────────────────────────────────────
+
+describe('boolean query param coerces via === "true" on Fastify (#314)', () => {
+  const boolQuerySpec = makeSpec({
+    '/items': {
+      get: {
+        operationId: 'listItems',
+        parameters: [
+          { name: 'active', in: 'query', required: true, schema: { type: 'boolean' } },
+          { name: 'deleted', in: 'query', required: false, schema: { type: 'boolean' } },
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it('Fastify: coerces boolean param via === "true" in extraction (not z.coerce.boolean)', () => {
+    const { content } = generateFastifyRouter(boolQuerySpec)
+    expect(content).toContain("=== 'true'")
+    expect(content).not.toContain('z.coerce.boolean')
+  })
+
+  it('Fastify: extraction uses (req.query.active as unknown as string) === "true"', () => {
+    const { content } = generateFastifyRouter(boolQuerySpec)
+    expect(content).toContain("(req.query.active as unknown as string) === 'true'")
+  })
+
+  it('Fastify: extraction uses (req.query.deleted as unknown as string) === "true" for optional boolean', () => {
+    const { content } = generateFastifyRouter(boolQuerySpec)
+    expect(content).toContain("(req.query.deleted as unknown as string) === 'true'")
+  })
+
+  it('Express: coerces boolean param via === "true" in extraction', () => {
+    const { content } = generateExpressRouter(boolQuerySpec)
+    expect(content).toContain("active: req.query['active'] === 'true'")
+    expect(content).toContain("deleted: req.query['deleted'] === 'true'")
   })
 })
 
@@ -704,7 +743,7 @@ describe('query param with enum emits z.enum([...])', () => {
 
 // ── Query param: min/max constraints ─────────────────────────────────────────
 
-describe('query param with minimum/maximum emits .min()/.max() on z.number()', () => {
+describe('query param with minimum/maximum emits .min()/.max() on z.coerce.number()', () => {
   const rangeQuerySpec = makeSpec({
     '/items': {
       get: {
@@ -722,10 +761,10 @@ describe('query param with minimum/maximum emits .min()/.max() on z.number()', (
     },
   })
 
-  it.each(allFrameworks)('%s: emits z.number().min(1).max(100)', (_, gen) => {
+  it.each(allFrameworks)('%s: emits z.coerce.number().min(1).max(100)', (_, gen) => {
     const { content } = gen(rangeQuerySpec)
     expect(content).toContain('_qv')
-    expect(content).toContain('z.number().min(1).max(100)')
+    expect(content).toContain('z.coerce.number().min(1).max(100)')
   })
 })
 
