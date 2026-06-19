@@ -2376,3 +2376,129 @@ describe('issue #308: Fastify schema.response wiring', () => {
     expect(expressContent).not.toContain('setSerializerCompiler')
   })
 })
+
+// ── Issue #309: Fastify operationId in route config ───────────────────────────
+
+describe('issue #309: Fastify config.operationId in every route', () => {
+  it('every Fastify route includes config.operationId matching the method name', () => {
+    const spec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: { '200': { description: 'ok' } },
+        },
+        post: {
+          operationId: 'createPet',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } } },
+          },
+          responses: { '201': { description: 'created' } },
+        },
+      },
+      '/pets/{id}': {
+        get: {
+          operationId: 'getPet',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { '200': { description: 'ok' } },
+        },
+        delete: {
+          operationId: 'deletePet',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { '204': { description: 'deleted' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain("config: { operationId: 'listPets' }")
+    expect(content).toContain("config: { operationId: 'createPet' }")
+    expect(content).toContain("config: { operationId: 'getPet' }")
+    expect(content).toContain("config: { operationId: 'deletePet' }")
+  })
+
+  it('config.operationId appears in route options even without schema.response', () => {
+    const spec = makeSpec({
+      '/health': {
+        get: {
+          operationId: 'getHealth',
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain("config: { operationId: 'getHealth' }")
+    // Route registration uses a 3-arg form with the options object
+    expect(content).toContain('"/health", {')
+  })
+
+  it('config.operationId and schema.response are merged in the same options object', () => {
+    const spec = makeSpec({
+      '/pets/{id}': {
+        get: {
+          operationId: 'getPet',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec, {
+      schemaNames: new Set(['PetSchema']),
+      schemaImportPath: './schemas.js',
+    })
+    // Both must appear in a single options object literal on the route registration line
+    expect(content).toContain(
+      "{ schema: { response: { 200: PetSchema } }, config: { operationId: 'getPet' } }"
+    )
+  })
+
+  it('void (DELETE 204) route also gets config.operationId', () => {
+    const spec = makeSpec({
+      '/pets/{id}': {
+        delete: {
+          operationId: 'deletePet',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { '204': { description: 'deleted' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain("config: { operationId: 'deletePet' }")
+    // No schema.response on void routes
+    expect(content).not.toContain('schema: { response:')
+  })
+
+  it('derived method name (no operationId) is used in config.operationId', () => {
+    const spec = makeSpec({
+      '/pets': {
+        get: {
+          // no operationId — name is derived from path+method
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    // Derived name for GET /pets is getPets
+    expect(content).toContain("config: { operationId: 'getPets' }")
+  })
+
+  it('Hono and Express generators do NOT include config.operationId', () => {
+    const spec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const honoContent = generateRouter(spec).content
+    expect(honoContent).not.toContain('config: { operationId:')
+
+    const expressContent = generateExpressRouter(spec).content
+    expect(expressContent).not.toContain('config: { operationId:')
+  })
+})
