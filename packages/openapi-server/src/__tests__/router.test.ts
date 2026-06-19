@@ -414,12 +414,17 @@ describe('generateRouter with schemaNames (Zod validation)', () => {
     expect(result.content).toContain('422')
   })
 
-  it('uses validatedBody in service call when schema is present', () => {
+  it('uses body (typed via let body: Type) in service call when schema is present', () => {
     const result = generateRouter(postSpec, {
       schemaNames: new Set(['CreatePetRequestSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(result.content).toContain('validatedBody')
+    // Hono: 'let body: CreatePetRequest' is the typed parse variable; after safeParse
+    // the service receives parseResult.data (cast to the declared model type) so Zod
+    // coercion is preserved while the service-call type stays correct even when the
+    // schema infers a different shape (e.g. z.unknown() on inline unions).
+    expect(result.content).toContain('let body: CreatePetRequest')
+    expect(result.content).toContain('const validatedBody = parseResult.data as CreatePetRequest')
     expect(result.content).toContain('service.createPet(validatedBody')
   })
 
@@ -1350,12 +1355,14 @@ describe('generateExpressRouter with schemaNames (Zod validation)', () => {
     expect(result.content).toContain('422')
   })
 
-  it('uses parseResult.data in service call when schema is present', () => {
+  it('uses validatedBody (cast to model type) in service call when schema is present', () => {
     const result = generateExpressRouter(postSpec, {
       schemaNames: new Set(['CreatePetRequestSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(result.content).toContain('parseResult.data')
+    // parseResult.data is cast to the declared model type so the service receives
+    // the correct TypeScript type even when the Zod schema infers a different shape.
+    expect(result.content).toContain('parseResult.data as CreatePetRequest')
     expect(result.content).toContain('service.createPet(validatedBody')
   })
 
@@ -1423,13 +1430,17 @@ describe('generateFastifyRouter with schemaNames (Zod validation)', () => {
     expect(result.content).toContain('422')
   })
 
-  it('uses parseResult.data in service call when schema is present', () => {
+  it('uses validatedBody (coerced parseResult.data) in service call when schema is present', () => {
     const result = generateFastifyRouter(postSpec, {
       schemaNames: new Set(['CreatePetRequestSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(result.content).toContain('parseResult.data')
-    expect(result.content).toContain('service.createPet(parseResult.data')
+    // The service call uses parseResult.data (cast to the declared model type), not the
+    // raw req.body, so Zod coercion is preserved (e.g. form-urlencoded numeric fields).
+    // The cast keeps the service-call type correct even when the schema infers a
+    // different shape (e.g. z.unknown() on inline-union properties).
+    expect(result.content).toContain('const validatedBody = parseResult.data as CreatePetRequest')
+    expect(result.content).toContain('service.createPet(validatedBody')
   })
 
   it('returns 422 via reply.status(422).send()', () => {
@@ -1705,11 +1716,14 @@ describe('bug #1 fix: inline JSON request body synthesizes schema name from oper
     expect(content).not.toContain('let body: LabInlineBody')
   })
 
-  it('Hono: uses validatedBody in service call when inline schema is matched', () => {
+  it('Hono: uses validatedBody (coerced) in service call when inline schema is matched', () => {
     const { content } = generateRouter(inlineSpec, {
       schemaNames: new Set(['LabInlineBodySchema']),
       schemaImportPath: './schemas.js',
     })
+    // After safeParse the service receives parseResult.data (cast to unknown for an
+    // inline/synthesized schema) so Zod coercion is preserved.
+    expect(content).toContain('const validatedBody = parseResult.data as unknown')
     expect(content).toContain('service.labInlineBody(validatedBody')
   })
 
@@ -1793,11 +1807,15 @@ describe('bug #7 fix: form-urlencoded request body uses parseBody() not JSON.par
     expect(content).not.toContain("import type { LabFormBody }")
   })
 
-  it('Hono: uses validatedBody in service call when form schema is matched', () => {
+  it('Hono: uses validatedBody (coerced) in service call when form schema is matched', () => {
     const { content } = generateRouter(formSpec, {
       schemaNames: new Set(['LabFormBodySchema']),
       schemaImportPath: './schemas.js',
     })
+    // Form-urlencoded values arrive as strings; the service must receive the COERCED
+    // data (parseResult.data), not the raw parsed body, so e.g. z.coerce.number() takes
+    // effect. Cast to unknown for the synthesized form schema name.
+    expect(content).toContain('const validatedBody = parseResult.data as unknown')
     expect(content).toContain('service.labFormBody(validatedBody')
   })
 
