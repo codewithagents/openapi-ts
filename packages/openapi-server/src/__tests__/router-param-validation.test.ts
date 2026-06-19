@@ -347,6 +347,49 @@ describe('required header param generates Zod validation', () => {
   })
 })
 
+// ── Header param: mixed-case name lowercased in value lookup (#313) ───────────
+
+describe('header param mixed-case name: value lookup is lowercased on Fastify/Express', () => {
+  const mixedCaseHeaderSpec = makeSpec({
+    '/tokens': {
+      post: {
+        operationId: 'issueToken',
+        parameters: [
+          { name: 'X-Lab-Token', in: 'header', required: true, schema: { type: 'string' } },
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it('Fastify: looks up header by lowercased key in req.headers', () => {
+    const { content } = generateFastifyRouter(mixedCaseHeaderSpec)
+    expect(content).toContain('req.headers["x-lab-token"]')
+  })
+
+  it('Fastify: safeParse object field still uses original-cased key', () => {
+    const { content } = generateFastifyRouter(mixedCaseHeaderSpec)
+    expect(content).toContain('"X-Lab-Token": z.string()')
+    expect(content).toContain('"X-Lab-Token": req.headers["x-lab-token"]')
+  })
+
+  it('Express: looks up header by lowercased key in req.headers', () => {
+    const { content } = generateExpressRouter(mixedCaseHeaderSpec)
+    expect(content).toContain('req.headers["x-lab-token"] as string | undefined')
+  })
+
+  it('Express: safeParse object field still uses original-cased key', () => {
+    const { content } = generateExpressRouter(mixedCaseHeaderSpec)
+    expect(content).toContain('"X-Lab-Token": z.string()')
+    expect(content).toContain('"X-Lab-Token": req.headers["x-lab-token"] as string | undefined')
+  })
+
+  it('Hono: still uses case-insensitive c.req.header() with original casing', () => {
+    const { content } = generateRouter(mixedCaseHeaderSpec)
+    expect(content).toContain('c.req.header("X-Lab-Token")')
+  })
+})
+
 // ── 422 shape consistency across param types ──────────────────────────────────
 
 describe('422 shape is consistent with body validation shape', () => {
