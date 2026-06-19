@@ -138,9 +138,11 @@ function queryParamDeepObjectZodBase(param: QueryParam): string {
   return `z.object({ ${propFields.join(', ')} })`
 }
 
-/** Number/integer param: z.number() with optional range modifiers. */
+/** Number/integer param: z.coerce.number() with optional range modifiers.
+ * Uses coerce so that Fastify's raw string values (fast-querystring never converts types)
+ * are accepted alongside the already-coerced numbers from Express/Hono extraction. */
 function queryParamNumberZodBase(param: QueryParam): string {
-  let base = 'z.number()'
+  let base = 'z.coerce.number()'
   if (param.minimum !== undefined) base += `.min(${param.minimum})`
   if (param.maximum !== undefined) base += `.max(${param.maximum})`
   if (param.exclusiveMinimum !== undefined) base += `.gt(${param.exclusiveMinimum})`
@@ -1299,6 +1301,13 @@ function buildFastifyRouteHandler(
           return `    ${q.name}: typeof _dq['${q.rawName}'] === 'string' ? _dq['${q.rawName}']!.split(${delim}) : undefined`
         }
         // When _dq is defined, use it for consistent access; otherwise use typed req.query.
+        // Boolean params must be coerced from string at extraction time: z.coerce.boolean()
+        // is unusable because Boolean('false') === true, so mirror the Express === 'true' pattern.
+        if (q.tsType === 'boolean') {
+          return hasDeepOrDelimited
+            ? `    ${q.name}: _dq['${q.rawName}'] === 'true'`
+            : `    ${q.name}: (req.query.${q.name} as unknown as string) === 'true'`
+        }
         return hasDeepOrDelimited
           ? `    ${q.name}: _dq['${q.rawName}']`
           : `    ${q.name}: req.query.${q.name}`
