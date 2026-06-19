@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.10.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.9.0...openapi-server-v1.10.0) (2026-06-19)
+
+
+### Features
+
+* **openapi-server:** document Fastify body parsers and generate octet-stream request parser ([#318](https://github.com/codewithagents/openapi-zod-ts/issues/318)) ([d22a191](https://github.com/codewithagents/openapi-zod-ts/commit/d22a191e50a139b420a0e0efed03175f72512b6a))
+* **openapi-server:** inject operationId into Fastify route config ([#309](https://github.com/codewithagents/openapi-zod-ts/issues/309)) ([164ffbe](https://github.com/codewithagents/openapi-zod-ts/commit/164ffbe51219779e0191ea1e87c096ff3c1f46cd))
+* **openapi-server:** support request-scoped context type for service methods ([#310](https://github.com/codewithagents/openapi-zod-ts/issues/310)) ([24625f6](https://github.com/codewithagents/openapi-zod-ts/commit/24625f6782c0b7052c619d31236f24a2d6192c25))
+* **openapi-server:** validate cookie params (in: cookie) across Fastify/Express/Hono ([#319](https://github.com/codewithagents/openapi-zod-ts/issues/319)) ([6c4bdc6](https://github.com/codewithagents/openapi-zod-ts/commit/6c4bdc6fc46da20a452576d072c4c181f1b031fb))
+* **openapi-server:** warn on untyped service responses from missing schemas ([#312](https://github.com/codewithagents/openapi-zod-ts/issues/312)) ([6935779](https://github.com/codewithagents/openapi-zod-ts/commit/6935779234bd90559b119ace5977f0ae7296b383))
+* **openapi-server:** wire Fastify schema.response for runtime response validation ([#308](https://github.com/codewithagents/openapi-zod-ts/issues/308)) ([b2daf81](https://github.com/codewithagents/openapi-zod-ts/commit/b2daf8180541b86c3da0cb93188830d133c37d5e))
+
+
+### Bug Fixes
+
+* **openapi-server:** await service call in Fastify JSON response branches so HttpError maps correctly ([#315](https://github.com/codewithagents/openapi-zod-ts/issues/315)) ([d6da1e5](https://github.com/codewithagents/openapi-zod-ts/commit/d6da1e58e97435691e8e5b2d626e6cf4c2375d65))
+* **openapi-server:** coerce numeric and boolean query params on Fastify ([#314](https://github.com/codewithagents/openapi-zod-ts/issues/314)) ([346ead8](https://github.com/codewithagents/openapi-zod-ts/commit/346ead8eb0292ee961613dbb4bf11a6940b7fee3))
+* **openapi-server:** look up header params by lowercased key on Fastify/Express ([#313](https://github.com/codewithagents/openapi-zod-ts/issues/313)) ([9da0320](https://github.com/codewithagents/openapi-zod-ts/commit/9da03209952e461fc722fe4c82d45941efee4965))
+* **openapi-server:** type-check example servers and add Fastify inject suite + CI ([#316](https://github.com/codewithagents/openapi-zod-ts/issues/316)) ([6171e59](https://github.com/codewithagents/openapi-zod-ts/commit/6171e59f9b0ba7932f5a113fd03a8e13d61fba52))
+* **openapi-server:** type-check router against its own service interface ([#317](https://github.com/codewithagents/openapi-zod-ts/issues/317)) ([2a6b057](https://github.com/codewithagents/openapi-zod-ts/commit/2a6b057240a15321da24b920472411058909afa7))
+
 ## [1.9.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.8.0...openapi-server-v1.9.0) (2026-06-15)
 
 
