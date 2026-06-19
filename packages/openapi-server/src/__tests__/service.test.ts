@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateService } from '../plugins/service.js'
 
@@ -889,5 +889,199 @@ describe('generateService with contextType option', () => {
     })
     const { content } = generateService(spec, { contextType: 'UserCtx' })
     expect(content).toContain('deletePet(id: string, ctx: Ctx): Promise<void>')
+  })
+})
+
+// ── Issue #312: warn on untyped service responses ─────────────────────────────
+
+describe('issue #312: warn on untyped service responses', () => {
+  it('warns when an operation has no response schema (falls back to Promise<unknown>)', () => {
+    const spec = makeSpec({
+      '/widgets': {
+        get: {
+          operationId: 'listWidgets',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: {
+                'application/json': {
+                  // Inline schema, not a $ref: produces unknown return type
+                  schema: { type: 'object', properties: { id: { type: 'string' } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      generateService(spec)
+      expect(warnSpy).toHaveBeenCalledOnce()
+      const msg = warnSpy.mock.calls[0]![0] as string
+      expect(msg).toContain('listWidgets')
+      expect(msg).toContain('GET /widgets')
+      expect(msg).toContain('response type is unknown')
+      expect(msg).toContain('no response schema found in the spec')
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('warns for Promise<unknown[]> (inline array without $ref items)', () => {
+    const spec = makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: {
+                'application/json': {
+                  // Array with inline items, not a $ref: produces unknown[] return
+                  schema: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      generateService(spec)
+      expect(warnSpy).toHaveBeenCalledOnce()
+      const msg = warnSpy.mock.calls[0]![0] as string
+      expect(msg).toContain('listItems')
+      expect(msg).toContain('GET /items')
+      expect(msg).toContain('response type is unknown')
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('does NOT warn when operation has a typed $ref response', () => {
+    const spec = makeSpec({
+      '/pets/{id}': {
+        get: makeGetOp({ operationId: 'getPet', pathParams: ['id'], responseRef: 'Pet' }),
+      },
+    })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      generateService(spec)
+      expect(warnSpy).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('does NOT warn for void operations (204, no content)', () => {
+    const spec = makeSpec({
+      '/pets/{id}': { delete: makeDeleteOp('deletePet') },
+    })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      generateService(spec)
+      expect(warnSpy).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('does NOT warn for text/plain responses (typed as Promise<string>)', () => {
+    const spec = makeSpec({
+      '/text': {
+        get: {
+          operationId: 'getText',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'text/plain': { schema: { type: 'string' } } },
+            },
+          },
+        },
+      },
+    })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      generateService(spec)
+      expect(warnSpy).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('does NOT warn for octet-stream responses (typed as Promise<Uint8Array>)', () => {
+    const spec = makeSpec({
+      '/download': {
+        get: {
+          operationId: 'download',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+            },
+          },
+        },
+      },
+    })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      generateService(spec)
+      expect(warnSpy).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('warns once per untyped operation, not for typed operations in the same spec', () => {
+    const spec = makeSpec({
+      '/pets': {
+        get: makeGetOp({ operationId: 'listPets', responseRef: 'Pet', responseArray: true }),
+      },
+      '/widgets': {
+        get: {
+          operationId: 'listWidgets',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+          },
+        },
+      },
+    })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      generateService(spec)
+      // Only the untyped operation warns
+      expect(warnSpy).toHaveBeenCalledOnce()
+      const msg = warnSpy.mock.calls[0]![0] as string
+      expect(msg).toContain('listWidgets')
+      expect(msg).not.toContain('listPets')
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('warning message does not contain em dashes', () => {
+    const spec = makeSpec({
+      '/things': {
+        get: {
+          operationId: 'listThings',
+          responses: {
+            '200': { description: 'ok', content: { 'application/json': { schema: { type: 'object' } } } },
+          },
+        },
+      },
+    })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      generateService(spec)
+      const msg = warnSpy.mock.calls[0]![0] as string
+      expect(msg).not.toContain('—') // em dash character
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 })

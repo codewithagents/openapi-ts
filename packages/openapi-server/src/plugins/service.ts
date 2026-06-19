@@ -171,6 +171,21 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
       const bodyInfo = getBodyInfo(operation)
       const returnInfo = getReturnInfo(operation)
 
+      // Warn when the return type falls back to unknown due to a missing or
+      // unresolvable response schema. Fires for Promise<unknown> and Promise<unknown[]>.
+      // Does not fire for void, typed, or primitive (text/plain, octet-stream) responses.
+      if (
+        returnInfo.typeName === undefined &&
+        !returnInfo.isVoid &&
+        returnInfo.primitiveType === undefined
+      ) {
+        console.warn(
+          `${methodName} (${method.toUpperCase()} ${path}): response type is unknown, ` +
+            'no response schema found in the spec. ' +
+            'Add a response schema to get a typed return type and enable runtime validation.'
+        )
+      }
+
       operations.push({
         methodName,
         httpMethod: method,
