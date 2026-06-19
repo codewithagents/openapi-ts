@@ -494,3 +494,64 @@ export const petService: PetstoreService<Context> = {
 ```
 
 **Backward compatibility:** if `context_type` is not set in the config, the generated output is identical to previous versions. No changes to the interface shape, no extra arguments in service calls.
+
+---
+
+## Non-JSON request bodies (Fastify)
+
+Fastify 5 natively parses only `application/json` and `text/plain` request bodies. For other content types you must register the appropriate plugin before the generated router.
+
+### application/x-www-form-urlencoded
+
+Install and register [`@fastify/formbody`](https://github.com/fastify/fastify-formbody):
+
+```bash
+pnpm add @fastify/formbody
+```
+
+```ts
+import fastifyFormbody from '@fastify/formbody'
+
+fastify.register(fastifyFormbody)
+fastify.register(async (instance) => { createRouter(instance, service) }, { prefix: '/api' })
+```
+
+Without this plugin, `req.body` is `undefined` for form-urlencoded requests and the handler receives no body.
+
+### multipart/form-data
+
+Install and register [`@fastify/multipart`](https://github.com/fastify/fastify-multipart) with `attachFieldsToBody: true`:
+
+```bash
+pnpm add @fastify/multipart
+```
+
+```ts
+import fastifyMultipart from '@fastify/multipart'
+
+fastify.register(fastifyMultipart, { attachFieldsToBody: true })
+fastify.register(async (instance) => { createRouter(instance, service) }, { prefix: '/api' })
+```
+
+The `attachFieldsToBody` option is required. Without it, `@fastify/multipart` v10 exposes uploaded files only via async iterators (`request.parts()`), not via `req.body`. The generated router reads `req.body` and passes it to the service method, so `attachFieldsToBody: true` must be set.
+
+### application/octet-stream
+
+No extra plugin is needed. When your spec declares an `application/octet-stream` request body, the generator automatically emits an `addContentTypeParser` call inside `createRouter`:
+
+```ts
+app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))
+```
+
+`addContentTypeParser` is a core Fastify API with no additional dependencies. The parsed body is a `Buffer` and is forwarded directly to the service method.
+
+### 415 error-shape divergence
+
+When a request arrives with an unsupported content type and no parser is registered, the two frameworks return different shapes:
+
+| Framework | Status | Body shape |
+|---|---|---|
+| Hono | 415 | `{ error: 'Unsupported Media Type' }` |
+| Fastify | 415 | `{ statusCode: 415, code: 'FST_ERR_CTP_INVALID_MEDIA_TYPE', error: 'Unsupported Media Type', message: '...' }` |
+
+Hono uses the shared `{ error }` envelope from the generated router. Fastify uses its own framework-level 415 envelope, which is emitted before the route handler runs. If you rely on a consistent error shape across frameworks, register the appropriate parser or add a Fastify `setErrorHandler` that normalises the response.
