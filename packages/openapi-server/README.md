@@ -317,6 +317,46 @@ fastify.register(async (instance) => { createRouter(instance, service) }, { pref
 
 The `"none"` path is always available and keeps the zero-footprint promise: the generated code has no runtime dependencies that you did not already choose.
 
+## Cookie parameter validation
+
+Operations that declare `in: cookie` parameters get the same Zod validation treatment as header and query params. The generator reads the cookie name and schema constraints (required, enum, minLength, maxLength, pattern) from the spec and emits a `_ckv` safeParse block in the generated route handler. Failures return `422 { error: 'Invalid request cookies', issues }`.
+
+Cookie names are case-sensitive (unlike HTTP headers, which are always lowercased before lookup). The exact name from the spec is used for both the Zod field key and the value lookup.
+
+Cookies are not forwarded to the service method signature. They are validated in the router layer only. Forwarding cookies to service methods is out of scope for the current release.
+
+**Per-framework plugin requirements:**
+
+| Framework | Required plugin / middleware | Cookie accessor |
+|---|---|---|
+| Fastify | `@fastify/cookie` registered before the router | `req.cookies['name']` |
+| Express | `cookie-parser` middleware applied before mounting the router | `req.cookies['name']` |
+| Hono | `hono/cookie` (imported automatically in the generated output) | `getCookie(c, 'name')` |
+
+**Fastify setup:**
+
+```ts
+import fastifyCookie from '@fastify/cookie'
+
+fastify.register(fastifyCookie)
+fastify.register(async (instance) => { createRouter(instance, service) }, { prefix: '/api' })
+```
+
+**Express setup:**
+
+```ts
+import cookieParser from 'cookie-parser'
+
+app.use(cookieParser())
+app.use('/api', createRouter(service))
+```
+
+**Hono setup:**
+
+No extra setup needed. The generator automatically adds `import { getCookie } from 'hono/cookie'` to the generated router when the spec declares cookie params. `hono/cookie` ships with Hono; no additional install is required.
+
+---
+
 ## Error handling and troubleshooting
 
 The generated router wraps every service call in a `try/catch` block. The catch block handles two cases:

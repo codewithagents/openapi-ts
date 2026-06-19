@@ -54,6 +54,22 @@ interface HeaderParam {
   pattern?: string
 }
 
+/** Represents a cookie parameter to validate (in: cookie). */
+interface CookieParam {
+  /** Cookie name as defined in the spec. Cookie names are case-sensitive. */
+  rawName: string
+  /** Whether the cookie is required. */
+  required: boolean
+  /** Allowed values from the schema enum constraint. */
+  enum?: string[]
+  /** Minimum string length from schema.minLength. */
+  minLength?: number
+  /** Maximum string length from schema.maxLength. */
+  maxLength?: number
+  /** Regex pattern from schema.pattern. */
+  pattern?: string
+}
+
 /**
  * Map a schema format string to a Zod chain modifier.
  * Returns an empty string when no specific format validation is needed.
@@ -240,6 +256,25 @@ function getPathParamValidations(
 }
 
 /**
+ * Build a Zod expression for a cookie parameter based on its captured constraints.
+ * Cookie values are always strings; emits z.string() or z.enum([...]) with optional
+ * pattern/length modifiers. Appends .optional() for non-required params.
+ */
+function cookieParamZodExpr(param: CookieParam): string {
+  let base: string
+  if (param.enum !== undefined && param.enum.length > 0) {
+    const members = param.enum.map((v) => JSON.stringify(v)).join(', ')
+    base = `z.enum([${members}])`
+  } else {
+    base = 'z.string()'
+  }
+  if (param.minLength !== undefined) base += `.min(${param.minLength})`
+  if (param.maxLength !== undefined) base += `.max(${param.maxLength})`
+  if (param.pattern !== undefined) base += `.regex(/${param.pattern}/)`
+  return param.required ? base : `${base}.optional()`
+}
+
+/**
  * Collect header parameters from an operation, including schema constraints.
  */
 function getHeaderParams(operation: OperationObject, spec: OpenAPIV3_1.Document): HeaderParam[] {
@@ -251,6 +286,35 @@ function getHeaderParams(operation: OperationObject, spec: OpenAPIV3_1.Document)
     const resolved = resolveParam(p, spec)
     if (resolved === undefined || resolved.in !== 'header') continue
     const param: HeaderParam = {
+      rawName: resolved.name,
+      required: resolved.required === true,
+    }
+    const schema = resolved.schema as OpenAPIV3_1.SchemaObject | undefined
+    if (schema !== undefined && !isRef(schema)) {
+      const s = schema as OpenAPIV3_1.SchemaObject
+      if (Array.isArray(s.enum)) param.enum = s.enum as string[]
+      if (typeof s.minLength === 'number') param.minLength = s.minLength
+      if (typeof s.maxLength === 'number') param.maxLength = s.maxLength
+      if (typeof s.pattern === 'string') param.pattern = s.pattern
+    }
+    result.push(param)
+  }
+  return result
+}
+
+/**
+ * Collect cookie parameters (in: cookie) from an operation, including schema constraints.
+ * Cookie names are case-sensitive and are used as-is for both the Zod field key and value lookup.
+ */
+function getCookieParams(operation: OperationObject, spec: OpenAPIV3_1.Document): CookieParam[] {
+  const parameters = operation.parameters as (ParameterObject | ReferenceObject)[] | undefined
+  if (parameters === undefined) return []
+
+  const result: CookieParam[] = []
+  for (const p of parameters) {
+    const resolved = resolveParam(p, spec)
+    if (resolved === undefined || resolved.in !== 'cookie') continue
+    const param: CookieParam = {
       rawName: resolved.name,
       required: resolved.required === true,
     }
@@ -408,6 +472,60 @@ function emitHeaderValidation(
     .join(',\n')
   lines.push(`${inner}// Validate request headers: returns 422 with Zod issues on failure`)
   lines.push(`${inner}const _hv = z.object({`)
+  lines.push(schemaFields)
+  lines.push(`${inner}}).safeParse({`)
+  lines.push(rawFields)
+  lines.push(`${inner}})`)
+}
+
+/**
+ * Emit Zod validation lines for cookie parameters into the handler line buffer.
+ * Cookie names are case-sensitive: the exact name is used for both the Zod field key and
+ * the value lookup (unlike headers, which are lowercased for lookup on Express/Fastify).
+ *
+ * Required plugins per framework:
+ *   Fastify: register @fastify/cookie before creating the router.
+ *   Express: apply cookie-parser middleware before mounting this router.
+ *   Hono:    getCookie is imported from 'hono/cookie' (added to generated output automatically).
+ *
+ * Uses short variable name _ckv to keep the 422 return line under Prettier's print width.
+ * @param indent - outer handler indent (e.g. '  ')
+ * @param framework - used to generate the correct cookie accessor syntax
+ */
+function emitCookieValidation(
+  lines: string[],
+  cookieParams: CookieParam[],
+  indent: string,
+  framework: 'hono' | 'express' | 'fastify'
+): void {
+  const inner = `${indent}  `
+  const fieldIndent = `${indent}    `
+  const schemaFields = cookieParams
+    .map((ck) => {
+      const key = JSON.stringify(ck.rawName)
+      const expr = cookieParamZodExpr(ck)
+      return `${fieldIndent}${key}: ${expr}`
+    })
+    .join(',\n')
+  const rawFields = cookieParams
+    .map((ck) => {
+      const key = JSON.stringify(ck.rawName)
+      let access: string
+      if (framework === 'hono') {
+        // getCookie is imported from 'hono/cookie' when cookie params are present.
+        access = `getCookie(c, ${key})`
+      } else if (framework === 'express') {
+        // Requires cookie-parser middleware: req.cookies['name']
+        access = `req.cookies[${key}] as string | undefined`
+      } else {
+        // Requires @fastify/cookie plugin: req.cookies['name']
+        access = `req.cookies[${key}]`
+      }
+      return `${fieldIndent}${key}: ${access}`
+    })
+    .join(',\n')
+  lines.push(`${inner}// Validate request cookies: returns 422 with Zod issues on failure`)
+  lines.push(`${inner}const _ckv = z.object({`)
   lines.push(schemaFields)
   lines.push(`${inner}}).safeParse({`)
   lines.push(rawFields)
@@ -587,6 +705,7 @@ interface RouteOperation {
   pathParamValidations: PathParamValidation[]
   queryParams: QueryParam[]
   headerParams: HeaderParam[]
+  cookieParams: CookieParam[]
   bodyInfo: BodyInfo | undefined
   responseStatus: ResponseStatus
   /**
@@ -619,6 +738,7 @@ function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
       const pathParamValidations = getPathParamValidations(operation, spec, pathParams)
       const queryParams = getQueryParams(operation, spec)
       const headerParams = getHeaderParams(operation, spec)
+      const cookieParams = getCookieParams(operation, spec)
       const bodyInfo = getBodyInfo(operation)
       const responseStatus = getResponseStatus(operation, method)
       const responseTypeInfo = getResponseTypeName(operation)
@@ -632,6 +752,7 @@ function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
         pathParamValidations,
         queryParams,
         headerParams,
+        cookieParams,
         bodyInfo,
         responseStatus,
         responseTypeName: responseTypeInfo?.typeName,
@@ -832,6 +953,17 @@ function buildRouteHandler(
     lines.push(`${indent}  if (!_hv.success) {`)
     lines.push(
       `${indent}    return c.json({ error: 'Invalid request headers', issues: _hv.error.issues }, 422)`
+    )
+    lines.push(`${indent}  }`)
+  }
+
+  // Cookie param validation
+  // Requires @fastify/cookie on Fastify, cookie-parser on Express, getCookie from hono/cookie on Hono.
+  if (op.cookieParams.length > 0) {
+    emitCookieValidation(lines, op.cookieParams, indent, 'hono')
+    lines.push(`${indent}  if (!_ckv.success) {`)
+    lines.push(
+      `${indent}    return c.json({ error: 'Invalid request cookies', issues: _ckv.error.issues }, 422)`
     )
     lines.push(`${indent}  }`)
   }
@@ -1038,6 +1170,17 @@ function buildExpressRouteHandler(
     lines.push(`${indent}  if (!_hv.success) {`)
     lines.push(
       `${indent}    return void res.status(422).json({ error: 'Invalid request headers', issues: _hv.error.issues })`
+    )
+    lines.push(`${indent}  }`)
+  }
+
+  // Cookie param validation
+  // Requires cookie-parser middleware: app.use(cookieParser()) before mounting this router.
+  if (op.cookieParams.length > 0) {
+    emitCookieValidation(lines, op.cookieParams, indent, 'express')
+    lines.push(`${indent}  if (!_ckv.success) {`)
+    lines.push(
+      `${indent}    return void res.status(422).json({ error: 'Invalid request cookies', issues: _ckv.error.issues })`
     )
     lines.push(`${indent}  }`)
   }
@@ -1340,6 +1483,18 @@ function buildFastifyRouteHandler(
     lines.push(`${indent}  }`)
   }
 
+  // Cookie param validation
+  // Requires @fastify/cookie plugin registered before creating the router: fastify.register(fastifyCookie).
+  if (op.cookieParams.length > 0) {
+    emitCookieValidation(lines, op.cookieParams, indent, 'fastify')
+    lines.push(`${indent}  if (!_ckv.success) {`)
+    lines.push(`${indent}    return reply.status(422).send({`)
+    lines.push(`${indent}      error: 'Invalid request cookies',`)
+    lines.push(`${indent}      issues: _ckv.error.issues,`)
+    lines.push(`${indent}    })`)
+    lines.push(`${indent}  }`)
+  }
+
   // Body handling, with optional Zod validation.
   // Fastify pre-parses req.body for both JSON and form-urlencoded bodies via plugins.
   // For multipart/form-data: assumes @fastify/multipart (or equivalent) plugin is registered
@@ -1464,13 +1619,15 @@ function httpErrorClassLines(): string[] {
 
 /**
  * Returns true when any operation in the list generates param validation code
- * that requires Zod (path format validation, required/typed query params, or header params).
+ * that requires Zod (path format validation, required/typed query params, header params,
+ * or cookie params).
  */
 function operationsNeedZodForParams(operations: RouteOperation[]): boolean {
   for (const op of operations) {
     if (op.pathParamValidations.length > 0) return true
     if (queryParamsNeedValidation(op.queryParams)) return true
     if (op.headerParams.length > 0) return true
+    if (op.cookieParams.length > 0) return true
   }
   return false
 }
@@ -1611,7 +1768,12 @@ export function generateRouter(spec: OpenAPIV3_1.Document, options?: RouterOptio
   lines.push('')
   const ctx = options?.contextType
   const serviceRef = ctx !== undefined ? `${serviceName}<${ctx}>` : serviceName
+  // getCookie from hono/cookie is needed when any operation declares cookie params.
+  const needsGetCookie = operations.some((op) => op.cookieParams.length > 0)
   lines.push("import { Hono } from 'hono'")
+  if (needsGetCookie) {
+    lines.push("import { getCookie } from 'hono/cookie'")
+  }
   if (sortedBodyTypes.length > 0) {
     lines.push(`import type { ${sortedBodyTypes.join(', ')} } from './models.js'`)
   }
