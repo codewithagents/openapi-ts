@@ -25,6 +25,108 @@ export const petService: PetstoreService = {
   async deletePet(id) {
     pets.delete(id)
   },
+  async labNumeric(_body) {
+    throw new Error('not implemented')
+  },
+  async labString(_body) {
+    throw new Error('not implemented')
+  },
+  async labArray(_body) {
+    throw new Error('not implemented')
+  },
+  async labFormats(_body) {
+    throw new Error('not implemented')
+  },
+  async labEnumConst(_body) {
+    throw new Error('not implemented')
+  },
+  async labClosed(_body) {
+    throw new Error('not implemented')
+  },
+  async labPresence(_body) {
+    throw new Error('not implemented')
+  },
+  async labMap(_body) {
+    throw new Error('not implemented')
+  },
+  async labEmptyMap() {
+    throw new Error('not implemented')
+  },
+  async labUnion(_body) {
+    throw new Error('not implemented')
+  },
+  async labAnyOfUnion(_body) {
+    throw new Error('not implemented')
+  },
+  async labShape(_body) {
+    throw new Error('not implemented')
+  },
+  async labInlineShape(_body) {
+    throw new Error('not implemented')
+  },
+  async labInheritShape(_body) {
+    throw new Error('not implemented')
+  },
+  async labResponseUnion(_body) {
+    throw new Error('not implemented')
+  },
+  async labBackedEnum(_body) {
+    throw new Error('not implemented')
+  },
+  async labTuple(_body) {
+    throw new Error('not implemented')
+  },
+  async labAllOf(_body) {
+    throw new Error('not implemented')
+  },
+  async labNestedVariant(_body) {
+    throw new Error('not implemented')
+  },
+  async labInlineResponse() {
+    throw new Error('not implemented')
+  },
+  async labLooseUnion(_body) {
+    throw new Error('not implemented')
+  },
+  async labQuery(_params) {
+    throw new Error('not implemented')
+  },
+  async labHeader() {
+    throw new Error('not implemented')
+  },
+  async labInlineBody(_body) {
+    throw new Error('not implemented')
+  },
+  async labDelimitedQuery(_params) {
+    throw new Error('not implemented')
+  },
+  async labDeepFilter(_params) {
+    throw new Error('not implemented')
+  },
+  async labPath(_score) {
+    throw new Error('not implemented')
+  },
+  async labFormBody(_body) {
+    throw new Error('not implemented')
+  },
+  async labGallery(_body) {
+    throw new Error('not implemented')
+  },
+  async labAccepted(_body) {
+    throw new Error('not implemented')
+  },
+  async labDualStatus(_params) {
+    throw new Error('not implemented')
+  },
+  async labPlainText() {
+    throw new Error('not implemented')
+  },
+  async labDownload() {
+    throw new Error('not implemented')
+  },
+  async labInt64(_body) {
+    throw new Error('not implemented')
+  },
 }
 
 /** Reset all pets. Only used in dev/test environments. */

@@ -1,0 +1,17 @@
+// Scoped typecheck for the openapi-server generated output.
+// The openapi-zod-ts-generated client (client.ts, client-config.ts) is excluded because
+// it has a separate, pre-existing typing gap tracked outside the openapi-server scope.
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src",
+    "generated/service.ts",
+    "generated/router.ts",
+    "generated/models.ts"
+  ],
+  "exclude": [
+    "generated/client.ts",
+    "generated/client-config.ts",
+    "generated/index.ts"
+  ]
+}
