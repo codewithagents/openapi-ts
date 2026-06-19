@@ -317,4 +317,48 @@ The `"none"` path is always available and keeps the zero-footprint promise: the 
 
 ## Error handling and troubleshooting
 
-The generated router does not wrap service calls in `try/catch`. Errors propagate to the framework's own error handler. See [Error handling](https://openapi.codewithagents.de/openapi-server#error-handling) in the docs for per-framework error handler examples and [Troubleshooting](https://openapi.codewithagents.de/openapi-server#troubleshooting) for common issues such as missing Zod validation or `Cannot find module './models.js'`.
+The generated router wraps every service call in a `try/catch` block. The catch block handles two cases:
+
+- **`HttpError`** (exported from the generated `router.ts`): caught inline and mapped to its `.status` code. Use `new HttpError(404, 'Pet not found')` inside service methods to return structured HTTP error responses.
+- **All other errors**: re-thrown to the framework's own error handler (`setErrorHandler` in Fastify, error-handling middleware in Express, `app.onError` in Hono).
+
+This means custom error types that do NOT extend `HttpError` propagate to the framework layer, where you install a single error handler for logging, monitoring, and response shaping.
+
+**Example: custom error reaching Fastify's `setErrorHandler`**
+
+```ts
+// Your custom error class — does NOT extend HttpError
+class NotFoundError extends Error {
+  constructor(resource: string) {
+    super(`${resource} not found`)
+    this.name = 'NotFoundError'
+  }
+}
+
+// Service implementation throws NotFoundError
+export const petService: PetstoreService = {
+  async getPet(id) {
+    const pet = db.get(id)
+    if (!pet) throw new NotFoundError(`Pet ${id}`)
+    return pet
+  },
+  // ...
+}
+
+// Register a Fastify error handler ONCE at the app level.
+// The generated router re-throws non-HttpError errors, so they arrive here.
+fastify.setErrorHandler((err, request, reply) => {
+  if (err.name === 'NotFoundError') {
+    return reply.status(404).send({ error: err.message })
+  }
+  // Unknown errors become 500
+  fastify.log.error(err)
+  return reply.status(500).send({ error: 'Internal server error' })
+})
+
+fastify.register(async (instance) => { createRouter(instance, petService) }, { prefix: '/api' })
+```
+
+The same pattern applies to Express error middleware (`app.use((err, req, res, next) => { ... })`) and to Hono's `app.onError((err, c) => { ... })`.
+
+See [Error handling](https://openapi.codewithagents.de/openapi-server#error-handling) in the docs for per-framework error handler examples and [Troubleshooting](https://openapi.codewithagents.de/openapi-server#troubleshooting) for common issues such as missing Zod validation or `Cannot find module './models.js'`.
