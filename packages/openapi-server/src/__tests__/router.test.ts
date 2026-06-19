@@ -1216,7 +1216,7 @@ describe('generateFastifyRouter', () => {
     })
     const result = generateFastifyRouter(spec)
     expect(result.content).toContain('reply.status(201)')
-    expect(result.content).toContain('return service.createPet(')
+    expect(result.content).toContain('return await service.createPet(')
   })
 
   it('DELETE with 204 uses reply.status(204).send()', () => {
@@ -1254,7 +1254,7 @@ describe('generateFastifyRouter', () => {
     })
     const result = generateFastifyRouter(spec)
     expect(result.content).toContain('reply.status(202)')
-    expect(result.content).toContain('return service.enqueueJob(')
+    expect(result.content).toContain('return await service.enqueueJob(')
   })
 
   it('Bug #10 — GET with 200+202 declared emits envelope dispatch: reply.status(_envelope.status).send(_envelope.body)', () => {
@@ -1301,7 +1301,7 @@ describe('generateFastifyRouter', () => {
       },
     })
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain('return service.listPets(')
+    expect(result.content).toContain('return await service.listPets(')
   })
 
   it('route with no params has no generic type argument', () => {
@@ -1664,6 +1664,43 @@ describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps 
     expect(content).toContain('if (err instanceof HttpError)')
     expect(content).toContain('return reply.status(err.status).send({ error: err.message })')
     expect(content).toContain('throw err')
+  })
+
+  it('Fastify: 200 JSON branch awaits service call so async HttpError is caught', () => {
+    const jsonSpec = makeSpec({
+      '/pets/{id}': {
+        get: {
+          operationId: 'getPet',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(jsonSpec)
+    expect(content).toContain('return await service.getPet(')
+  })
+
+  it('Fastify: 201 JSON branch awaits service call so async HttpError is caught', () => {
+    const jsonSpec = makeSpec({
+      '/pets': {
+        post: {
+          operationId: 'createPet',
+          responses: {
+            '201': {
+              description: 'created',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(jsonSpec)
+    expect(content).toContain('return await service.createPet(')
   })
 })
 
