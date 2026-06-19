@@ -1083,3 +1083,148 @@ describe('deepObject query param assembles bracket-notation keys into object', (
     expect(content).not.toContain("startsWith('filter[')")
   })
 })
+
+// ── Cookie param: required cookie enforcement (#319) ─────────────────────────
+
+describe('required cookie param generates Zod validation', () => {
+  const cookieSpec = makeSpec({
+    '/profile': {
+      get: {
+        operationId: 'getProfile',
+        parameters: [
+          { name: 'session', in: 'cookie', required: true, schema: { type: 'string' } },
+          { name: 'locale', in: 'cookie', required: false, schema: { type: 'string' } },
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it('Hono: generates _ckv with z.string() for required cookie and z.string().optional() for optional', () => {
+    const { content } = generateRouter(cookieSpec)
+    expect(content).toContain('_ckv')
+    expect(content).toContain('"session": z.string()')
+    expect(content).toContain('"locale": z.string().optional()')
+    expect(content).toContain("import { z } from 'zod'")
+  })
+
+  it('Hono: reads cookie via getCookie(c, "session")', () => {
+    const { content } = generateRouter(cookieSpec)
+    expect(content).toContain('getCookie(c, "session")')
+  })
+
+  it('Hono: imports getCookie from hono/cookie', () => {
+    const { content } = generateRouter(cookieSpec)
+    expect(content).toContain("import { getCookie } from 'hono/cookie'")
+  })
+
+  it('Hono: 422 response uses Invalid request cookies error label', () => {
+    const { content } = generateRouter(cookieSpec)
+    expect(content).toContain("error: 'Invalid request cookies'")
+    expect(content).toContain('_ckv.error.issues')
+    expect(content).toContain('422')
+  })
+
+  it.each([
+    ['Express', generateExpressRouter] as const,
+    ['Fastify', generateFastifyRouter] as const,
+  ])('%s: generates _ckv with required/optional cookie schema', (_, gen) => {
+    const { content } = gen(cookieSpec)
+    expect(content).toContain('_ckv')
+    expect(content).toContain('"session": z.string()')
+    expect(content).toContain('"locale": z.string().optional()')
+  })
+
+  it('Express: reads cookie via req.cookies["session"]', () => {
+    const { content } = generateExpressRouter(cookieSpec)
+    expect(content).toContain('req.cookies["session"] as string | undefined')
+  })
+
+  it('Express: returns 422 with void pattern on cookie failure', () => {
+    const { content } = generateExpressRouter(cookieSpec)
+    expect(content).toContain('return void res.status(422).json(')
+    expect(content).toContain("error: 'Invalid request cookies'")
+    expect(content).toContain('_ckv.error.issues')
+  })
+
+  it('Fastify: reads cookie via req.cookies["session"]', () => {
+    const { content } = generateFastifyRouter(cookieSpec)
+    expect(content).toContain('req.cookies["session"]')
+  })
+
+  it('Fastify: returns 422 via reply.status(422).send() on cookie failure', () => {
+    const { content } = generateFastifyRouter(cookieSpec)
+    expect(content).toContain('reply.status(422).send(')
+    expect(content).toContain("error: 'Invalid request cookies'")
+    expect(content).toContain('_ckv.error.issues')
+  })
+})
+
+// ── Cookie param: names are case-sensitive (no lowercasing) ──────────────────
+
+describe('cookie param names are case-sensitive: no lowercasing applied', () => {
+  const mixedCaseCookieSpec = makeSpec({
+    '/auth': {
+      get: {
+        operationId: 'checkAuth',
+        parameters: [
+          { name: 'SessionToken', in: 'cookie', required: true, schema: { type: 'string' } },
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it('Hono: uses exact cookie name (no lowercasing) in getCookie call', () => {
+    const { content } = generateRouter(mixedCaseCookieSpec)
+    expect(content).toContain('getCookie(c, "SessionToken")')
+    expect(content).not.toContain('getCookie(c, "sessiontoken")')
+  })
+
+  it('Fastify: uses exact cookie name in req.cookies lookup', () => {
+    const { content } = generateFastifyRouter(mixedCaseCookieSpec)
+    expect(content).toContain('req.cookies["SessionToken"]')
+    expect(content).not.toContain('req.cookies["sessiontoken"]')
+  })
+
+  it('Express: uses exact cookie name in req.cookies lookup', () => {
+    const { content } = generateExpressRouter(mixedCaseCookieSpec)
+    expect(content).toContain('req.cookies["SessionToken"] as string | undefined')
+    expect(content).not.toContain('req.cookies["sessiontoken"]')
+  })
+})
+
+// ── No-cookie spec: getCookie import must not appear ─────────────────────────
+
+describe('spec without cookie params emits no getCookie import and no cookie validation', () => {
+  const noCookieSpec = makeSpec({
+    '/items': {
+      get: {
+        operationId: 'listItems',
+        parameters: [
+          { name: 'q', in: 'query', required: true, schema: { type: 'string' } },
+        ],
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it('Hono: no getCookie import when no cookie params', () => {
+    const { content } = generateRouter(noCookieSpec)
+    expect(content).not.toContain('getCookie')
+    expect(content).not.toContain("hono/cookie")
+  })
+
+  it('Hono: no _ckv variable when no cookie params', () => {
+    const { content } = generateRouter(noCookieSpec)
+    expect(content).not.toContain('_ckv')
+  })
+
+  it.each([
+    ['Express', generateExpressRouter] as const,
+    ['Fastify', generateFastifyRouter] as const,
+  ])('%s: no _ckv variable when no cookie params', (_, gen) => {
+    const { content } = gen(noCookieSpec)
+    expect(content).not.toContain('_ckv')
+  })
+})
