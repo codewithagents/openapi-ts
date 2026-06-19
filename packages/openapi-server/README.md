@@ -216,7 +216,8 @@ See the [full configuration reference](https://openapi.codewithagents.de/openapi
   "input_openapi": "./spec/api.json",       // required: path to OpenAPI 3.x spec (JSON or YAML)
   "output": "./generated",                  // required: directory to write generated files
   "framework": "hono",                      // optional: router target (default: "none")
-  "input_schema": "./generated/schemas.ts"  // optional: Zod schema file for request validation
+  "input_schema": "./generated/schemas.ts", // optional: Zod schema file for request validation
+  "context_type": "RequestContext"          // optional: TypeScript type for per-request caller context
 }
 ```
 
@@ -226,6 +227,7 @@ See the [full configuration reference](https://openapi.codewithagents.de/openapi
 | `output` | Yes | n/a | Directory to write `service.ts` and `router.ts` |
 | `framework` | No | `"none"` | Router framework to generate: `"hono"`, `"express"`, `"fastify"`, or `"none"`. Use `"none"` to generate only `service.ts` |
 | `input_schema` | No | none | Path to user-owned Zod schema file. Enables server-side request validation (see below) |
+| `context_type` | No | none | TypeScript type name to thread through service methods as a final `ctx` argument. See below. |
 
 Use `--config <path>` to point at a config file in a different location:
 
@@ -362,3 +364,93 @@ fastify.register(async (instance) => { createRouter(instance, petService) }, { p
 The same pattern applies to Express error middleware (`app.use((err, req, res, next) => { ... })`) and to Hono's `app.onError((err, c) => { ... })`.
 
 See [Error handling](https://openapi.codewithagents.de/openapi-server#error-handling) in the docs for per-framework error handler examples and [Troubleshooting](https://openapi.codewithagents.de/openapi-server#troubleshooting) for common issues such as missing Zod validation or `Cannot find module './models.js'`.
+
+---
+
+## Request-scoped context / caller principal (`context_type`)
+
+The `context_type` config option threads a typed caller context through every generated service method. Use it to pass an authentication principal, a tenant ID, or any per-request metadata without coupling service code to framework types.
+
+**Config:**
+
+```json
+{
+  "input_openapi": "./spec/api.json",
+  "output": "./generated",
+  "framework": "hono",
+  "context_type": "RequestContext"
+}
+```
+
+**What changes in generated `service.ts`:**
+
+```ts
+// Without context_type (default):
+export interface PetstoreService {
+  listPets(params?: { species?: string }): Promise<Pet[]>
+  getPet(id: string): Promise<Pet>
+}
+
+// With context_type: "RequestContext":
+export interface PetstoreService<Ctx = never> {
+  listPets(params?: { species?: string }, ctx: Ctx): Promise<Pet[]>
+  getPet(id: string, ctx: Ctx): Promise<Pet>
+}
+```
+
+The generic default `Ctx = never` keeps the interface usable when no context is needed: existing implementations that do not pass ctx continue to compile as long as the service is instantiated without a type argument.
+
+**What changes in generated `router.ts`:**
+
+The generated router passes the framework's native request/context object as the final argument to every service call:
+
+| Framework | ctx value passed |
+|---|---|
+| Hono | `c` (the Hono `Context` object) |
+| Express | `req` (the Express `Request` object) |
+| Fastify | `req` (the Fastify `FastifyRequest` object) |
+
+```ts
+// Generated Hono handler (with context_type: "RequestContext"):
+app.get('/pets', async (c) => {
+  try {
+    return c.json(await service.listPets(c))
+  } catch (err) { ... }
+})
+```
+
+**Implementing the service with context:**
+
+```ts
+import type { PetstoreService } from '../generated/service.js'
+import type { Context } from 'hono'
+
+// Define your request context type
+interface RequestContext {
+  userId: string
+  tenantId: string
+}
+
+// Extract context from the Hono Context object in a middleware
+const app = new Hono()
+app.use('*', async (c, next) => {
+  const userId = c.req.header('x-user-id') ?? ''
+  // Store on the Hono context so the generated router can pass it
+  c.set('userId', userId)
+  await next()
+})
+
+// Implement the service — ctx is whatever the router passed (here: the Hono Context)
+export const petService: PetstoreService<Context> = {
+  async listPets(params, ctx) {
+    const userId = ctx.get('userId')
+    return db.listPets({ userId, ...params })
+  },
+  async getPet(id, ctx) {
+    const userId = ctx.get('userId')
+    return db.getPet(id, userId)
+  },
+}
+```
+
+**Backward compatibility:** if `context_type` is not set in the config, the generated output is identical to previous versions. No changes to the interface shape, no extra arguments in service calls.

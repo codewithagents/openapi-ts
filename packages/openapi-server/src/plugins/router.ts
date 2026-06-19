@@ -584,6 +584,19 @@ function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
 interface RouterOptions {
   schemaNames?: Set<string>
   schemaImportPath?: string
+  /**
+   * When set, matches the `contextType` from ServiceOptions. The generated router
+   * handlers extract a context value from the framework's native channel and pass
+   * it as the final argument to every service call.
+   *
+   * Framework channels used:
+   *   Hono:    `c` (the Hono Context object)
+   *   Express: `req` (the Express Request object)
+   *   Fastify: `req` (the Fastify Request object)
+   *
+   * Must match the value set in ServiceOptions so service call signatures align.
+   */
+  contextType?: string
 }
 
 interface GeneratorSetup {
@@ -643,7 +656,12 @@ function collectGeneratorSetup(
 // ── Hono route handler ────────────────────────────────────────────────────────
 
 // fallow-ignore-next-line complexity
-function buildRouteHandler(op: RouteOperation, indent: string, schemaNames?: Set<string>): string {
+function buildRouteHandler(
+  op: RouteOperation,
+  indent: string,
+  schemaNames?: Set<string>,
+  contextType?: string
+): string {
   const lines: string[] = []
   lines.push(`${indent}app.${op.httpMethod}(${JSON.stringify(op.honoPath)}, async (c) => {`)
 
@@ -789,6 +807,10 @@ function buildRouteHandler(op: RouteOperation, indent: string, schemaNames?: Set
   if (op.queryParams.length > 0) {
     serviceArgs.push('params')
   }
+  // Context arg: pass the Hono Context object (c) as the final argument when contextType is set.
+  if (contextType !== undefined) {
+    serviceArgs.push('c')
+  }
 
   const serviceCall = `service.${op.methodName}(${serviceArgs.join(', ')})`
 
@@ -843,7 +865,8 @@ function buildRouteHandler(op: RouteOperation, indent: string, schemaNames?: Set
 function buildExpressRouteHandler(
   op: RouteOperation,
   indent: string,
-  schemaNames?: Set<string>
+  schemaNames?: Set<string>,
+  contextType?: string
 ): string {
   const lines: string[] = []
   lines.push(
@@ -961,6 +984,10 @@ function buildExpressRouteHandler(
   if (op.queryParams.length > 0) {
     serviceArgs.push('params')
   }
+  // Context arg: pass the Express Request object (req) as the final argument when contextType is set.
+  if (contextType !== undefined) {
+    serviceArgs.push('req')
+  }
 
   const serviceCall = `service.${op.methodName}(${serviceArgs.join(', ')})`
 
@@ -1013,7 +1040,8 @@ function buildExpressRouteHandler(
 function buildFastifyRouteHandler(
   op: RouteOperation,
   indent: string,
-  schemaNames?: Set<string>
+  schemaNames?: Set<string>,
+  contextType?: string
 ): string {
   const lines: string[] = []
 
@@ -1185,6 +1213,10 @@ function buildFastifyRouteHandler(
   if (op.queryParams.length > 0) {
     serviceArgs.push('params')
   }
+  // Context arg: pass the Fastify Request object (req) as the final argument when contextType is set.
+  if (contextType !== undefined) {
+    serviceArgs.push('req')
+  }
 
   const serviceCall = `service.${op.methodName}(${serviceArgs.join(', ')})`
 
@@ -1281,6 +1313,8 @@ export function generateExpressRouter(
   if (sortedBodyTypes.length > 0) {
     lines.push(`import type { ${sortedBodyTypes.join(', ')} } from './models.js'`)
   }
+  const ctx = options?.contextType
+  const serviceRef = ctx !== undefined ? `${serviceName}<${ctx}>` : serviceName
   lines.push(`import type { ${serviceName} } from './service.js'`)
   if (needsZod) {
     lines.push(`import { z } from 'zod'`)
@@ -1292,12 +1326,12 @@ export function generateExpressRouter(
   lines.push('')
   for (const l of httpErrorClassLines()) lines.push(l)
   lines.push('')
-  lines.push(`export function createRouter(service: ${serviceName}): Router {`)
+  lines.push(`export function createRouter(service: ${serviceRef}): Router {`)
   lines.push('  const router = Router()')
   lines.push('')
 
   for (const op of operations) {
-    lines.push(buildExpressRouteHandler(op, '  ', options?.schemaNames))
+    lines.push(buildExpressRouteHandler(op, '  ', options?.schemaNames, ctx))
     lines.push('')
   }
 
@@ -1325,6 +1359,8 @@ export function generateFastifyRouter(
   const lines: string[] = []
   lines.push('// This file is auto-generated. Do not edit manually.')
   lines.push('')
+  const ctx = options?.contextType
+  const serviceRef = ctx !== undefined ? `${serviceName}<${ctx}>` : serviceName
   lines.push("import type { FastifyInstance } from 'fastify'")
   if (sortedBodyTypes.length > 0) {
     lines.push(`import type { ${sortedBodyTypes.join(', ')} } from './models.js'`)
@@ -1340,11 +1376,11 @@ export function generateFastifyRouter(
   lines.push('')
   for (const l of httpErrorClassLines()) lines.push(l)
   lines.push('')
-  lines.push(`export function createRouter(app: FastifyInstance, service: ${serviceName}): void {`)
+  lines.push(`export function createRouter(app: FastifyInstance, service: ${serviceRef}): void {`)
 
   for (const op of operations) {
     lines.push('')
-    lines.push(buildFastifyRouteHandler(op, '  ', options?.schemaNames))
+    lines.push(buildFastifyRouteHandler(op, '  ', options?.schemaNames, ctx))
   }
 
   lines.push('}')
@@ -1367,6 +1403,8 @@ export function generateRouter(spec: OpenAPIV3_1.Document, options?: RouterOptio
   const lines: string[] = []
   lines.push('// This file is auto-generated. Do not edit manually.')
   lines.push('')
+  const ctx = options?.contextType
+  const serviceRef = ctx !== undefined ? `${serviceName}<${ctx}>` : serviceName
   lines.push("import { Hono } from 'hono'")
   if (sortedBodyTypes.length > 0) {
     lines.push(`import type { ${sortedBodyTypes.join(', ')} } from './models.js'`)
@@ -1382,12 +1420,12 @@ export function generateRouter(spec: OpenAPIV3_1.Document, options?: RouterOptio
   lines.push('')
   for (const l of httpErrorClassLines()) lines.push(l)
   lines.push('')
-  lines.push(`export function createRouter(service: ${serviceName}): Hono {`)
+  lines.push(`export function createRouter(service: ${serviceRef}): Hono {`)
   lines.push('  const app = new Hono()')
   lines.push('')
 
   for (const op of operations) {
-    lines.push(buildRouteHandler(op, '  ', options?.schemaNames))
+    lines.push(buildRouteHandler(op, '  ', options?.schemaNames, ctx))
     lines.push('')
   }
 

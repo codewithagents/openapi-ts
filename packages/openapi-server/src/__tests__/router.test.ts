@@ -1998,3 +1998,122 @@ describe('bug #8 fix: multipart/form-data request body uses parseBody({ all: tru
     expect(() => generateFastifyRouter(multipartSpec)).not.toThrow()
   })
 })
+
+// ── Context type (issue #310) ─────────────────────────────────────────────────
+
+describe('context type option (issue #310)', () => {
+  const petSpec = makeSpec({
+    '/pets': {
+      get: {
+        operationId: 'listPets',
+        responses: {
+          '200': {
+            description: 'ok',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+          },
+        },
+      },
+      post: {
+        operationId: 'createPet',
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } } },
+        },
+        responses: { '201': { description: 'created' } },
+      },
+    },
+    '/pets/{id}': {
+      get: {
+        operationId: 'getPet',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'ok',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+          },
+        },
+      },
+    },
+  })
+
+  describe('Hono — no contextType (backward compat)', () => {
+    it('createRouter signature does not include a generic type arg', () => {
+      const { content } = generateRouter(petSpec)
+      // PetStoreService (no generic) must appear in the factory signature
+      expect(content).toContain('createRouter(service: PetStoreService): Hono')
+      expect(content).not.toContain('PetStoreService<')
+    })
+
+    it('service calls do NOT include c as an extra arg', () => {
+      const { content } = generateRouter(petSpec)
+      expect(content).toContain('service.listPets(')
+      // Verify c is not passed as ctx: the call must not end with ", c)"
+      expect(content).not.toMatch(/service\.listPets\([^)]*,\s*c\)/)
+    })
+  })
+
+  describe('Hono — with contextType', () => {
+    it('createRouter signature uses the generic service reference', () => {
+      const { content } = generateRouter(petSpec, { contextType: 'RequestContext' })
+      expect(content).toContain('createRouter(service: PetStoreService<RequestContext>): Hono')
+    })
+
+    it('service calls pass c as the final argument (no other args for GET /pets)', () => {
+      const { content } = generateRouter(petSpec, { contextType: 'RequestContext' })
+      // service.listPets(c) — only arg is c
+      expect(content).toContain('service.listPets(c)')
+    })
+
+    it('service call with path param passes path param then c', () => {
+      const { content } = generateRouter(petSpec, { contextType: 'RequestContext' })
+      expect(content).toContain('service.getPet(c.req.param("id"), c)')
+    })
+
+    it('service call with body passes body then c', () => {
+      const { content } = generateRouter(petSpec, { contextType: 'RequestContext' })
+      expect(content).toContain('service.createPet(body, c)')
+    })
+  })
+
+  describe('Express — with contextType', () => {
+    it('createRouter signature uses the generic service reference', () => {
+      const { content } = generateExpressRouter(petSpec, { contextType: 'RequestContext' })
+      expect(content).toContain('createRouter(service: PetStoreService<RequestContext>): Router')
+    })
+
+    it('service calls pass req as the final argument (only arg for GET /pets)', () => {
+      const { content } = generateExpressRouter(petSpec, { contextType: 'RequestContext' })
+      expect(content).toContain('service.listPets(req)')
+    })
+  })
+
+  describe('Express — no contextType (backward compat)', () => {
+    it('service calls do NOT include req as an extra ctx arg', () => {
+      const { content } = generateExpressRouter(petSpec)
+      // GET /pets has no path params, body, or query — service call has no args at all
+      expect(content).toContain('service.listPets()')
+    })
+  })
+
+  describe('Fastify — with contextType', () => {
+    it('createRouter signature uses the generic service reference', () => {
+      const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
+      expect(content).toContain(
+        'createRouter(app: FastifyInstance, service: PetStoreService<RequestContext>): void'
+      )
+    })
+
+    it('service calls pass req as the final argument (only arg for GET /pets)', () => {
+      const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
+      expect(content).toContain('service.listPets(req)')
+    })
+  })
+
+  describe('Fastify — no contextType (backward compat)', () => {
+    it('service calls do NOT include req as an extra ctx arg', () => {
+      const { content } = generateFastifyRouter(petSpec)
+      // GET /pets has no path params, body, or query — service call has no args
+      expect(content).toContain('service.listPets()')
+    })
+  })
+})
