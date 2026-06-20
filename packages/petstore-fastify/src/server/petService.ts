@@ -67,8 +67,9 @@ export const petService: PetstoreService = {
   async labInheritShape(_body) {
     throw new Error('not implemented')
   },
-  async labResponseUnion(_body) {
-    throw new Error('not implemented')
+  async labResponseUnion(body) {
+    // Echo: pick a concrete variant based on the requested selector.
+    return body.want === 'circle' ? { kind: 'circle', radius: 1 } : { kind: 'square', side: 1 }
   },
   async labBackedEnum(_body) {
     throw new Error('not implemented')
@@ -83,7 +84,8 @@ export const petService: PetstoreService = {
     throw new Error('not implemented')
   },
   async labInlineResponse() {
-    throw new Error('not implemented')
+    // Echo: a fixed inline-shaped response (no named schema).
+    return { ok: true, note: 'inline response' }
   },
   async labLooseUnion(_body) {
     throw new Error('not implemented')
@@ -97,11 +99,17 @@ export const petService: PetstoreService = {
   async labInlineBody(_body) {
     throw new Error('not implemented')
   },
-  async labDelimitedQuery(_params) {
-    throw new Error('not implemented')
+  async labDelimitedQuery(params) {
+    // Echo the delimiter-split arrays back; the router already reshaped them.
+    return { csv: params.csv, ssv: params.ssv, psv: params.psv }
   },
-  async labDeepFilter(_params) {
-    throw new Error('not implemented')
+  async labDeepFilter(params) {
+    // Echo the reshaped + coerced deepObject filter back.
+    return {
+      gte: params.filter.gte ?? 0,
+      lte: params.filter.lte ?? 0,
+      color: params.filter.color,
+    }
   },
   async labPath(_score) {
     throw new Error('not implemented')
