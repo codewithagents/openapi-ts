@@ -9,7 +9,7 @@
  * - Single setErrorHandler maps HttpError to its .status code (no per-route try/catch)
  * - Per route: schema.body, schema.params, schema.querystring, schema.headers, schema.response, config.operationId
  * - preValidation hook for deepObject and delimiter-style query params (emitted per-route, not globally)
- * - Cookie params still use manual _ckv safeParse (schema.cookie requires @fastify/cookie, out of scope)
+ * - Cookie params use manual _ckv safeParse: Fastify 5's FastifySchema only exposes body/querystring/params/headers/response, so there is no cookie slot in the type-provider path
  * - No per-route generic type arguments; req.body/req.query/req.params infer from schemas
  * - No (reply as FastifyReply) casts
  */
@@ -100,6 +100,7 @@ function toFastifyPath(openapiPath: string): string {
 
 // ── Header param helpers ──────────────────────────────────────────────────────
 
+// fallow-ignore-next-line complexity
 function getHeaderParams(operation: OperationObject, spec: OpenAPIV3_1.Document): HeaderParam[] {
   const parameters = operation.parameters as (ParameterObject | ReferenceObject)[] | undefined
   if (parameters === undefined) return []
@@ -123,6 +124,7 @@ function getHeaderParams(operation: OperationObject, spec: OpenAPIV3_1.Document)
 
 // ── Cookie param helpers ──────────────────────────────────────────────────────
 
+// fallow-ignore-next-line complexity
 function getCookieParams(operation: OperationObject, spec: OpenAPIV3_1.Document): CookieParam[] {
   const parameters = operation.parameters as (ParameterObject | ReferenceObject)[] | undefined
   if (parameters === undefined) return []
@@ -165,6 +167,7 @@ function detectResponseContentType(
   return 'application/json'
 }
 
+// fallow-ignore-next-line complexity
 function getResponseStatus(
   operation: OperationObject,
   httpMethod: SupportedMethod
@@ -233,6 +236,7 @@ function getResponseStatus(
     : { status: 200, isVoid: false, responseContentType: 'application/json' }
 }
 
+// fallow-ignore-next-line complexity
 function getResponseTypeName(
   operation: OperationObject
 ): { typeName: string; isArray: boolean } | undefined {
@@ -442,6 +446,7 @@ function cookieParamZodExpr(param: CookieParam): string {
 
 // ── Path param schema builder ─────────────────────────────────────────────────
 
+// fallow-ignore-next-line complexity
 function pathParamSchemaExpr(resolved: ParameterObject): string {
   const schema = resolved.schema as OpenAPIV3_1.SchemaObject | undefined
   if (schema === undefined || isRef(schema)) return 'z.string()'
@@ -456,10 +461,10 @@ function pathParamSchemaExpr(resolved: ParameterObject): string {
   }
   if (s.type !== 'string') return 'z.string()'
   const format = s.format as string | undefined
-  if (format === 'uuid') return 'z.string().uuid()'
-  if (format === 'email') return 'z.string().email()'
-  if (format === 'uri' || format === 'url') return 'z.string().url()'
-  if (format === 'date-time') return 'z.string().datetime()'
+  if (format === 'uuid') return 'z.uuid()'
+  if (format === 'email') return 'z.email()'
+  if (format === 'uri' || format === 'url') return 'z.url()'
+  if (format === 'date-time') return 'z.iso.datetime()'
   return 'z.string()'
 }
 
@@ -646,7 +651,10 @@ function buildFastifyTypeProviderHandler(
     `${indent}_app.${op.httpMethod}(${JSON.stringify(op.honoPath)}, ${routeOpts}, async (req, reply) => {`
   )
 
-  // ── Cookie validation (manual _ckv: type provider does not handle cookies) ─
+  // ── Cookie validation (manual _ckv: Fastify 5's FastifySchema has no cookie slot,
+  //    so cookie params cannot go through the type-provider path. Read via a guarded
+  //    local so that a missing @fastify/cookie plugin yields {} and a required cookie
+  //    is simply absent, producing a clean 422 instead of a TypeError 500.) ─────
   if (op.cookieParams.length > 0) {
     const fieldIndent = `${indent}    `
     const schemaFields = op.cookieParams
@@ -655,9 +663,12 @@ function buildFastifyTypeProviderHandler(
     const rawFields = op.cookieParams
       .map(
         (ck) =>
-          `${fieldIndent}${JSON.stringify(ck.rawName)}: req.cookies[${JSON.stringify(ck.rawName)}]`
+          `${fieldIndent}${JSON.stringify(ck.rawName)}: _cookies[${JSON.stringify(ck.rawName)}]`
       )
       .join(',\n')
+    lines.push(
+      `${inner}const _cookies = (req as { cookies?: Record<string, string | undefined> }).cookies ?? {}`
+    )
     lines.push(`${inner}// Validate request cookies: returns 422 with Zod issues on failure`)
     lines.push(`${inner}const _ckv = z.object({`)
     lines.push(schemaFields)
@@ -821,7 +832,10 @@ export function generateFastifyRouter(
   )
   lines.push('')
   lines.push(
-    "import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod'"
+    "import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'"
+  )
+  lines.push(
+    "import type { ZodTypeProvider } from 'fastify-type-provider-zod'"
   )
   lines.push("import type { FastifyInstance } from 'fastify'")
   if (sortedBodyTypes.length > 0) {

@@ -2370,7 +2370,10 @@ describe('issue #308: Fastify schema.response wiring', () => {
     })
     expect(content).toContain('app.setSerializerCompiler(serializerCompiler)')
     expect(content).toContain(
-      "import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod'"
+      "import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'"
+    )
+    expect(content).toContain(
+      "import type { ZodTypeProvider } from 'fastify-type-provider-zod'"
     )
   })
 
