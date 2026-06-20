@@ -3643,3 +3643,186 @@ describe('generateFastifyRouter: emit_response_validation opt-in (commit 8)', ()
     expect(content).not.toContain('response: {')
   })
 })
+
+// ── synthesizePropExpr and synthesizeResponseSchemaExpr branch coverage ────────
+// Drives every conditional branch via generateFastifyRouter(..., { emitResponseValidation: true })
+// so that CRAP scores drop below the 30 threshold.
+
+describe('generateFastifyRouter emit_response_validation: synthesizer branch coverage', () => {
+  // Shared helpers — defined once to keep each test body short and unique.
+  function makeRespSpec(
+    schema: Record<string, unknown>,
+    operationId = 'listItems'
+  ): OpenAPIV3_1.Document {
+    return makeSpec({
+      '/items': {
+        get: {
+          operationId,
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema } },
+            },
+          },
+        },
+      },
+    })
+  }
+
+  function genContent(schema: Record<string, unknown>): string {
+    return generateFastifyRouter(makeRespSpec(schema), { emitResponseValidation: true }).content
+  }
+
+  // ── synthesizePropExpr branches (exercised via object property types) ─────────
+
+  it('synthesizePropExpr: string with enum produces z.enum([...])', () => {
+    const content = genContent({
+      type: 'object',
+      required: ['status'],
+      properties: { status: { type: 'string', enum: ['active', 'inactive'] } },
+    })
+    expect(content).toContain('status: z.enum(["active", "inactive"])')
+  })
+
+  it('synthesizePropExpr: string with minLength/maxLength/pattern applies constraints', () => {
+    const content = genContent({
+      type: 'object',
+      required: ['name'],
+      properties: { name: { type: 'string', minLength: 1, maxLength: 50, pattern: '^[a-z]+$' } },
+    })
+    expect(content).toContain('name: z.string().min(1).max(50).regex(/^[a-z]+$/)')
+  })
+
+  it('synthesizePropExpr: number type produces z.number()', () => {
+    const content = genContent({
+      type: 'object',
+      required: ['score'],
+      properties: { score: { type: 'number' } },
+    })
+    expect(content).toContain('score: z.number()')
+  })
+
+  it('synthesizePropExpr: integer type produces z.number()', () => {
+    const content = genContent({
+      type: 'object',
+      required: ['age'],
+      properties: { age: { type: 'integer' } },
+    })
+    expect(content).toContain('age: z.number()')
+  })
+
+  it('synthesizePropExpr: boolean type produces z.boolean()', () => {
+    const content = genContent({
+      type: 'object',
+      required: ['enabled'],
+      properties: { enabled: { type: 'boolean' } },
+    })
+    expect(content).toContain('enabled: z.boolean()')
+  })
+
+  it('synthesizePropExpr: array property with $ref items falls back to z.unknown()', () => {
+    // isRef(s.items) = true inside synthesizePropExpr -> falls through to z.unknown()
+    const content = genContent({
+      type: 'object',
+      required: ['tags'],
+      properties: {
+        tags: { type: 'array', items: { $ref: '#/components/schemas/Tag' } },
+      },
+    })
+    expect(content).toContain('tags: z.unknown()')
+  })
+
+  it('synthesizePropExpr: array property with no items falls back to z.unknown()', () => {
+    // s.items === undefined -> array branch not entered -> falls through to z.unknown()
+    const content = genContent({
+      type: 'object',
+      required: ['items'],
+      properties: { items: { type: 'array' } },
+    })
+    expect(content).toContain('items: z.unknown()')
+  })
+
+  it('synthesizePropExpr: array property whose items are an object falls back to z.unknown()', () => {
+    // synthesizePropExpr(items) returns 'z.unknown()' for object items; the
+    // !itemExpr.startsWith('z.unknown') guard prevents wrapping -> z.unknown()
+    const content = genContent({
+      type: 'object',
+      required: ['data'],
+      properties: { data: { type: 'array', items: { type: 'object' } } },
+    })
+    expect(content).toContain('data: z.unknown()')
+  })
+
+  // ── synthesizeResponseSchemaExpr branches (root-level response schema) ────────
+
+  it.each([
+    ['oneOf', { oneOf: [{ type: 'object', properties: { id: { type: 'string' } } }] }],
+    ['anyOf', { anyOf: [{ type: 'object', properties: { id: { type: 'string' } } }] }],
+  ] as [string, Record<string, unknown>][])(
+    'synthesizeResponseSchemaExpr: %s at root produces z.unknown()',
+    (_, schema) => {
+      const content = genContent(schema)
+      expect(content).toContain('200: z.unknown()')
+    }
+  )
+
+  it('synthesizeResponseSchemaExpr: array with no items produces z.array(z.unknown())', () => {
+    // s.items === undefined -> synthesizeResponseSchemaExpr returns z.array(z.unknown())
+    const content = genContent({ type: 'array' })
+    expect(content).toContain('z.array(z.unknown())')
+  })
+
+  it('synthesizeResponseSchemaExpr: array with $ref items falls back to z.unknown()', () => {
+    // isRef(s.items) = true in synthesizeResponseSchemaExpr -> returns z.unknown()
+    const content = genContent({
+      type: 'array',
+      items: { $ref: '#/components/schemas/Tag' },
+    })
+    expect(content).toContain('200: z.unknown()')
+  })
+
+  it('synthesizeResponseSchemaExpr: nested object property (required) uses z.unknown()', () => {
+    // type === 'object' inside property map -> required entry -> z.unknown()
+    const content = genContent({
+      type: 'object',
+      required: ['meta'],
+      properties: { meta: { type: 'object', properties: { x: { type: 'string' } } } },
+    })
+    expect(content).toContain('meta: z.unknown()')
+  })
+
+  it('synthesizeResponseSchemaExpr: nested object property (optional) uses z.unknown().optional()', () => {
+    // type === 'object' inside property map -> optional entry -> z.unknown().optional()
+    const content = genContent({
+      type: 'object',
+      properties: { meta: { type: 'object', properties: { x: { type: 'string' } } } },
+    })
+    expect(content).toContain('meta: z.unknown().optional()')
+  })
+
+  it('synthesizeResponseSchemaExpr: non-identifier property key is JSON-quoted', () => {
+    // Key 'content-type' fails /[^a-zA-Z0-9_$]/ check -> JSON.stringify(key) wrapping
+    const content = genContent({
+      type: 'object',
+      required: ['content-type'],
+      properties: { 'content-type': { type: 'string' } },
+    })
+    expect(content).toContain('"content-type": z.string()')
+  })
+
+  it('synthesizeResponseSchemaExpr: $ref object property falls back to z.unknown() via synthesizePropExpr', () => {
+    // synthesizePropExpr called for $ref property -> isRef(schema) = true -> z.unknown()
+    const content = genContent({
+      type: 'object',
+      required: ['pet'],
+      properties: { pet: { $ref: '#/components/schemas/Pet' } },
+    })
+    expect(content).toContain('pet: z.unknown()')
+  })
+
+  it('synthesizeResponseSchemaExpr: primitive string type at root delegates to synthesizePropExpr', () => {
+    // s.type is not 'array'/'object' -> falls through to synthesizePropExpr(s) -> z.string()
+    const content = genContent({ type: 'string' })
+    expect(content).toContain('200: z.string()')
+  })
+})
