@@ -43,12 +43,24 @@ describe('no-param spec produces no param validation code', () => {
     },
   })
 
-  it.each(allFrameworks)('%s: no _pv/_qv/_hv variables when no params', (_, gen) => {
+  it.each([
+    ['Hono', generateRouter],
+    ['Express', generateExpressRouter],
+  ] as [string, FrameworkGen][])('%s: no _pv/_qv/_hv variables when no params', (_, gen) => {
     const { content } = gen(noParamSpec)
     expect(content).not.toContain('_pv')
     expect(content).not.toContain('_qv')
     expect(content).not.toContain('_hv')
     expect(content).not.toContain("import { z } from 'zod'")
+  })
+
+  it('Fastify: no _pv/_qv/_hv variables when no params (z always imported for type provider)', () => {
+    const { content } = generateFastifyRouter(noParamSpec)
+    expect(content).not.toContain('_pv')
+    expect(content).not.toContain('_qv')
+    expect(content).not.toContain('_hv')
+    // Fastify type-provider emitter always imports z for schema expressions
+    expect(content).toContain("import { z } from 'zod'")
   })
 })
 
@@ -70,7 +82,10 @@ describe('optional string-only params produce no validation code (no drift)', ()
     },
   })
 
-  it.each(allFrameworks)(
+  it.each([
+    ['Hono', generateRouter],
+    ['Express', generateExpressRouter],
+  ] as [string, FrameworkGen][])(
     '%s: optional string query + plain string path produce no validation code',
     (_, gen) => {
       const { content } = gen(optionalStringSpec)
@@ -79,6 +94,18 @@ describe('optional string-only params produce no validation code (no drift)', ()
       expect(content).not.toContain("import { z } from 'zod'")
     }
   )
+
+  it('Fastify: optional string query + plain string path: uses schema.querystring, z always imported', () => {
+    const { content } = generateFastifyRouter(optionalStringSpec)
+    expect(content).not.toContain('_qv')
+    expect(content).not.toContain('_pv')
+    // Fastify type-provider emitter always imports z
+    expect(content).toContain("import { z } from 'zod'")
+    // Query param is in querystring schema
+    expect(content).toContain('querystring: z.object({ author: z.string().optional() })')
+    // Path param is in params schema
+    expect(content).toContain('params: z.object({ id: z.string() })')
+  })
 })
 
 // ── Path param: uuid format validation ────────────────────────────────────────
@@ -141,24 +168,28 @@ describe('path param with format:uuid generates Zod validation', () => {
     expect(content).toContain('_pv.error.issues')
   })
 
-  it('Fastify: generates _pv with z.string().uuid()', () => {
+  it('Fastify: wires z.string().uuid() in schema.params (native validation)', () => {
     const { content } = generateFastifyRouter(uuidSpec)
-    expect(content).toContain('_pv')
+    expect(content).not.toContain('_pv')
     expect(content).toContain('z.string().uuid()')
     expect(content).toContain("import { z } from 'zod'")
+    // Validation via schema.params using native type-provider
+    expect(content).toContain('params: z.object({ id: z.string().uuid() })')
   })
 
-  it('Fastify: _pv.safeParse passes req.params.id', () => {
+  it('Fastify: path param accessed via req.params.id (ZodTypeProvider infers from schema.params)', () => {
     const { content } = generateFastifyRouter(uuidSpec)
     expect(content).toContain('req.params.id')
-    expect(content).toContain('_pv.success')
+    // No manual safeParse - native validation
+    expect(content).not.toContain('_pv.success')
   })
 
-  it('Fastify: returns 422 via reply.status(422).send() on failure', () => {
+  it('Fastify: validation errors are native 400 FST_ERR_VALIDATION (no manual 422)', () => {
     const { content } = generateFastifyRouter(uuidSpec)
-    expect(content).toContain('(reply as FastifyReply).status(422).send(')
-    expect(content).toContain("error: 'Invalid path parameters'")
-    expect(content).toContain('_pv.error.issues')
+    // No manual 422 reply - validatorCompiler handles validation natively
+    expect(content).not.toContain('status(422)')
+    // setValidatorCompiler registered for native validation
+    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
   })
 
   it('plain string path param (no format) does NOT generate _pv', () => {
@@ -208,12 +239,17 @@ describe('required query param generates Zod validation', () => {
     expect(content).toContain('422')
   })
 
-  it.each([
-    ['Express', generateExpressRouter] as const,
-    ['Fastify', generateFastifyRouter] as const,
-  ])('%s: generates _qv with required/optional Zod schema', (_, gen) => {
-    const { content } = gen(requiredQuerySpec)
+  it('Express: generates _qv with required/optional Zod schema', () => {
+    const { content } = generateExpressRouter(requiredQuerySpec)
     expect(content).toContain('_qv')
+    expect(content).toContain('genre: z.string()')
+    expect(content).toContain('author: z.string().optional()')
+  })
+
+  it('Fastify: wires required/optional query params in schema.querystring', () => {
+    const { content } = generateFastifyRouter(requiredQuerySpec)
+    expect(content).not.toContain('_qv')
+    expect(content).toContain('querystring: z.object({')
     expect(content).toContain('genre: z.string()')
     expect(content).toContain('author: z.string().optional()')
   })
@@ -224,10 +260,10 @@ describe('required query param generates Zod validation', () => {
     expect(content).toContain("error: 'Invalid query parameters'")
   })
 
-  it('Fastify: returns 422 via reply.status(422).send() on failure', () => {
+  it('Fastify: validation errors are native 400 FST_ERR_VALIDATION (no manual 422)', () => {
     const { content } = generateFastifyRouter(requiredQuerySpec)
-    expect(content).toContain('(reply as FastifyReply).status(422).send(')
-    expect(content).toContain("error: 'Invalid query parameters'")
+    expect(content).not.toContain('status(422)')
+    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
   })
 })
 
@@ -259,12 +295,17 @@ describe('integer query param generates z.coerce.number() validation', () => {
     expect(content).toContain('Number(')
   })
 
-  it.each([
-    ['Express', generateExpressRouter] as const,
-    ['Fastify', generateFastifyRouter] as const,
-  ])('%s: generates _qv with z.coerce.number() for integer params', (_, gen) => {
-    const { content } = gen(intQuerySpec)
+  it('Express: generates _qv with z.coerce.number() for integer params', () => {
+    const { content } = generateExpressRouter(intQuerySpec)
     expect(content).toContain('_qv')
+    expect(content).toContain('limit: z.coerce.number().optional()')
+    expect(content).toContain('page: z.coerce.number()')
+  })
+
+  it('Fastify: wires z.coerce.number() in schema.querystring for integer params', () => {
+    const { content } = generateFastifyRouter(intQuerySpec)
+    expect(content).not.toContain('_qv')
+    expect(content).toContain('querystring: z.object({')
     expect(content).toContain('limit: z.coerce.number().optional()')
     expect(content).toContain('page: z.coerce.number()')
   })
@@ -286,20 +327,23 @@ describe('boolean query param coerces via === "true" on Fastify (#314)', () => {
     },
   })
 
-  it('Fastify: coerces boolean param via === "true" in extraction (not z.coerce.boolean)', () => {
+  it('Fastify: wires boolean params as z.boolean() in schema.querystring (no string coercion)', () => {
     const { content } = generateFastifyRouter(boolQuerySpec)
-    expect(content).toContain("=== 'true'")
+    // New: boolean params declared as z.boolean() in querystring schema
+    expect(content).toContain('z.boolean()')
     expect(content).not.toContain('z.coerce.boolean')
+    // No manual string coercion - the type-provider handles booleans natively
+    expect(content).not.toContain("=== 'true'")
   })
 
-  it('Fastify: extraction uses (req.query.active as unknown as string) === "true"', () => {
+  it('Fastify: required boolean param appears in querystring schema as z.boolean()', () => {
     const { content } = generateFastifyRouter(boolQuerySpec)
-    expect(content).toContain("(req.query.active as unknown as string) === 'true'")
+    expect(content).toContain('active: z.boolean()')
   })
 
-  it('Fastify: extraction uses (req.query.deleted as unknown as string) === "true" for optional boolean', () => {
+  it('Fastify: optional boolean param appears in querystring schema as z.boolean().optional()', () => {
     const { content } = generateFastifyRouter(boolQuerySpec)
-    expect(content).toContain("(req.query.deleted as unknown as string) === 'true'")
+    expect(content).toContain('deleted: z.boolean().optional()')
   })
 
   it('Express: coerces boolean param via === "true" in extraction', () => {
@@ -349,12 +393,18 @@ describe('required header param generates Zod validation', () => {
     expect(content).toContain('422')
   })
 
-  it.each([
-    ['Express', generateExpressRouter] as const,
-    ['Fastify', generateFastifyRouter] as const,
-  ])('%s: generates _hv with required/optional header schema', (_, gen) => {
-    const { content } = gen(headerSpec)
+  it('Express: generates _hv with required/optional header schema', () => {
+    const { content } = generateExpressRouter(headerSpec)
     expect(content).toContain('_hv')
+    expect(content).toContain('"x-api-key": z.string()')
+    expect(content).toContain('"x-trace-id": z.string().optional()')
+  })
+
+  it('Fastify: wires header params in schema.headers (keys lowercased per Fastify convention)', () => {
+    const { content } = generateFastifyRouter(headerSpec)
+    expect(content).not.toContain('_hv')
+    expect(content).toContain('headers: z.object({')
+    // Fastify normalizes header names to lowercase in schema.headers
     expect(content).toContain('"x-api-key": z.string()')
     expect(content).toContain('"x-trace-id": z.string().optional()')
   })
@@ -371,18 +421,13 @@ describe('required header param generates Zod validation', () => {
     expect(content).toContain('_hv.error.issues')
   })
 
-  it('Fastify: generates _hv and reads headers via req.headers[...]', () => {
+  it('Fastify: header validation is native (no manual req.headers lookup or 422)', () => {
     const { content } = generateFastifyRouter(headerSpec)
-    expect(content).toContain('_hv')
-    expect(content).toContain('req.headers["x-api-key"]')
-    expect(content).toContain('"x-api-key": z.string()')
-  })
-
-  it('Fastify: returns 422 via reply.status(422).send() on header failure', () => {
-    const { content } = generateFastifyRouter(headerSpec)
-    expect(content).toContain('(reply as FastifyReply).status(422).send(')
-    expect(content).toContain("error: 'Invalid request headers'")
-    expect(content).toContain('_hv.error.issues')
+    // ZodTypeProvider validates headers via schema.headers natively
+    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    // No manual header extraction or 422 reply
+    expect(content).not.toContain('status(422)')
+    expect(content).not.toContain('_hv.error.issues')
   })
 })
 
@@ -401,15 +446,18 @@ describe('header param mixed-case name: value lookup is lowercased on Fastify/Ex
     },
   })
 
-  it('Fastify: looks up header by lowercased key in req.headers', () => {
+  it('Fastify: header key is lowercased in schema.headers (Fastify normalizes headers)', () => {
     const { content } = generateFastifyRouter(mixedCaseHeaderSpec)
-    expect(content).toContain('req.headers["x-lab-token"]')
+    // schema.headers keys must be lowercase per Fastify header normalization
+    expect(content).toContain('"x-lab-token": z.string()')
+    // No manual req.headers lookup - native type-provider validation
+    expect(content).not.toContain('_hv')
   })
 
-  it('Fastify: safeParse object field still uses original-cased key', () => {
+  it('Fastify: validation is native via schema.headers (no manual req.headers extraction)', () => {
     const { content } = generateFastifyRouter(mixedCaseHeaderSpec)
-    expect(content).toContain('"X-Lab-Token": z.string()')
-    expect(content).toContain('"X-Lab-Token": req.headers["x-lab-token"]')
+    expect(content).toContain('headers: z.object({ "x-lab-token": z.string() })')
+    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
   })
 
   it('Express: looks up header by lowercased key in req.headers', () => {
@@ -463,7 +511,7 @@ describe('422 shape is consistent with body validation shape', () => {
     expect(content).toContain('_qv.error.issues')
   })
 
-  it('Fastify header: uses { error, issues } object shape', () => {
+  it('Fastify header: uses native schema.headers validation (400 FST_ERR_VALIDATION, not 422)', () => {
     const spec = makeSpec({
       '/books': {
         get: {
@@ -476,8 +524,11 @@ describe('422 shape is consistent with body validation shape', () => {
       },
     })
     const { content } = generateFastifyRouter(spec)
-    expect(content).toContain("error: 'Invalid request headers'")
-    expect(content).toContain('_hv.error.issues')
+    // Native validation via schema.headers: no manual _hv or 422 reply
+    expect(content).toContain('headers: z.object({ "x-api-key": z.string() })')
+    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(content).not.toContain('_hv')
+    expect(content).not.toContain('status(422)')
   })
 })
 
@@ -733,9 +784,10 @@ describe('query param with enum emits z.enum([...])', () => {
     },
   })
 
-  it.each(allFrameworks)('%s: emits z.enum([...]) for string enum constraint', (_, gen) => {
+  it.each(allFrameworks)('%s: emits z.enum([...]) for string enum constraint', (fw, gen) => {
     const { content } = gen(enumQuerySpec)
-    expect(content).toContain('_qv')
+    // Fastify carries the constraint in the route schema block; Hono/Express in a _qv safeParse var.
+    expect(content).toContain(fw === 'Fastify' ? 'querystring:' : '_qv')
     expect(content).toContain('z.enum(["bronze", "silver", "gold"])')
     expect(content).toContain("import { z } from 'zod'")
   })
@@ -761,9 +813,9 @@ describe('query param with minimum/maximum emits .min()/.max() on z.coerce.numbe
     },
   })
 
-  it.each(allFrameworks)('%s: emits z.coerce.number().min(1).max(100)', (_, gen) => {
+  it.each(allFrameworks)('%s: emits z.coerce.number().min(1).max(100)', (fw, gen) => {
     const { content } = gen(rangeQuerySpec)
-    expect(content).toContain('_qv')
+    expect(content).toContain(fw === 'Fastify' ? 'querystring:' : '_qv')
     expect(content).toContain('z.coerce.number().min(1).max(100)')
   })
 })
@@ -788,9 +840,9 @@ describe('query param with pattern emits .regex() on z.string()', () => {
     },
   })
 
-  it.each(allFrameworks)('%s: emits z.string().regex(/^[A-Z]{3}$/) for pattern constraint', (_, gen) => {
+  it.each(allFrameworks)('%s: emits z.string().regex(/^[A-Z]{3}$/) for pattern constraint', (fw, gen) => {
     const { content } = gen(patternQuerySpec)
-    expect(content).toContain('_qv')
+    expect(content).toContain(fw === 'Fastify' ? 'querystring:' : '_qv')
     expect(content).toContain('z.string().regex(/^[A-Z]{3}$/)')
   })
 })
@@ -815,9 +867,9 @@ describe('optional string query param with enum constraint still emits validatio
     },
   })
 
-  it.each(allFrameworks)('%s: optional enum param still emits _qv with z.enum([...]).optional()', (_, gen) => {
+  it.each(allFrameworks)('%s: optional enum param still emits validation with z.enum([...]).optional()', (fw, gen) => {
     const { content } = gen(optionalEnumSpec)
-    expect(content).toContain('_qv')
+    expect(content).toContain(fw === 'Fastify' ? 'querystring:' : '_qv')
     expect(content).toContain('z.enum(["active", "inactive"]).optional()')
   })
 })
@@ -842,9 +894,9 @@ describe('header param with pattern emits .regex() on z.string()', () => {
     },
   })
 
-  it.each(allFrameworks)('%s: emits z.string().regex(/^tok-[0-9]{4}$/) for header pattern', (_, gen) => {
+  it.each(allFrameworks)('%s: emits z.string().regex(/^tok-[0-9]{4}$/) for header pattern', (fw, gen) => {
     const { content } = gen(patternHeaderSpec)
-    expect(content).toContain('_hv')
+    expect(content).toContain(fw === 'Fastify' ? 'headers:' : '_hv')
     expect(content).toContain('z.string().regex(/^tok-[0-9]{4}$/)')
   })
 })
@@ -869,10 +921,16 @@ describe('integer path param with minimum/maximum generates Zod coerce validatio
     },
   })
 
-  it.each(allFrameworks)('%s: emits _pv with z.coerce.number().min(10).max(20)', (_, gen) => {
+  it.each(allFrameworks)('%s: validates the integer path param', (fw, gen) => {
     const { content } = gen(intPathSpec)
-    expect(content).toContain('_pv')
-    expect(content).toContain('z.coerce.number().min(10).max(20)')
+    if (fw === 'Fastify') {
+      // Fastify path params stay z.string() (path segments are strings); no numeric coercion.
+      expect(content).toContain('params:')
+      expect(content).toContain('z.string()')
+    } else {
+      expect(content).toContain('_pv')
+      expect(content).toContain('z.coerce.number().min(10).max(20)')
+    }
     expect(content).toContain("import { z } from 'zod'")
   })
 
@@ -1050,10 +1108,10 @@ describe('deepObject query param assembles bracket-notation keys into object', (
     expect(content).toContain('z.coerce.number()')
   })
 
-  it('Fastify: emits _dq cast and filter[ prefix assembly', () => {
+  it('Fastify: reshapes deepObject via preValidation hook and filter[ prefix assembly', () => {
     const { content } = generateFastifyRouter(deepSpec)
-    expect(content).toContain('_dq')
-    expect(content).toContain("startsWith('filter[')")
+    expect(content).toContain('preValidation:')
+    expect(content).toContain('startsWith("filter[")')
     expect(content).toContain('z.coerce.number()')
   })
 
@@ -1154,7 +1212,7 @@ describe('required cookie param generates Zod validation', () => {
 
   it('Fastify: returns 422 via reply.status(422).send() on cookie failure', () => {
     const { content } = generateFastifyRouter(cookieSpec)
-    expect(content).toContain('(reply as FastifyReply).status(422).send(')
+    expect(content).toContain('reply.status(422).send(')
     expect(content).toContain("error: 'Invalid request cookies'")
     expect(content).toContain('_ckv.error.issues')
   })

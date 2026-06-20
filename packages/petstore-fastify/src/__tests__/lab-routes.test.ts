@@ -1,5 +1,5 @@
 /**
- * Runtime inject() suite for the generated Fastify router.
+ * Runtime inject() suite for the generated Fastify router (type-provider-zod edition).
  * Uses a local stub service (not the real petService) with canned returns
  * so each test controls exactly what the service layer does.
  *
@@ -12,7 +12,10 @@
  *   - form-urlencoded body parsed without 415 (#318)
  *   - multipart body parsed without 415 (#318)
  *   - 200-vs-202 dual-status selection
- *   - async HttpError(404) from service → statusCode 404 (#315)
+ *   - async HttpError(404) from service returns 404 (#315)
+ *   - invalid query validation now returns 400 (ajv/Zod validatorCompiler, not 422)
+ *   - deepObject preValidation reshaping for /lab/deep-filter
+ *   - delimiter preValidation reshaping for /lab/delimited-query
  */
 import { describe, it, expect } from 'vitest'
 import Fastify from 'fastify'
@@ -99,7 +102,7 @@ describe('lab-routes inject() suite', () => {
     expect(typeof capturedParams?.count).toBe('number')
   })
 
-  it('#314 invalid count (non-numeric) returns 422 query validation error', async () => {
+  it('#314 invalid count (non-numeric) returns 400 from validatorCompiler (not 422)', async () => {
     const service = makeStub({
       async labQuery(params) {
         return { tier: params.tier, count: params.count, code: params.code }
@@ -110,8 +113,9 @@ describe('lab-routes inject() suite', () => {
       method: 'GET',
       url: '/lab/query?tier=gold&count=notanumber&code=ABC',
     })
-    expect(res.statusCode).toBe(422)
-    expect(res.json<{ error: string }>().error).toBe('Invalid query parameters')
+    // fastify-type-provider-zod validatorCompiler returns 400 FST_ERR_VALIDATION (not 422).
+    expect(res.statusCode).toBe(400)
+    expect(res.json<{ code: string }>().code).toBe('FST_ERR_VALIDATION')
   })
 
   it('#313 lowercase X-Lab-Token header validates successfully: GET /lab/header returns 200', async () => {
@@ -132,7 +136,7 @@ describe('lab-routes inject() suite', () => {
     expect(res.json<{ token: string }>()).toMatchObject({ token: 'tok-1234' })
   })
 
-  it('#313 missing X-Lab-Token header returns 422', async () => {
+  it('#313 missing X-Lab-Token header returns 400 from validatorCompiler (not 422)', async () => {
     const service = makeStub({
       async labHeader() {
         return { token: '' }
@@ -140,8 +144,9 @@ describe('lab-routes inject() suite', () => {
     })
     const app = buildApp(service)
     const res = await app.inject({ method: 'GET', url: '/lab/header' })
-    expect(res.statusCode).toBe(422)
-    expect(res.json<{ error: string }>().error).toBe('Invalid request headers')
+    // schema.headers is validated by fastify-type-provider-zod validatorCompiler: returns 400 FST_ERR_VALIDATION.
+    expect(res.statusCode).toBe(400)
+    expect(res.json<{ code: string }>().code).toBe('FST_ERR_VALIDATION')
   })
 
   it('DELETE /pets/:id returns 204 with empty body', async () => {

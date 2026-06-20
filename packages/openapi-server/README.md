@@ -280,6 +280,15 @@ Invalid requests get a structured `422` response instead of reaching your servic
 }
 ```
 
+**Fastify validation is native.** The `"fastify"` router does not hand-roll the `safeParse` block shown above. It registers [`fastify-type-provider-zod`](https://github.com/turkerdev/fastify-type-provider-zod) once and attaches each operation's Zod schemas to the route (`schema: { body, querystring, params, headers, response }`), so Fastify validates and types requests through its own pipeline. Consequences specific to Fastify:
+
+- **Validation failures return Fastify's native `400` (`FST_ERR_VALIDATION`)**, not the `422 { error, issues }` envelope that Hono and Express emit. Reshape it with a Fastify `setErrorHandler` if you want a different contract.
+- **Responses are validated** against the declared response schema via the serializer compiler.
+- **Handlers are fully typed**: `req.body`, `req.query`, and `req.params` are inferred from the Zod schemas (no manual generics or casts in your code).
+- Requires `fastify` and `fastify-type-provider-zod` in your own `dependencies`.
+- The router registers one `setErrorHandler` that maps the exported `HttpError` to its status; other errors are re-thrown to your app-level handler.
+- Cookie params (`in: cookie`) are the exception: Fastify has no native cookie schema, so those keep a `_ckv` safeParse block and still return `422 { error: 'Invalid request cookies', issues }` (see [Cookie parameter validation](#cookie-parameter-validation)).
+
 **Same schemas, both sides of the wire**: `openapi-zod-ts` validates outgoing requests in the browser; `openapi-server` validates incoming requests on the server. One `schemas.ts`, one source of truth.
 
 **Drift detection**: if schemas diverge from the spec (extra schema, missing schema), the generator warns to stderr. Builds still succeed; the warning is advisory.
@@ -297,7 +306,7 @@ Invalid requests get a structured `422` response instead of reaching your servic
 | `"none"` | Only `service.ts`. Wire the interface yourself. |
 | `"hono"` | `service.ts` + a ready-to-mount `router.ts` using [Hono](https://hono.dev). Includes optional Zod request validation via `input_schema`. |
 | `"express"` | `service.ts` + a ready-to-mount `router.ts` using [Express](https://expressjs.com) `Router`. Apply `express.json()` middleware before mounting. |
-| `"fastify"` | `service.ts` + a route-registering `router.ts` using [Fastify](https://fastify.dev). Routes are registered onto a `FastifyInstance`; see mount pattern below. |
+| `"fastify"` | `service.ts` + a route-registering `router.ts` using [Fastify](https://fastify.dev) with [`fastify-type-provider-zod`](https://github.com/turkerdev/fastify-type-provider-zod) for native request/response validation. Routes are registered onto a `FastifyInstance`; see mount pattern below. Requires `fastify` and `fastify-type-provider-zod` in your `dependencies`. |
 
 The framework package must be in your own `dependencies`. This package adds nothing at runtime.
 
@@ -359,10 +368,10 @@ No extra setup needed. The generator automatically adds `import { getCookie } fr
 
 ## Error handling and troubleshooting
 
-The generated router wraps every service call in a `try/catch` block. The catch block handles two cases:
+The generated router maps service-call errors in two cases. Hono and Express use a per-route `try/catch`; Fastify registers a single `setErrorHandler` once (no per-route `try/catch`). Both handle the same two cases:
 
-- **`HttpError`** (exported from the generated `router.ts`): caught inline and mapped to its `.status` code. Use `new HttpError(404, 'Pet not found')` inside service methods to return structured HTTP error responses.
-- **All other errors**: re-thrown to the framework's own error handler (`setErrorHandler` in Fastify, error-handling middleware in Express, `app.onError` in Hono).
+- **`HttpError`** (exported from the generated `router.ts`): mapped to its `.status` code. Use `new HttpError(404, 'Pet not found')` inside service methods to return structured HTTP error responses.
+- **All other errors**: re-thrown to your app-level error handler (`setErrorHandler` in Fastify, error-handling middleware in Express, `app.onError` in Hono).
 
 This means custom error types that do NOT extend `HttpError` propagate to the framework layer, where you install a single error handler for logging, monitoring, and response shaping.
 
