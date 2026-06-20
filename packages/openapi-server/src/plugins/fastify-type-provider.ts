@@ -1149,19 +1149,29 @@ export function generateFastifyRouter(
   // Callers who need custom options (e.g. upload size limits) should pass registerParsers: false
   // and register the plugins themselves before mounting this router.
   if (hasAnyParserNeeded) {
+    // Registrations are guarded by hasContentTypeParser so they are idempotent and order-safe:
+    // if the caller already registered the parser on a parent scope (the child inherits it), we skip.
+    // app.register is intentionally not awaited — awaiting a register inside an async plugin can
+    // stall boot; avvio loads queued registrations before the plugin is considered ready.
     lines.push('    if (options?.registerParsers !== false) {')
     if (hasFormUrlencodedBody) {
-      lines.push("      const _formbody = await import('@fastify/formbody')")
-      lines.push('      await app.register(_formbody.default ?? _formbody)')
+      lines.push("      if (!app.hasContentTypeParser('application/x-www-form-urlencoded')) {")
+      lines.push("        const _formbody = await import('@fastify/formbody')")
+      lines.push('        app.register(_formbody.default ?? _formbody)')
+      lines.push('      }')
     }
     if (hasMultipartBody) {
-      lines.push("      const _multipart = await import('@fastify/multipart')")
-      lines.push('      await app.register(_multipart.default ?? _multipart, { attachFieldsToBody: true })')
+      lines.push("      if (!app.hasContentTypeParser('multipart/form-data')) {")
+      lines.push("        const _multipart = await import('@fastify/multipart')")
+      lines.push('        app.register(_multipart.default ?? _multipart, { attachFieldsToBody: true })')
+      lines.push('      }')
     }
     if (hasOctetStreamRequestBody) {
+      lines.push("      if (!app.hasContentTypeParser('application/octet-stream')) {")
       lines.push(
-        "      app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
+        "        app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
       )
+      lines.push('      }')
     }
     lines.push('    }')
   }
