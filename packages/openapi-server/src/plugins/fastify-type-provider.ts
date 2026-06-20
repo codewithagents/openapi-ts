@@ -275,34 +275,65 @@ function getResponseTypeName(
     if (jsonContent === undefined || jsonContent.schema === undefined) continue
     const schema = jsonContent.schema
     if (isRef(schema)) {
-      return { typeName: refToName((schema as ReferenceObject).$ref), isArray: false }
+      const typeName = refToName((schema as ReferenceObject).$ref)
+      // Warn when schemaNames is provided but the named $ref schema is absent.
+      // This typically means the schemas.ts is out of sync with the spec.
+      if (schemaNames !== undefined && !schemaNames.has(`${typeName}Schema`)) {
+        console.warn(
+          `${operation.operationId ?? 'unknown'} (${code}): response schema ${typeName}Schema is referenced in the spec but not found in schemas.ts. The service return type will be unknown.`
+        )
+      }
+      return { typeName, isArray: false }
     }
     const s = schema as OpenAPIV3_1.SchemaObject
     if (s.type === 'array' && s.items !== undefined && isRef(s.items)) {
-      return { typeName: refToName((s.items as ReferenceObject).$ref), isArray: true }
+      const typeName = refToName((s.items as ReferenceObject).$ref)
+      if (schemaNames !== undefined && !schemaNames.has(`${typeName}Schema`)) {
+        console.warn(
+          `${operation.operationId ?? 'unknown'} (${code}): response schema ${typeName}Schema is referenced in the spec but not found in schemas.ts. The service return type will be unknown.`
+        )
+      }
+      return { typeName, isArray: true }
     }
   }
 
-  // Synthesized response schema fallback: when the response is inline (no $ref) and
-  // a synthesized schema name exists in the user-owned schemas.ts, use it. This enables
-  // schema.response wiring and typed service return types for labInlineResponse etc.
+  // Synthesized response schema fallback: when the response is inline (no $ref), try
+  // several naming conventions in priority order before giving up. This enables schema.response
+  // wiring and typed service return types for operations with inline response schemas.
   //
-  // Naming: toTypeName(operationId) + 'Schema' = 'LabInlineResponseSchema' for
-  // operationId 'labInlineResponse'. The distinction from body schemas is that the
-  // operationId itself encodes the context (e.g. labInlineBody -> LabInlineBodySchema,
-  // labInlineResponse -> LabInlineResponseSchema).
+  // Fallback order (first match wins):
+  //   1. toTypeName(operationId) + 'Schema'         e.g. LabInlineResponseSchema
+  //   2. toTypeName(operationId) + 'ResponseSchema'  e.g. LabInlineBodyResponseSchema
+  //   3. toTypeName(operationId) + statusCode + 'Schema' e.g. LabInlineBody200Schema
   //
-  // Guard: skip if the synthesized name collides with the operation's body schema name.
-  // This prevents a form-body or inline-body schema (e.g. LabFormBodySchema) from being
-  // misidentified as a response schema for the same operation.
+  // Guard: skip any candidate whose name collides with the operation's body schema name.
+  // This prevents a form-body schema (e.g. LabFormBodySchema) from being misidentified
+  // as a response schema for the same operation.
   if (schemaNames !== undefined && operation.operationId !== undefined && operation.operationId.length > 0) {
     const synthesizedName = toTypeName(operation.operationId)
-    const synthesizedSchemaName = `${synthesizedName}Schema`
     const bodyInfo = getBodyInfo(operation)
     const bodySchemaName =
       bodyInfo?.typeName !== undefined ? `${bodyInfo.typeName}Schema` : undefined
-    if (schemaNames.has(synthesizedSchemaName) && synthesizedSchemaName !== bodySchemaName) {
+
+    // Candidate 1: operationId + Schema
+    const candidate1 = `${synthesizedName}Schema`
+    if (schemaNames.has(candidate1) && candidate1 !== bodySchemaName) {
       return { typeName: synthesizedName, isArray: false }
+    }
+
+    // Candidate 2: operationId + ResponseSchema
+    const candidate2 = `${synthesizedName}ResponseSchema`
+    if (schemaNames.has(candidate2) && candidate2 !== bodySchemaName) {
+      return { typeName: `${synthesizedName}Response`, isArray: false }
+    }
+
+    // Candidate 3: operationId + {3-digit statusCode} + Schema (try each 2xx code)
+    for (const code of priority) {
+      if (responses[code] === undefined) continue
+      const candidate3 = `${synthesizedName}${code}Schema`
+      if (schemaNames.has(candidate3) && candidate3 !== bodySchemaName) {
+        return { typeName: `${synthesizedName}${code}`, isArray: false }
+      }
     }
   }
 

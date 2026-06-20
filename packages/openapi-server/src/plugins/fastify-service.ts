@@ -102,20 +102,46 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
         return { typeName: undefined, isArray: true, isVoid: false, isMultiStatus }
       }
 
-      // Inline JSON response: check for a synthesized response schema name.
-      // Naming: toTypeName(operationId) + 'Schema' (e.g. LabInlineResponseSchema).
-      // The schemaNames check in buildReturnType/resolveAliasType will confirm presence.
+      // Inline JSON response: try synthesized response schema name candidates in order.
       //
-      // Guard: skip when the synthesized name would collide with the body schema name.
+      // Fallback order (first match wins, checked via resolveAliasType at buildReturnType time):
+      //   1. toTypeName(operationId) + 'Schema'          e.g. LabInlineResponseSchema
+      //   2. toTypeName(operationId) + 'ResponseSchema'   e.g. LabInlineBodyResponseSchema
+      //   3. toTypeName(operationId) + statusCode + 'Schema' e.g. LabInlineBody200Schema
+      //
+      // Guard: skip when any candidate would collide with the body schema name.
       const operationId = operation.operationId
       if (operationId !== undefined && operationId.length > 0) {
         const synthesizedName = toTypeName(operationId)
         const bodyInfo = getBodyInfo(operation)
-        const collidesWithBody =
-          bodyInfo?.typeName !== undefined && bodyInfo.typeName === synthesizedName
-        if (!collidesWithBody) {
+        const bodyTypeName = bodyInfo?.typeName
+
+        // Candidate 1: operationId + Schema
+        if (bodyTypeName !== synthesizedName) {
           return {
             typeName: synthesizedName,
+            isArray: false,
+            isVoid: false,
+            isMultiStatus,
+          }
+        }
+
+        // Candidate 2: operationId + ResponseSchema (typeName without 'Schema' suffix)
+        const responseTypeName = `${synthesizedName}Response`
+        if (bodyTypeName !== responseTypeName) {
+          return {
+            typeName: responseTypeName,
+            isArray: false,
+            isVoid: false,
+            isMultiStatus,
+          }
+        }
+
+        // Candidate 3: operationId + statusCode + Schema (typeName without 'Schema' suffix)
+        const statusTypeName = `${synthesizedName}${code}`
+        if (bodyTypeName !== statusTypeName) {
+          return {
+            typeName: statusTypeName,
             isArray: false,
             isVoid: false,
             isMultiStatus,

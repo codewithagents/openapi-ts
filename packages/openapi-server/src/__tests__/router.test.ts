@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from '../plugins/router.js'
 import { generateFastifyTypes, generateFastifyTypedService } from '../plugins/fastify-service.js'
@@ -3053,5 +3053,153 @@ describe('generateFastifyRouter: native HttpError envelope (FST_ERR_VALIDATION s
     const expressContent = generateExpressRouter(spec).content
     expect(expressContent).toContain('if (err instanceof HttpError)')
     expect(expressContent).not.toContain('_HTTP_CODES')
+  })
+})
+
+// ── Item 2b: response collision fallback ──────────────────────────────────────
+
+describe('generateFastifyRouter: response schema collision fallback (item 2b)', () => {
+  it('wires ${operationId}ResponseSchema when it is in schemaNames (candidate 2)', () => {
+    const spec = makeSpec({
+      '/lab/inline-body': {
+        post: {
+          operationId: 'labInlineBody',
+          requestBody: {
+            required: true,
+            content: { 'application/x-www-form-urlencoded': { schema: { type: 'object' } } },
+          },
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+          },
+        },
+      },
+    })
+    // LabInlineBodySchema exists for body; LabInlineBodyResponseSchema exists for response.
+    const { content } = generateFastifyRouter(spec, {
+      schemaNames: new Set(['LabInlineBodySchema', 'LabInlineBodyResponseSchema']),
+      schemaImportPath: '../schemas.js',
+    })
+    expect(content).toContain('body: LabInlineBodySchema')
+    expect(content).toContain('response: { 200: LabInlineBodyResponseSchema }')
+  })
+
+  it('wires ${operationId}${statusCode}Schema when it is in schemaNames (candidate 3)', () => {
+    const spec = makeSpec({
+      '/lab/inline-body': {
+        post: {
+          operationId: 'labInlineBody',
+          requestBody: {
+            required: true,
+            content: { 'application/x-www-form-urlencoded': { schema: { type: 'object' } } },
+          },
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+          },
+        },
+      },
+    })
+    // Only the status-code variant exists in schemaNames.
+    const { content } = generateFastifyRouter(spec, {
+      schemaNames: new Set(['LabInlineBodySchema', 'LabInlineBody200Schema']),
+      schemaImportPath: '../schemas.js',
+    })
+    expect(content).toContain('body: LabInlineBodySchema')
+    expect(content).toContain('response: { 200: LabInlineBody200Schema }')
+  })
+
+  it('multi-status (labDualStatus): { status; body: T } envelope is unchanged', () => {
+    const multiStatusSpec = makeSpec({
+      '/tasks/{id}': {
+        get: {
+          operationId: 'getTask',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'done',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+            '202': {
+              description: 'pending',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(multiStatusSpec, {
+      schemaNames: new Set(['TaskSchema']),
+      schemaImportPath: '../schemas.js',
+    })
+    // Multi-status operations get the dual-status envelope, not schema.response
+    expect(content).not.toContain('schema: { response:')
+    expect(content).toContain('_envelope.status')
+    expect(content).toContain('_envelope.body')
+  })
+
+  it('emits console.warn when a named $ref response schema is absent from schemaNames', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const spec = makeSpec({
+        '/pets/{id}': {
+          get: {
+            operationId: 'getPet',
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+            responses: {
+              '200': {
+                description: 'ok',
+                content: {
+                  'application/json': { schema: { $ref: '#/components/schemas/Pet' } },
+                },
+              },
+            },
+          },
+        },
+      })
+      // PetSchema is NOT in schemaNames: triggers the drift warning
+      generateFastifyRouter(spec, {
+        schemaNames: new Set(['SomeOtherSchema']),
+        schemaImportPath: '../schemas.js',
+      })
+      expect(warnSpy).toHaveBeenCalled()
+      const warnMsg = warnSpy.mock.calls[0]?.[0] as string
+      expect(warnMsg).toContain('PetSchema')
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('does NOT warn when named $ref response schema IS in schemaNames', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const spec = makeSpec({
+        '/pets/{id}': {
+          get: {
+            operationId: 'getPet',
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+            responses: {
+              '200': {
+                description: 'ok',
+                content: {
+                  'application/json': { schema: { $ref: '#/components/schemas/Pet' } },
+                },
+              },
+            },
+          },
+        },
+      })
+      generateFastifyRouter(spec, {
+        schemaNames: new Set(['PetSchema']),
+        schemaImportPath: '../schemas.js',
+      })
+      expect(warnSpy).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 })
