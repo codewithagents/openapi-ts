@@ -1021,12 +1021,16 @@ describe('generateFastifyRouter', () => {
     expect(result.content).toMatch(/^\/\/ This file is auto-generated/)
   })
 
-  it('imports FastifyPluginAsyncZod, ValidatorCompiler, SerializerCompiler as type-only from fastify-type-provider-zod', () => {
+  it('imports FastifyPluginAsyncZod as type-only from fastify-type-provider-zod', () => {
     const spec = makeSpec({})
     const result = generateFastifyRouter(spec)
     expect(result.content).toContain(
-      "import type { FastifyPluginAsyncZod, ValidatorCompiler, SerializerCompiler } from 'fastify-type-provider-zod'"
+      "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
     )
+    // The compilers are imported as values; CreateRouterOptions derives their types via `typeof`
+    // since fastify-type-provider-zod does not export ValidatorCompiler/SerializerCompiler type names.
+    expect(result.content).not.toContain('ValidatorCompiler }')
+    expect(result.content).not.toContain('SerializerCompiler }')
     // FastifyRequest and FastifyReply are type-only from fastify (for CreateRouterOptions).
     expect(result.content).toContain("import type { FastifyRequest, FastifyReply } from 'fastify'")
   })
@@ -2387,7 +2391,7 @@ describe('issue #308: Fastify schema.response wiring', () => {
       "import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'"
     )
     expect(content).toContain(
-      "import type { FastifyPluginAsyncZod, ValidatorCompiler, SerializerCompiler } from 'fastify-type-provider-zod'"
+      "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
     )
   })
 
@@ -3326,13 +3330,15 @@ describe('generateFastifyRouter: CreateRouterOptions escape hatch (commit 6)', (
     expect(content).toContain('app.setErrorHandler(options.errorHandler)')
   })
 
-  it('emits import type for ValidatorCompiler, SerializerCompiler from fastify-type-provider-zod', () => {
+  it('types CreateRouterOptions compilers via typeof, without importing nonexistent compiler type names', () => {
     const { content } = generateFastifyRouter(simpleSpec())
-    expect(content).toContain("import type {")
-    expect(content).toContain('ValidatorCompiler')
-    expect(content).toContain('SerializerCompiler')
-    // Must be type-only imports (verbatimModuleSyntax).
-    expect(content).not.toMatch(/^import \{ .*ValidatorCompiler/m)
+    // fastify-type-provider-zod exports the compilers as values only; the option types are derived
+    // via `typeof` so the generated file type-checks without phantom type-name imports.
+    expect(content).toContain('validatorCompiler?: typeof validatorCompiler')
+    expect(content).toContain('serializerCompiler?: typeof serializerCompiler')
+    // No type-only import of ValidatorCompiler/SerializerCompiler (they are not exported).
+    expect(content).not.toMatch(/import type \{[^}]*ValidatorCompiler/)
+    expect(content).not.toMatch(/import type \{[^}]*SerializerCompiler/)
   })
 
   it('emits import type FastifyRequest and FastifyReply from fastify', () => {

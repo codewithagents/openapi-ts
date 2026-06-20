@@ -1076,7 +1076,7 @@ export function generateFastifyRouter(
     "import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'"
   )
   lines.push(
-    "import type { FastifyPluginAsyncZod, ValidatorCompiler, SerializerCompiler } from 'fastify-type-provider-zod'"
+    "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
   )
   lines.push("import type { FastifyRequest, FastifyReply } from 'fastify'")
   if (sortedBodyTypes.length > 0) {
@@ -1103,8 +1103,10 @@ export function generateFastifyRouter(
   // and control parser registration without having to re-implement the whole plugin.
   lines.push('export interface CreateRouterOptions {')
   lines.push('  errorHandler?: (err: Error, req: FastifyRequest, reply: FastifyReply) => void')
-  lines.push('  validatorCompiler?: ValidatorCompiler')
-  lines.push('  serializerCompiler?: SerializerCompiler')
+  // fastify-type-provider-zod exports the compilers as values, not as named types; deriving the
+  // option types via `typeof` keeps the generated file self-contained and always type-correct.
+  lines.push('  validatorCompiler?: typeof validatorCompiler')
+  lines.push('  serializerCompiler?: typeof serializerCompiler')
   lines.push('  /** Set to false to skip automatic parser registration (default: true). */')
   lines.push('  registerParsers?: boolean')
   lines.push('}')
