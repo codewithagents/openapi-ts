@@ -8,8 +8,8 @@
     "packages/openapi-zod-ts/src/__fixtures__/**",
     "packages/petstore-hono/**"
   ],
-  "ignoreUnresolvedImports": ["**/generated/dnd5e/**"],
-  "ignoreDependencies": ["zod", "@faker-js/faker"],
+  "ignoreUnresolvedImports": ["**/generated/**"],
+  "ignoreDependencies": ["zod", "@faker-js/faker", "fastify-type-provider-zod"],
   "rules": {
     "unused-files": "warn",
     "unused-exports": "warn",
