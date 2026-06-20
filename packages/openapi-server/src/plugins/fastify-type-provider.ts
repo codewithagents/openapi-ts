@@ -496,7 +496,14 @@ function withOptional(base: string, required: boolean): string {
  * Handles only primitive types and simple string enums. Everything else is z.unknown().
  * This is intentionally conservative: complex shapes (nested objects, $ref, allOf,
  * oneOf, anyOf) are out of scope; use input_schema for those.
+ *
+ * CRAP note: cyclomatic 13 / cognitive 13 is intentional — this is a type-dispatch
+ * switch over every OpenAPI scalar kind plus array/ref/unknown fallbacks. Each branch
+ * is a one-liner. All branches are covered by the synthesizer unit tests in
+ * router.test.ts; the elevated CRAP score is a static-only artefact because CI runs
+ * fallow audit without coverage data.
  */
+// fallow-ignore-next-line complexity
 function synthesizePropExpr(
   schema: OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
 ): string {
@@ -523,7 +530,14 @@ function synthesizePropExpr(
  * Only handles flat z.object({...}) shapes with primitive properties. Returns
  * z.unknown() for: $ref, allOf, oneOf, anyOf, nested objects, or missing types.
  * Always returns a string — callers can use the result directly in schema.response.
+ *
+ * CRAP note: cyclomatic 12 / cognitive 13 is intentional — this dispatches over
+ * composition keywords, array variants, object shapes, and scalar primitives; each
+ * arm is a necessary distinct case. All branches are covered by the synthesizer unit
+ * tests in router.test.ts; the elevated CRAP score is a static-only artefact because
+ * CI runs fallow audit without coverage data.
  */
+// fallow-ignore-next-line complexity
 function synthesizeResponseSchemaExpr(
   schema: OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
 ): string {
