@@ -951,8 +951,9 @@ export function generateFastifyRouter(
     "import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'"
   )
   lines.push(
-    "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
+    "import type { FastifyPluginAsyncZod, ValidatorCompiler, SerializerCompiler } from 'fastify-type-provider-zod'"
   )
+  lines.push("import type { FastifyRequest, FastifyReply } from 'fastify'")
   if (sortedBodyTypes.length > 0) {
     lines.push(`import type { ${sortedBodyTypes.join(', ')} } from './models.js'`)
   }
@@ -973,41 +974,60 @@ export function generateFastifyRouter(
   lines.push('')
   lines.push("import { HttpError } from './errors.js'")
   lines.push('')
-  lines.push(`export function createRouter(service: ${serviceRef}): FastifyPluginAsyncZod {`)
+  // Emit the CreateRouterOptions escape hatch so callers can override compilers/errorHandler
+  // and control parser registration without having to re-implement the whole plugin.
+  lines.push('export interface CreateRouterOptions {')
+  lines.push('  errorHandler?: (err: Error, req: FastifyRequest, reply: FastifyReply) => void')
+  lines.push('  validatorCompiler?: ValidatorCompiler')
+  lines.push('  serializerCompiler?: SerializerCompiler')
+  lines.push('  /** Set to false to skip automatic parser registration (default: true). */')
+  lines.push('  registerParsers?: boolean')
+  lines.push('}')
+  lines.push('')
+  lines.push(`export function createRouter(service: ${serviceRef}, options?: CreateRouterOptions): FastifyPluginAsyncZod {`)
   lines.push('  return async (app) => {')
 
   // FastifyPluginAsyncZod carries ZodTypeProvider: no withTypeProvider() call needed.
   // Compilers and error handler are scoped to the plugin instance, not the root app.
-  lines.push('    app.setValidatorCompiler(validatorCompiler)')
-  lines.push('    app.setSerializerCompiler(serializerCompiler)')
+  lines.push('    app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
+  lines.push('    app.setSerializerCompiler(options?.serializerCompiler ?? serializerCompiler)')
+  // Error handler: use caller-supplied handler when provided; otherwise use the built-in
+  // FST_ERR_VALIDATION-aligned envelope for HttpError responses.
+  lines.push('    if (options?.errorHandler !== undefined) {')
+  lines.push('      app.setErrorHandler(options.errorHandler)')
+  lines.push('    } else {')
   // Emit a small status-code-to-code lookup for the error envelope. This mirrors the
   // FST_ERR_VALIDATION shape (statusCode, code, error, message) so HttpError responses
   // are structurally consistent with Fastify's built-in validation errors.
-  lines.push('    const _HTTP_CODES: Record<number, string> = {')
-  lines.push("      400: 'BAD_REQUEST',")
-  lines.push("      401: 'UNAUTHORIZED',")
-  lines.push("      403: 'FORBIDDEN',")
-  lines.push("      404: 'NOT_FOUND',")
-  lines.push("      409: 'CONFLICT',")
-  lines.push("      410: 'GONE',")
-  lines.push("      422: 'UNPROCESSABLE_ENTITY',")
-  lines.push("      429: 'TOO_MANY_REQUESTS',")
-  lines.push("      500: 'INTERNAL_ERROR',")
-  lines.push('    }')
-  lines.push('    app.setErrorHandler((err, _req, reply) => {')
-  lines.push('      if (err instanceof HttpError) {')
-  lines.push("        const _errCode = _HTTP_CODES[err.status] ?? 'APP_ERROR'")
-  lines.push('        const _errReply = reply.status(err.status)')
-  lines.push('        return _errReply.send({ statusCode: err.status, code: _errCode, error: err.message, message: err.message })')
+  lines.push('      const _HTTP_CODES: Record<number, string> = {')
+  lines.push("        400: 'BAD_REQUEST',")
+  lines.push("        401: 'UNAUTHORIZED',")
+  lines.push("        403: 'FORBIDDEN',")
+  lines.push("        404: 'NOT_FOUND',")
+  lines.push("        409: 'CONFLICT',")
+  lines.push("        410: 'GONE',")
+  lines.push("        422: 'UNPROCESSABLE_ENTITY',")
+  lines.push("        429: 'TOO_MANY_REQUESTS',")
+  lines.push("        500: 'INTERNAL_ERROR',")
   lines.push('      }')
-  lines.push('      throw err')
-  lines.push('    })')
+  lines.push('      app.setErrorHandler((err, _req, reply) => {')
+  lines.push('        if (err instanceof HttpError) {')
+  lines.push("          const _errCode = _HTTP_CODES[err.status] ?? 'APP_ERROR'")
+  lines.push('          const _errReply = reply.status(err.status)')
+  lines.push('          return _errReply.send({ statusCode: err.status, code: _errCode, error: err.message, message: err.message })')
+  lines.push('        }')
+  lines.push('        throw err')
+  lines.push('      })')
+  lines.push('    }')
 
-  // Register a content-type parser for application/octet-stream when needed.
+  // Register a content-type parser for application/octet-stream when needed,
+  // gated on registerParsers !== false so callers can opt out.
   if (hasOctetStreamRequestBody) {
+    lines.push('    if (options?.registerParsers !== false) {')
     lines.push(
-      "    app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
+      "      app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
     )
+    lines.push('    }')
   }
 
   for (const op of operations) {

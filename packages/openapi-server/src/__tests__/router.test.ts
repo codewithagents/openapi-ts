@@ -1021,13 +1021,14 @@ describe('generateFastifyRouter', () => {
     expect(result.content).toMatch(/^\/\/ This file is auto-generated/)
   })
 
-  it('imports FastifyPluginAsyncZod from fastify-type-provider-zod', () => {
+  it('imports FastifyPluginAsyncZod, ValidatorCompiler, SerializerCompiler as type-only from fastify-type-provider-zod', () => {
     const spec = makeSpec({})
     const result = generateFastifyRouter(spec)
     expect(result.content).toContain(
-      "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
+      "import type { FastifyPluginAsyncZod, ValidatorCompiler, SerializerCompiler } from 'fastify-type-provider-zod'"
     )
-    expect(result.content).not.toContain("from 'fastify'")
+    // FastifyRequest and FastifyReply are type-only from fastify (for CreateRouterOptions).
+    expect(result.content).toContain("import type { FastifyRequest, FastifyReply } from 'fastify'")
   })
 
   it('exports createRouter function returning FastifyPluginAsyncZod', () => {
@@ -1433,7 +1434,7 @@ describe('generateFastifyRouter with schemaNames (Zod validation)', () => {
     })
     // No hand-rolled safeParse: the body schema drives Fastify's native validatorCompiler.
     expect(result.content).toContain('body: CreatePetRequestSchema')
-    expect(result.content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(result.content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
     expect(result.content).not.toContain('safeParse(req.body)')
   })
 
@@ -1453,7 +1454,7 @@ describe('generateFastifyRouter with schemaNames (Zod validation)', () => {
       schemaImportPath: './schemas.js',
     })
     // Body validation errors are now native (400 FST_ERR_VALIDATION), not the old 422 envelope.
-    expect(result.content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(result.content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
     expect(result.content).not.toContain("error: 'Invalid request body'")
     expect(result.content).not.toContain('(reply as FastifyReply).status(422)')
   })
@@ -1798,7 +1799,7 @@ describe('bug #1 fix: inline JSON request body synthesizes schema name from oper
       schemaImportPath: './schemas.js',
     })
     expect(content).toContain('body: LabInlineBodySchema')
-    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
     // No per-route generics in the type-provider emitter.
     expect(content).not.toContain('post<')
   })
@@ -2177,7 +2178,7 @@ describe('context type option (issue #310)', () => {
     it('createRouter signature uses the generic service reference and returns FastifyPluginAsyncZod', () => {
       const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
       expect(content).toContain(
-        'createRouter(service: PetStoreService<RequestContext>): FastifyPluginAsyncZod'
+        'createRouter(service: PetStoreService<RequestContext>, options?: CreateRouterOptions): FastifyPluginAsyncZod'
       )
     })
 
@@ -2381,12 +2382,12 @@ describe('issue #308: Fastify schema.response wiring', () => {
       schemaNames: new Set(['PetSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(content).toContain('app.setSerializerCompiler(serializerCompiler)')
+    expect(content).toContain('app.setSerializerCompiler(options?.serializerCompiler ?? serializerCompiler)')
     expect(content).toContain(
       "import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'"
     )
     expect(content).toContain(
-      "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
+      "import type { FastifyPluginAsyncZod, ValidatorCompiler, SerializerCompiler } from 'fastify-type-provider-zod'"
     )
   })
 
@@ -2395,14 +2396,14 @@ describe('issue #308: Fastify schema.response wiring', () => {
       schemaNames: new Set(['SomeOtherSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(content).toContain('app.setSerializerCompiler(serializerCompiler)')
-    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(content).toContain('app.setSerializerCompiler(options?.serializerCompiler ?? serializerCompiler)')
+    expect(content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
   })
 
   it('compilers are registered once even when schemaNames is not provided', () => {
     const { content } = generateFastifyRouter(getPetSpec)
-    expect(content).toContain('app.setSerializerCompiler(serializerCompiler)')
-    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(content).toContain('app.setSerializerCompiler(options?.serializerCompiler ?? serializerCompiler)')
+    expect(content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
   })
 
   it('void (DELETE 204) operation: no schema.response added', () => {
@@ -3281,5 +3282,91 @@ describe('generateFastifyRouter: header + cookie forwarding to service (item 1)'
     // No header or cookie forwarding when params are absent.
     expect(content).not.toContain('req.headers[')
     expect(content).not.toContain('_ckv.data')
+  })
+})
+
+// ── Commit 6: CreateRouterOptions ────────────────────────────────────────────
+
+describe('generateFastifyRouter: CreateRouterOptions escape hatch (commit 6)', () => {
+  function simpleSpec() {
+    return makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+  }
+
+  it('emits CreateRouterOptions interface in generated router.ts', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('export interface CreateRouterOptions {')
+    expect(content).toContain('errorHandler?:')
+    expect(content).toContain('validatorCompiler?:')
+    expect(content).toContain('serializerCompiler?:')
+    expect(content).toContain('registerParsers?:')
+  })
+
+  it('emits options? param in createRouter signature', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('options?: CreateRouterOptions')
+    expect(content).toContain('createRouter(')
+  })
+
+  it('emits options?.validatorCompiler ?? validatorCompiler', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('options?.validatorCompiler ?? validatorCompiler')
+    expect(content).toContain('options?.serializerCompiler ?? serializerCompiler')
+  })
+
+  it('emits conditional options?.errorHandler block', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('if (options?.errorHandler !== undefined)')
+    expect(content).toContain('app.setErrorHandler(options.errorHandler)')
+  })
+
+  it('emits import type for ValidatorCompiler, SerializerCompiler from fastify-type-provider-zod', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain("import type {")
+    expect(content).toContain('ValidatorCompiler')
+    expect(content).toContain('SerializerCompiler')
+    // Must be type-only imports (verbatimModuleSyntax).
+    expect(content).not.toMatch(/^import \{ .*ValidatorCompiler/m)
+  })
+
+  it('emits import type FastifyRequest and FastifyReply from fastify', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain("from 'fastify'")
+    expect(content).toContain('FastifyRequest')
+    expect(content).toContain('FastifyReply')
+  })
+
+  it('octet-stream parser is gated on options?.registerParsers !== false', () => {
+    const spec = makeSpec({
+      '/upload': {
+        post: {
+          operationId: 'upload',
+          requestBody: {
+            required: true,
+            content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain("options?.registerParsers !== false")
+    expect(content).toContain("addContentTypeParser")
+  })
+
+  it('spec without octet-stream body does not emit the registerParsers runtime gate', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    // No octet-stream body => no addContentTypeParser call and no runtime gate.
+    // The CreateRouterOptions interface still declares registerParsers as a field,
+    // but the conditional `if (options?.registerParsers !== false)` is only emitted
+    // when the spec actually has an octet-stream body.
+    expect(content).not.toContain('addContentTypeParser')
+    expect(content).not.toContain('options?.registerParsers !== false')
   })
 })
