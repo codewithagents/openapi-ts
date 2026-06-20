@@ -273,6 +273,11 @@ export interface FastifyServiceOptions {
  * in schemaNames. Both router.ts and service.ts import from this file instead
  * of models.ts, making body/response casts unnecessary.
  *
+ * z.infer is equivalent to z.output: it reflects the post-validation, post-transform
+ * shape. This is the correct type for a Fastify handler, where ZodTypeProvider has
+ * already run the schema through .parse(). When a schema uses .transform(), .default(),
+ * or coercion, this type will differ from the hand-authored models.ts interfaces.
+ *
  * Alias naming: strip the trailing 'Schema' suffix.
  * Example: PetSchema -> export type Pet = z.infer<typeof PetSchema>
  */
@@ -291,8 +296,10 @@ export function generateFastifyTypes(
 
   const lines: string[] = []
   lines.push('// This file is auto-generated. Do not edit manually.')
-  lines.push('// Fastify-aligned type aliases derived from Zod schemas via z.infer.')
-  lines.push('// Import from this file instead of models.ts in your Fastify service implementation.')
+  lines.push('// Fastify-aligned type aliases derived from Zod schemas via z.infer (= z.output).')
+  lines.push('// These are post-validation, post-transform types: they reflect the shape after Zod')
+  lines.push('// has parsed and transformed the value, which can differ from models.ts when a schema')
+  lines.push('// uses .transform(), .default(), or coercion. Import from here in your Fastify service.')
   lines.push('')
   lines.push("import { z } from 'zod'")
 

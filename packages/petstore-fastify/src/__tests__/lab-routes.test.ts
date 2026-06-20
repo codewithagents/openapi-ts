@@ -207,7 +207,7 @@ describe('lab-routes inject() suite', () => {
   it('#318 multipart body on POST /lab/gallery returns 200 without 415', async () => {
     const service = makeStub({
       async labGallery(_body) {
-        return { uploaded: 1 }
+        return { count: 1 }
       },
     })
     const app = buildApp(service)

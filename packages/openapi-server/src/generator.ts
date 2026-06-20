@@ -20,9 +20,9 @@ interface BaseRouterOptions {
   contextType?: string
 }
 
-/** Extended options for the Fastify zero-cast path (adds schemaTypesImportPath). */
+/** Extended options for the Fastify zero-cast path. */
 interface FastifyRouterOptions extends BaseRouterOptions {
-  schemaTypesImportPath?: string
+  zeroCast?: boolean
 }
 
 /** Pick the framework-specific router generator for a first or second pass. */
@@ -113,7 +113,6 @@ async function generateSchemaEnhancedRouter(
     await writeFile(schemaTypesPath, await formatTs(schemaTypesFile.content, schemaTypesPath), 'utf-8')
     console.log(`${prefix}  ✓ schema-types.ts (z.infer aliases for ${exportedSchemas.size} schema(s))`)
 
-    const schemaTypesImportPath = './schema-types.js'
     const fastifyServiceFile = generateFastifyTypedService(spec, {
       schemaNames: exportedSchemas,
       schemaImportPath: schemaImportPathJs,
@@ -126,7 +125,7 @@ async function generateSchemaEnhancedRouter(
     const routerFile = buildRouterFile(spec, framework, {
       schemaNames: exportedSchemas,
       schemaImportPath: schemaImportPathJs,
-      schemaTypesImportPath,
+      zeroCast: true,
       contextType: config.context_type,
     })
     const routerPath = join(outputDir, routerFile.filename)

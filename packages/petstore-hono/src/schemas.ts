@@ -218,3 +218,8 @@ export const LabResponseUnionSchema = z.union([
   z.object({ kind: z.literal('circle'), radius: z.number() }),
   z.object({ kind: z.literal('square'), side: z.number() }),
 ])
+
+// POST /lab/gallery: multipart upload acknowledgement.
+export const LabGallerySchema = z.object({
+  count: z.number().int().min(0),
+})

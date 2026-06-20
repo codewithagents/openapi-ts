@@ -92,12 +92,12 @@ interface RouterOptions {
   schemaNames?: Set<string>
   schemaImportPath?: string
   /**
-   * When set, the router imports alias types from this path (schema-types.js) and emits
-   * zero-cast body/response handlers. Only used with the Fastify zero-cast path
-   * (framework=fastify + input_schema configured). When absent, the old models-import
-   * and cast-based output is produced.
+   * When true, emit the zero-cast router: body is passed as req.body (no cast),
+   * response is sent without a cast, and model imports are skipped. The router
+   * imports alias types from schema-types.js (emitted separately by generateFastifyTypes).
+   * Enabled by the generator when framework=fastify and input_schema is configured.
    */
-  schemaTypesImportPath?: string
+  zeroCast?: boolean
   contextType?: string
 }
 
@@ -615,8 +615,15 @@ function buildFastifyTypeProviderHandler(
   const inner = `${indent}  `
 
   // ── Body schema ───────────────────────────────────────────────────────────
+  // multipart/form-data and application/octet-stream bodies are not validated
+  // by Fastify's schema.body slot (they use addContentTypeParser or raw stream).
+  // Skip the body schema lookup for those content types to avoid assigning a
+  // synthesized schema name that may also be used as a response schema (C1 naming).
+  const isNonJsonBody =
+    op.bodyInfo?.contentType === 'multipart/form-data' ||
+    op.bodyInfo?.contentType === 'application/octet-stream'
   let bodySchemaExpr: string | undefined
-  if (op.bodyInfo !== undefined && op.bodyInfo.typeName !== undefined) {
+  if (op.bodyInfo !== undefined && op.bodyInfo.typeName !== undefined && !isNonJsonBody) {
     const schemaName = `${op.bodyInfo.typeName}Schema`
     if (schemaNames !== undefined && schemaNames.has(schemaName)) {
       bodySchemaExpr = schemaName
@@ -867,8 +874,8 @@ export function generateFastifyRouter(
   const allUsedSchemaNames = new Set([...usedSchemaNames, ...usedResponseSchemaNames])
 
   // Collect body type names for model imports. Only needed in the legacy (non-zero-cast) path.
-  // When schemaTypesImportPath is set we are on the zero-cast path and models.ts is not imported.
-  const zeroCast = options?.schemaTypesImportPath !== undefined
+  // When zeroCast=true, models.ts is skipped and schema-types.js is used instead.
+  const zeroCast = options?.zeroCast === true
   const sortedBodyTypes = zeroCast ? [] : collectSortedBodyTypes(operations)
 
   // z is always needed: schema.params/querystring/headers/response use z.object/z.array/z.string.

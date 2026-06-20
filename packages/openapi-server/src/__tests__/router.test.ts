@@ -2683,7 +2683,7 @@ describe('issue #318: Fastify octet-stream request body parser', () => {
   })
 })
 
-// ── Component B: zero-cast path (schemaTypesImportPath) ───────────────────────
+// ── Component B: zero-cast path (zeroCast: true) ──────────────────────────────
 
 describe('generateFastifyTypes (schema-types.ts emitter)', () => {
   const petSchemas = new Set(['PetSchema', 'CreatePetRequestSchema', 'ErrorSchema'])
@@ -2792,7 +2792,7 @@ describe('generateFastifyTypedService (service.ts emitter for zero-cast path)', 
   })
 })
 
-describe('generateFastifyRouter zero-cast path (schemaTypesImportPath set)', () => {
+describe('generateFastifyRouter zero-cast path (zeroCast: true)', () => {
   const postSpec = makeSpec({
     '/pets': {
       post: {
@@ -2816,10 +2816,10 @@ describe('generateFastifyRouter zero-cast path (schemaTypesImportPath set)', () 
   const zeroOpts = {
     schemaNames: new Set(['PetSchema', 'CreatePetRequestSchema']),
     schemaImportPath: '../schemas.js',
-    schemaTypesImportPath: './schema-types.js',
+    zeroCast: true,
   }
 
-  it('does not import from models.js when schemaTypesImportPath is set', () => {
+  it('does not import from models.js when zeroCast is set', () => {
     const result = generateFastifyRouter(postSpec, zeroOpts)
     expect(result.content).not.toContain("from './models.js'")
   })
@@ -2832,7 +2832,7 @@ describe('generateFastifyRouter zero-cast path (schemaTypesImportPath set)', () 
     expect(result.content).not.toContain('req.body as any')
   })
 
-  it('does not emit a response cast when schemaTypesImportPath is set', () => {
+  it('does not emit a response cast when zeroCast is set', () => {
     const getSpec = makeSpec({
       '/pets/{id}': {
         get: {
@@ -2850,7 +2850,7 @@ describe('generateFastifyRouter zero-cast path (schemaTypesImportPath set)', () 
     const result = generateFastifyRouter(getSpec, {
       schemaNames: new Set(['PetSchema']),
       schemaImportPath: '../schemas.js',
-      schemaTypesImportPath: './schema-types.js',
+      zeroCast: true,
     })
     // Zero-cast: no `as z.infer<...>` appended to the service call result.
     expect(result.content).not.toContain('as z.infer<typeof PetSchema>')
@@ -2879,12 +2879,12 @@ describe('generateFastifyRouter zero-cast path (schemaTypesImportPath set)', () 
     const result = generateFastifyRouter(multipartSpec, {
       schemaNames: new Set<string>(),
       schemaImportPath: '../schemas.js',
-      schemaTypesImportPath: './schema-types.js',
+      zeroCast: true,
     })
     expect(result.content).toContain('req.body as unknown')
   })
 
-  it('legacy path (no schemaTypesImportPath) still emits the body cast', () => {
+  it('legacy path (no zeroCast) still emits the body cast', () => {
     const result = generateFastifyRouter(postSpec, {
       schemaNames: new Set(['PetSchema', 'CreatePetRequestSchema']),
       schemaImportPath: '../schemas.js',

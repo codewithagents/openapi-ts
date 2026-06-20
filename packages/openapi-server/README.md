@@ -378,7 +378,7 @@ This means custom error types that do NOT extend `HttpError` propagate to the fr
 **Example: custom error reaching Fastify's `setErrorHandler`**
 
 ```ts
-// Your custom error class — does NOT extend HttpError
+// Your custom error class: does NOT extend HttpError
 class NotFoundError extends Error {
   constructor(resource: string) {
     super(`${resource} not found`)
@@ -489,7 +489,7 @@ app.use('*', async (c, next) => {
   await next()
 })
 
-// Implement the service — ctx is whatever the router passed (here: the Hono Context)
+// Implement the service. ctx is whatever the router passed (here: the Hono Context)
 export const petService: PetstoreService<Context> = {
   async listPets(params, ctx) {
     const userId = ctx.get('userId')
