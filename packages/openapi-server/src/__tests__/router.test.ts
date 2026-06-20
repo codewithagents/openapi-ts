@@ -3028,9 +3028,10 @@ describe('generateFastifyRouter: native HttpError envelope (FST_ERR_VALIDATION s
       },
     },
   })
+  // Hoist: generateFastifyRouter is pure — generate once, assert in each it block.
+  const { content } = generateFastifyRouter(spec)
 
   it('emits _HTTP_CODES lookup object in the plugin body', () => {
-    const { content } = generateFastifyRouter(spec)
     expect(content).toContain('_HTTP_CODES')
     expect(content).toContain("400: 'BAD_REQUEST'")
     expect(content).toContain("404: 'NOT_FOUND'")
@@ -3038,7 +3039,6 @@ describe('generateFastifyRouter: native HttpError envelope (FST_ERR_VALIDATION s
   })
 
   it('send() uses statusCode, code, error, and message fields', () => {
-    const { content } = generateFastifyRouter(spec)
     expect(content).toContain('statusCode: err.status')
     expect(content).toContain("_HTTP_CODES[err.status] ?? 'APP_ERROR'")
     expect(content).toContain('error: err.message')
@@ -3046,7 +3046,6 @@ describe('generateFastifyRouter: native HttpError envelope (FST_ERR_VALIDATION s
   })
 
   it('reply.status(err.status) is still set correctly', () => {
-    const { content } = generateFastifyRouter(spec)
     expect(content).toContain('reply.status(err.status)')
   })
 

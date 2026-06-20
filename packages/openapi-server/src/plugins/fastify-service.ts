@@ -40,34 +40,35 @@ export interface ServiceCookieParam {
   required: boolean
 }
 
+/** Collect resolved parameters of a specific `in` kind from an operation. */
+function getServiceInParams(
+  operation: OpenAPIV3_1.OperationObject,
+  spec: OpenAPIV3_1.Document,
+  inKind: 'header' | 'cookie'
+): { rawName: string; required: boolean }[] {
+  const parameters = operation.parameters as (OpenAPIV3_1.ParameterObject | OpenAPIV3_1.ReferenceObject)[] | undefined
+  if (parameters === undefined) return []
+  const result: { rawName: string; required: boolean }[] = []
+  for (const p of parameters) {
+    const resolved = resolveParam(p, spec)
+    if (resolved === undefined || resolved.in !== inKind) continue
+    result.push({ rawName: resolved.name, required: resolved.required === true })
+  }
+  return result
+}
+
 function getServiceHeaderParams(
   operation: OpenAPIV3_1.OperationObject,
   spec: OpenAPIV3_1.Document
 ): ServiceHeaderParam[] {
-  const parameters = operation.parameters as (OpenAPIV3_1.ParameterObject | OpenAPIV3_1.ReferenceObject)[] | undefined
-  if (parameters === undefined) return []
-  const result: ServiceHeaderParam[] = []
-  for (const p of parameters) {
-    const resolved = resolveParam(p, spec)
-    if (resolved === undefined || resolved.in !== 'header') continue
-    result.push({ rawName: resolved.name, required: resolved.required === true })
-  }
-  return result
+  return getServiceInParams(operation, spec, 'header')
 }
 
 function getServiceCookieParams(
   operation: OpenAPIV3_1.OperationObject,
   spec: OpenAPIV3_1.Document
 ): ServiceCookieParam[] {
-  const parameters = operation.parameters as (OpenAPIV3_1.ParameterObject | OpenAPIV3_1.ReferenceObject)[] | undefined
-  if (parameters === undefined) return []
-  const result: ServiceCookieParam[] = []
-  for (const p of parameters) {
-    const resolved = resolveParam(p, spec)
-    if (resolved === undefined || resolved.in !== 'cookie') continue
-    result.push({ rawName: resolved.name, required: resolved.required === true })
-  }
-  return result
+  return getServiceInParams(operation, spec, 'cookie')
 }
 
 type OperationObject = OpenAPIV3_1.OperationObject
@@ -197,6 +198,11 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
       return { typeName: undefined, isArray: false, isVoid: false, isMultiStatus }
     }
 
+    // fallow-ignore-next-line code-duplication
+    // Parallel to service.ts getReturnInfo — both emitters must handle text/plain,
+    // octet-stream, and 204 the same way. The return types differ (fastify-service.ts
+    // carries isMultiStatus) so a shared cross-file helper would require exposing an
+    // internal union type. Suppressed as inherent two-emitter parallel structure.
     if (content['text/plain'] !== undefined) {
       return { typeName: undefined, isArray: false, isVoid: false, primitiveType: 'string' }
     }

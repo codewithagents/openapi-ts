@@ -817,6 +817,11 @@ function buildFastifyTypeProviderHandler(
       | Record<string, ResponseObject | ReferenceObject>
       | undefined
     if (responses !== undefined) {
+      // fallow-ignore-next-line code-duplication
+      // The priority-ordered 2xx response scan mirrors the one in fastify-service.ts
+      // getReturnInfo. Both emitters must independently walk the same responses object:
+      // fastify-service.ts resolves type names, this emitter synthesizes Zod expressions.
+      // They cannot share a helper without coupling two separate generation passes.
       const priority = ['200', '201', ...Object.keys(responses).filter(
         (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
       )]

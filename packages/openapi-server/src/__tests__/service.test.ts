@@ -1188,6 +1188,9 @@ function makeFastifySpec(
 }
 
 describe('generateFastifyTypedService: header + cookie params in method signature (item 1)', () => {
+  // Shared base options — every test in this block uses the same schema import path.
+  const baseOpts = { schemaNames: new Set<string>(), schemaImportPath: '../schemas.js' }
+
   it('required header param emits headers?: { "x-api-key": string }', () => {
     const spec = makeFastifySpec({
       '/secure': {
@@ -1200,10 +1203,7 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
         },
       },
     })
-    const { content } = generateFastifyTypedService(spec, {
-      schemaNames: new Set(),
-      schemaImportPath: '../schemas.js',
-    })
+    const { content } = generateFastifyTypedService(spec, baseOpts)
     // Key is lowercased; outer arg is optional; inner type is string (required header).
     expect(content).toContain('headers?: { "x-api-key": string }')
     expect(content).not.toContain('"X-Api-Key"')
@@ -1221,10 +1221,7 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
         },
       },
     })
-    const { content } = generateFastifyTypedService(spec, {
-      schemaNames: new Set(),
-      schemaImportPath: '../schemas.js',
-    })
+    const { content } = generateFastifyTypedService(spec, baseOpts)
     expect(content).toContain('headers?: { "x-trace-id"?: string | undefined }')
   })
 
@@ -1240,10 +1237,7 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
         },
       },
     })
-    const { content } = generateFastifyTypedService(spec, {
-      schemaNames: new Set(),
-      schemaImportPath: '../schemas.js',
-    })
+    const { content } = generateFastifyTypedService(spec, baseOpts)
     expect(content).toContain('cookies?: { "session": string }')
   })
 
@@ -1259,10 +1253,7 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
         },
       },
     })
-    const { content } = generateFastifyTypedService(spec, {
-      schemaNames: new Set(),
-      schemaImportPath: '../schemas.js',
-    })
+    const { content } = generateFastifyTypedService(spec, baseOpts)
     expect(content).not.toContain('headers?:')
     expect(content).not.toContain('cookies?:')
   })
@@ -1281,8 +1272,7 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
       },
     })
     const { content } = generateFastifyTypedService(spec, {
-      schemaNames: new Set(),
-      schemaImportPath: '../schemas.js',
+      ...baseOpts,
       contextType: 'FastifyRequest',
     })
     // Check arg order: params (query), then headers?, then ctx.
