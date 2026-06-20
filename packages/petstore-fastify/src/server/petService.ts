@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { PetstoreService } from '../../generated/service.js'
 import type { Pet } from '../../generated/models.js'
+import { HttpError } from '../../generated/router.js'
 
 const pets = new Map<string, Pet>()
 
@@ -19,7 +20,8 @@ export const petService: PetstoreService = {
   },
   async getPet(id) {
     const pet = pets.get(id)
-    if (!pet) throw new Error(`Pet ${id} not found`)
+    // HttpError is recognised by the generated setErrorHandler and mapped to its status.
+    if (!pet) throw new HttpError(404, `Pet ${id} not found`)
     return pet
   },
   async deletePet(id) {
@@ -90,11 +92,13 @@ export const petService: PetstoreService = {
   async labLooseUnion(_body) {
     throw new Error('not implemented')
   },
-  async labQuery(_params) {
-    throw new Error('not implemented')
+  async labQuery(params) {
+    // Echo the coerced query params (count arrives as a number).
+    return { tier: params.tier, count: params.count, code: params.code }
   },
   async labHeader() {
-    throw new Error('not implemented')
+    // The header is validated by the router; the service just returns a canned token.
+    return { token: 'tok-0000' }
   },
   async labInlineBody(_body) {
     throw new Error('not implemented')
@@ -115,22 +119,26 @@ export const petService: PetstoreService = {
     throw new Error('not implemented')
   },
   async labFormBody(_body) {
-    throw new Error('not implemented')
+    // Acknowledge a form-urlencoded body was parsed.
+    return { ok: true }
   },
   async labGallery(_body) {
-    throw new Error('not implemented')
+    // Acknowledge a multipart body was parsed.
+    return { uploaded: 1 }
   },
   async labAccepted(_body) {
     throw new Error('not implemented')
   },
-  async labDualStatus(_params) {
-    throw new Error('not implemented')
+  async labDualStatus(params) {
+    // prefer=async returns 202, anything else returns 200.
+    const async = params?.prefer === 'async'
+    return { status: async ? 202 : 200, body: { phase: async ? 'pending' : 'done' } }
   },
   async labPlainText() {
-    throw new Error('not implemented')
+    return 'hello plain text'
   },
   async labDownload() {
-    throw new Error('not implemented')
+    return new Uint8Array([1, 2, 3, 4])
   },
   async labInt64(_body) {
     throw new Error('not implemented')

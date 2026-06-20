@@ -4,3 +4,4 @@ generated/
 
 # Test artifacts
 test-results/
+playwright-report/
