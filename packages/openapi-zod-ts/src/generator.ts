@@ -6,7 +6,7 @@ import { parseSpec } from './parser.js'
 import { generateTypes } from './plugins/types.js'
 import { generateClientConfig } from './plugins/client-config.js'
 import { generateClient, hasCookieAuth, detectAuthSchemes } from './plugins/client.js'
-import { generateZodSchemas } from './plugins/zod.js'
+import { generateZodSchemas, collectSynthesizedResponseSchemaNames } from './plugins/zod.js'
 import { generateIndexBarrel } from './plugins/index-barrel.js'
 import { generateServer } from './plugins/server.js'
 import { buildWritableVariantMap } from './utils/writable-variants.js'
@@ -147,12 +147,24 @@ async function generateZodIntegration(
       exportedSchemas.add(match[1]!)
     }
 
-    // Drift detection: warn to stderr for missing schemas.
+    // Drift detection: warn to stderr for missing component schemas.
     const specSchemaNames = Object.keys(spec.components?.schemas ?? {})
     for (const name of specSchemaNames) {
       if (!exportedSchemas.has(`${name}Schema`)) {
         console.warn(
           `${prefix}Drift: ${name}Schema is in the OpenAPI spec but not found in ${config.input_schema}. Run with --reset-schema to re-bootstrap.`
+        )
+      }
+    }
+
+    // Drift detection: warn for missing synthesized inline response schemas.
+    // These are bootstrapped by generateZodSchemas() but may be absent if the file
+    // predates this feature or if the user removed them accidentally.
+    const synthesizedNames = collectSynthesizedResponseSchemaNames(spec)
+    for (const schemaName of synthesizedNames) {
+      if (!exportedSchemas.has(schemaName)) {
+        console.warn(
+          `${prefix}Drift: ${schemaName} is synthesized from an inline response but not found in ${config.input_schema}. Run with --reset-schema to re-bootstrap, or add it manually.`
         )
       }
     }

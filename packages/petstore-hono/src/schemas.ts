@@ -202,3 +202,24 @@ export const LabFormBodySchema = z.object({
   label: z.string(),
   quantity: z.coerce.number().int(),
 })
+
+// Synthesized schemas for inline JSON responses (operationId-based naming).
+// These are used by openapi-server to wire schema.response for Fastify routes.
+// Add refinements here as needed.
+
+// GET /lab/inline-response: inline { ok: boolean, note: string } response.
+export const LabInlineResponseSchema = z.object({
+  ok: z.boolean(),
+  note: z.string(),
+})
+
+// POST /lab/response-union: oneOf circle | square inline response.
+export const LabResponseUnionSchema = z.union([
+  z.object({ kind: z.literal('circle'), radius: z.number() }),
+  z.object({ kind: z.literal('square'), side: z.number() }),
+])
+
+// POST /lab/gallery: multipart upload acknowledgement.
+export const LabGallerySchema = z.object({
+  count: z.number().int().min(0),
+})

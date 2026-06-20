@@ -820,6 +820,13 @@ function collectUsedSchemaNames(
 ): Set<string> {
   const used = new Set<string>()
   for (const op of operations) {
+    // multipart/form-data and application/octet-stream bodies are never validated against a
+    // JSON schema. A same-named schema may exist for the operation's response (C1 naming);
+    // excluding these content types prevents that schema from being imported as a body schema.
+    const isNonJsonBody =
+      op.bodyInfo?.contentType === 'multipart/form-data' ||
+      op.bodyInfo?.contentType === 'application/octet-stream'
+    if (isNonJsonBody) continue
     const typeName = op.bodyInfo?.typeName
     if (typeName === undefined) continue
     const schemaName = `${typeName}Schema`
@@ -1022,9 +1029,16 @@ function buildRouteHandler(
       lines.push(`${indent}  }`)
     }
 
-    // Zod validation when schema is available
+    // Zod validation when schema is available.
+    // multipart/form-data and application/octet-stream are never validated against a JSON schema:
+    // they carry binary/mixed payloads that no Zod schema can describe at the body level.
+    const isNonJsonBody =
+      op.bodyInfo.contentType === 'multipart/form-data' ||
+      op.bodyInfo.contentType === 'application/octet-stream'
     const schemaName =
-      op.bodyInfo.typeName !== undefined ? `${op.bodyInfo.typeName}Schema` : undefined
+      !isNonJsonBody && op.bodyInfo.typeName !== undefined
+        ? `${op.bodyInfo.typeName}Schema`
+        : undefined
     if (schemaName !== undefined && schemaNames !== undefined && schemaNames.has(schemaName)) {
       lines.push(`${indent}  // Validate request body: returns 422 with Zod issues on failure`)
       lines.push(`${indent}  const parseResult = ${schemaName}.safeParse(body)`)

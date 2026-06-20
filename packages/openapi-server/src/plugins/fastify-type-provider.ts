@@ -5,8 +5,9 @@
  * that uses fastify-type-provider-zod for request validation and type inference.
  *
  * Key design points (decided, not re-litigated):
- * - withTypeProvider<ZodTypeProvider>() + setValidatorCompiler + setSerializerCompiler registered once
- * - Single setErrorHandler maps HttpError to its .status code (no per-route try/catch)
+ * - createRouter(service) returns a FastifyPluginAsyncZod; mount via app.register(createRouter(service), { prefix })
+ * - FastifyPluginAsyncZod carries ZodTypeProvider: no withTypeProvider() call needed inside the plugin
+ * - setValidatorCompiler, setSerializerCompiler, setErrorHandler are scoped to the plugin instance
  * - Per route: schema.body, schema.params, schema.querystring, schema.headers, schema.response, config.operationId
  * - preValidation hook for deepObject and delimiter-style query params (emitted per-route, not globally)
  * - Cookie params use manual _ckv safeParse: Fastify 5's FastifySchema only exposes body/querystring/params/headers/response, so there is no cookie slot in the type-provider path
@@ -15,6 +16,7 @@
  */
 import type { OpenAPIV3_1 } from 'openapi-types'
 import type { GeneratedFile } from 'openapi-zod-ts'
+import { toTypeName } from 'openapi-zod-ts'
 import {
   SUPPORTED_METHODS,
   type SupportedMethod,
@@ -89,6 +91,13 @@ interface RouteOperation {
 interface RouterOptions {
   schemaNames?: Set<string>
   schemaImportPath?: string
+  /**
+   * When true, emit the zero-cast router: body is passed as req.body (no cast),
+   * response is sent without a cast, and model imports are skipped. The router
+   * imports alias types from schema-types.js (emitted separately by generateFastifyTypes).
+   * Enabled by the generator when framework=fastify and input_schema is configured.
+   */
+  zeroCast?: boolean
   contextType?: string
 }
 
@@ -238,7 +247,8 @@ function getResponseStatus(
 
 // fallow-ignore-next-line complexity
 function getResponseTypeName(
-  operation: OperationObject
+  operation: OperationObject,
+  schemaNames?: Set<string>
 ): { typeName: string; isArray: boolean } | undefined {
   const responses = operation.responses as
     | Record<string, ResponseObject | ReferenceObject>
@@ -273,12 +283,35 @@ function getResponseTypeName(
     }
   }
 
+  // Synthesized response schema fallback: when the response is inline (no $ref) and
+  // a synthesized schema name exists in the user-owned schemas.ts, use it. This enables
+  // schema.response wiring and typed service return types for labInlineResponse etc.
+  //
+  // Naming: toTypeName(operationId) + 'Schema' = 'LabInlineResponseSchema' for
+  // operationId 'labInlineResponse'. The distinction from body schemas is that the
+  // operationId itself encodes the context (e.g. labInlineBody -> LabInlineBodySchema,
+  // labInlineResponse -> LabInlineResponseSchema).
+  //
+  // Guard: skip if the synthesized name collides with the operation's body schema name.
+  // This prevents a form-body or inline-body schema (e.g. LabFormBodySchema) from being
+  // misidentified as a response schema for the same operation.
+  if (schemaNames !== undefined && operation.operationId !== undefined && operation.operationId.length > 0) {
+    const synthesizedName = toTypeName(operation.operationId)
+    const synthesizedSchemaName = `${synthesizedName}Schema`
+    const bodyInfo = getBodyInfo(operation)
+    const bodySchemaName =
+      bodyInfo?.typeName !== undefined ? `${bodyInfo.typeName}Schema` : undefined
+    if (schemaNames.has(synthesizedSchemaName) && synthesizedSchemaName !== bodySchemaName) {
+      return { typeName: synthesizedName, isArray: false }
+    }
+  }
+
   return undefined
 }
 
 // ── Operation collection ──────────────────────────────────────────────────────
 
-function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
+function collectOperations(spec: OpenAPIV3_1.Document, schemaNames?: Set<string>): RouteOperation[] {
   const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
   if (paths === undefined) return []
 
@@ -296,7 +329,8 @@ function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
       const cookieParams = getCookieParams(operation, spec)
       const bodyInfo = getBodyInfo(operation)
       const responseStatus = getResponseStatus(operation, method)
-      const responseTypeInfo = getResponseTypeName(operation)
+      // Pass schemaNames so synthesized response schema names are recognised.
+      const responseTypeInfo = getResponseTypeName(operation, schemaNames)
 
       operations.push({
         methodName,
@@ -574,14 +608,22 @@ function buildFastifyTypeProviderHandler(
   indent: string,
   spec: OpenAPIV3_1.Document,
   schemaNames?: Set<string>,
-  contextType?: string
+  contextType?: string,
+  zeroCast?: boolean
 ): string {
   const lines: string[] = []
   const inner = `${indent}  `
 
   // ── Body schema ───────────────────────────────────────────────────────────
+  // multipart/form-data and application/octet-stream bodies are not validated
+  // by Fastify's schema.body slot (they use addContentTypeParser or raw stream).
+  // Skip the body schema lookup for those content types to avoid assigning a
+  // synthesized schema name that may also be used as a response schema (C1 naming).
+  const isNonJsonBody =
+    op.bodyInfo?.contentType === 'multipart/form-data' ||
+    op.bodyInfo?.contentType === 'application/octet-stream'
   let bodySchemaExpr: string | undefined
-  if (op.bodyInfo !== undefined && op.bodyInfo.typeName !== undefined) {
+  if (op.bodyInfo !== undefined && op.bodyInfo.typeName !== undefined && !isNonJsonBody) {
     const schemaName = `${op.bodyInfo.typeName}Schema`
     if (schemaNames !== undefined && schemaNames.has(schemaName)) {
       bodySchemaExpr = schemaName
@@ -648,7 +690,7 @@ function buildFastifyTypeProviderHandler(
 
   const routeOpts = buildRouteOptions(schemaParts, preValidationLines, op.methodName)
   lines.push(
-    `${indent}_app.${op.httpMethod}(${JSON.stringify(op.honoPath)}, ${routeOpts}, async (req, reply) => {`
+    `${indent}app.${op.httpMethod}(${JSON.stringify(op.honoPath)}, ${routeOpts}, async (req, reply) => {`
   )
 
   // ── Cookie validation (manual _ckv: Fastify 5's FastifySchema has no cookie slot,
@@ -694,15 +736,30 @@ function buildFastifyTypeProviderHandler(
     }
   }
 
-  // Body: the validatorCompiler validates req.body at runtime before the handler runs, and the
-  // ZodTypeProvider infers req.body as the schema's output type. That type usually matches the
-  // service interface's parameter type, but can diverge structurally for some constructs (a
-  // passthrough object adds an index signature; loose/synthesized shapes infer differently). We
-  // therefore assert the body to the service's named model type where one exists (specific and
-  // safe, since validation already happened), and fall back to `any` only for synthesized/inline
-  // shapes that have no nameable type.
+  // Body: pass req.body to the service.
+  //
+  // Zero-cast path (zeroCast=true, enabled when framework=fastify + input_schema configured):
+  // The service parameter is z.infer of the body schema, which is exactly what ZodTypeProvider
+  // infers for req.body after the validatorCompiler validates it. No cast needed.
+  //
+  // Legacy path (zeroCast=false): The service parameter is a TypeScript interface from models.ts
+  // which may differ structurally from z.infer (e.g. passthrough adds an index signature). We cast
+  // to the named model type (safe: validation already ran) or fall back to `any` for synthesized.
   if (op.bodyInfo !== undefined) {
-    if (op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized) {
+    if (zeroCast === true) {
+      // Zero-cast: req.body aligns with z.infer<BodySchema> which aligns with service param.
+      // For content types without Zod validation (octet-stream, multipart), fall back to unknown.
+      const hasBodySchema = bodySchemaExpr !== undefined
+      if (
+        hasBodySchema ||
+        (op.bodyInfo.contentType !== 'application/octet-stream' &&
+          op.bodyInfo.contentType !== 'multipart/form-data')
+      ) {
+        serviceArgs.push('req.body')
+      } else {
+        serviceArgs.push('req.body as unknown')
+      }
+    } else if (op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized) {
       serviceArgs.push(`req.body as ${op.bodyInfo.typeName}`)
     } else if (bodySchemaExpr !== undefined) {
       serviceArgs.push('req.body as any')
@@ -727,14 +784,23 @@ function buildFastifyTypeProviderHandler(
   // Response cast: the serializerCompiler validates the response at runtime against the response
   // schema. At compile time the ZodTypeProvider constrains reply.send() to the schema's inferred
   // type, which can diverge structurally from the service's return (model) type (e.g. a passthrough
-  // object adds an index signature). When the response schema is a named schema we assert to its
-  // inferred type (specific and runtime-validated); inline response schemas fall back to `any`.
-  const responseCast =
-    responseSchemaExpr === undefined
-      ? ''
-      : /^[A-Za-z_$][\w$]*$/.test(responseSchemaExpr)
-        ? ` as z.infer<typeof ${responseSchemaExpr}>`
-        : ' as any'
+  // object adds an index signature).
+  //
+  // Zero-cast path: both service.ts and router.ts use z.infer aliases so they align exactly.
+  // No cast needed.
+  //
+  // Legacy path: when the response schema is a named schema we assert to its inferred type (safe:
+  // serializerCompiler validates at runtime); inline response schemas fall back to `any`.
+  let responseCast: string
+  if (zeroCast === true) {
+    responseCast = ''
+  } else if (responseSchemaExpr === undefined) {
+    responseCast = ''
+  } else if (/^[A-Za-z_$][\w$]*$/.test(responseSchemaExpr)) {
+    responseCast = ` as z.infer<typeof ${responseSchemaExpr}>`
+  } else {
+    responseCast = ' as any'
+  }
 
   // ── Response (no per-route try/catch: setErrorHandler handles HttpError) ──
 
@@ -794,7 +860,7 @@ export function generateFastifyRouter(
   options?: RouterOptions
 ): GeneratedFile {
   const serviceName = deriveServiceName(spec)
-  const operations = collectOperations(spec)
+  const operations = collectOperations(spec, options?.schemaNames)
 
   // Collect schema names used for body and response wiring.
   const usedSchemaNames =
@@ -807,11 +873,10 @@ export function generateFastifyRouter(
       : new Set<string>()
   const allUsedSchemaNames = new Set([...usedSchemaNames, ...usedResponseSchemaNames])
 
-  // Collect body type names for model imports. All named body types are imported because
-  // the handler casts req.body to the service model type (e.g. req.body as unknown as LabNumeric)
-  // regardless of whether a schema is present. The cast is needed because the Zod-inferred type
-  // from fastify-type-provider-zod may differ structurally from the TypeScript interface.
-  const sortedBodyTypes = collectSortedBodyTypes(operations)
+  // Collect body type names for model imports. Only needed in the legacy (non-zero-cast) path.
+  // When zeroCast=true, models.ts is skipped and schema-types.js is used instead.
+  const zeroCast = options?.zeroCast === true
+  const sortedBodyTypes = zeroCast ? [] : collectSortedBodyTypes(operations)
 
   // z is always needed: schema.params/querystring/headers/response use z.object/z.array/z.string.
   // Even with no operations, the cookie _ckv block uses z.
@@ -835,9 +900,8 @@ export function generateFastifyRouter(
     "import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'"
   )
   lines.push(
-    "import type { ZodTypeProvider } from 'fastify-type-provider-zod'"
+    "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
   )
-  lines.push("import type { FastifyInstance } from 'fastify'")
   if (sortedBodyTypes.length > 0) {
     lines.push(`import type { ${sortedBodyTypes.join(', ')} } from './models.js'`)
   }
@@ -858,33 +922,33 @@ export function generateFastifyRouter(
   lines.push('')
   for (const l of httpErrorClassLines()) lines.push(l)
   lines.push('')
-  lines.push(`export function createRouter(app: FastifyInstance, service: ${serviceRef}): void {`)
+  lines.push(`export function createRouter(service: ${serviceRef}): FastifyPluginAsyncZod {`)
+  lines.push('  return async (app) => {')
 
-  // Register type-provider compilers and a single error handler once at the top.
-  // withTypeProvider returns a new typed FastifyInstance; routes must be registered on _app so
-  // ZodTypeProvider can infer req.body/req.query/req.params from the schema blocks.
-  lines.push('  const _app = app.withTypeProvider<ZodTypeProvider>()')
-  lines.push('  app.setValidatorCompiler(validatorCompiler)')
-  lines.push('  app.setSerializerCompiler(serializerCompiler)')
-  lines.push('  app.setErrorHandler((err, _req, reply) => {')
-  lines.push('    if (err instanceof HttpError) {')
-  lines.push('      return reply.status(err.status).send({ error: err.message })')
-  lines.push('    }')
-  lines.push('    throw err')
-  lines.push('  })')
+  // FastifyPluginAsyncZod carries ZodTypeProvider: no withTypeProvider() call needed.
+  // Compilers and error handler are scoped to the plugin instance, not the root app.
+  lines.push('    app.setValidatorCompiler(validatorCompiler)')
+  lines.push('    app.setSerializerCompiler(serializerCompiler)')
+  lines.push('    app.setErrorHandler((err, _req, reply) => {')
+  lines.push('      if (err instanceof HttpError) {')
+  lines.push('        return reply.status(err.status).send({ error: err.message })')
+  lines.push('      }')
+  lines.push('      throw err')
+  lines.push('    })')
 
   // Register a content-type parser for application/octet-stream when needed.
   if (hasOctetStreamRequestBody) {
     lines.push(
-      "  app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
+      "    app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
     )
   }
 
   for (const op of operations) {
     lines.push('')
-    lines.push(buildFastifyTypeProviderHandler(op, '  ', spec, options?.schemaNames, ctx))
+    lines.push(buildFastifyTypeProviderHandler(op, '    ', spec, options?.schemaNames, ctx, zeroCast))
   }
 
+  lines.push('  }')
   lines.push('}')
   lines.push('')
 

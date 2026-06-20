@@ -1,0 +1,399 @@
+/**
+ * Fastify-specific service and schema-types generators for openapi-server.
+ *
+ * When framework=fastify and input_schema is configured, these generators replace
+ * the generic service.ts and emit an additional schema-types.ts file that derives
+ * TypeScript types from z.infer of the user-owned Zod schemas. Both service.ts and
+ * router.ts then use these z.infer aliases, eliminating all body/response casts.
+ */
+import type { OpenAPIV3_1 } from 'openapi-types'
+import type { GeneratedFile } from 'openapi-zod-ts'
+import { toTypeName } from 'openapi-zod-ts'
+import {
+  SUPPORTED_METHODS,
+  type SupportedMethod,
+  isRef,
+  refToName,
+  extractPathParamsFromPath,
+  resolveParam,
+  deriveServiceName,
+  sanitizeOperationId,
+  deriveMethodName,
+  type QueryParam,
+  getQueryParams,
+  type BodyInfo,
+  getBodyInfo,
+} from './shared.js'
+
+type OperationObject = OpenAPIV3_1.OperationObject
+type ReferenceObject = OpenAPIV3_1.ReferenceObject
+type ResponseObject = OpenAPIV3_1.ResponseObject
+
+// ── Return type resolution (mirrors service.ts but with schema-type awareness) ──
+
+interface ReturnInfo {
+  typeName: string | undefined
+  isArray: boolean
+  isVoid: boolean
+  primitiveType?: string
+  isMultiStatus?: boolean
+}
+
+function collectContentfulTwoxxCodes(
+  responses: Record<string, ResponseObject | ReferenceObject>
+): string[] {
+  return Object.keys(responses)
+    .filter((k) => /^2\d\d$/.test(k) && k !== '204')
+    .sort()
+}
+
+// fallow-ignore-next-line complexity
+function getReturnInfo(operation: OperationObject): ReturnInfo {
+  const responses = operation.responses as
+    | Record<string, ResponseObject | ReferenceObject>
+    | undefined
+  if (responses === undefined) return { typeName: undefined, isArray: false, isVoid: true }
+
+  const contentfulCodes = collectContentfulTwoxxCodes(responses)
+  const isMultiStatus = contentfulCodes.length > 1
+
+  const twoxxCodes = [
+    '200',
+    '201',
+    ...Object.keys(responses).filter(
+      (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
+    ),
+  ]
+
+  for (const code of twoxxCodes) {
+    const response = responses[code]
+    if (response === undefined) continue
+    if (isRef(response)) continue
+
+    const resp = response as ResponseObject
+    const content = resp.content as
+      | Record<string, { schema?: OpenAPIV3_1.SchemaObject | ReferenceObject }>
+      | undefined
+    if (content === undefined) continue
+
+    const jsonContent = content['application/json']
+    if (jsonContent !== undefined && jsonContent.schema !== undefined) {
+      const schema = jsonContent.schema
+      if (isRef(schema)) {
+        return {
+          typeName: refToName((schema as ReferenceObject).$ref),
+          isArray: false,
+          isVoid: false,
+          isMultiStatus,
+        }
+      }
+
+      const s = schema as OpenAPIV3_1.SchemaObject
+      if (s.type === 'array') {
+        const items = s.items as OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
+        if (items !== undefined && isRef(items)) {
+          return {
+            typeName: refToName((items as ReferenceObject).$ref),
+            isArray: true,
+            isVoid: false,
+            isMultiStatus,
+          }
+        }
+        return { typeName: undefined, isArray: true, isVoid: false, isMultiStatus }
+      }
+
+      // Inline JSON response: check for a synthesized response schema name.
+      // Naming: toTypeName(operationId) + 'Schema' (e.g. LabInlineResponseSchema).
+      // The schemaNames check in buildReturnType/resolveAliasType will confirm presence.
+      //
+      // Guard: skip when the synthesized name would collide with the body schema name.
+      const operationId = operation.operationId
+      if (operationId !== undefined && operationId.length > 0) {
+        const synthesizedName = toTypeName(operationId)
+        const bodyInfo = getBodyInfo(operation)
+        const collidesWithBody =
+          bodyInfo?.typeName !== undefined && bodyInfo.typeName === synthesizedName
+        if (!collidesWithBody) {
+          return {
+            typeName: synthesizedName,
+            isArray: false,
+            isVoid: false,
+            isMultiStatus,
+          }
+        }
+      }
+
+      return { typeName: undefined, isArray: false, isVoid: false, isMultiStatus }
+    }
+
+    if (content['text/plain'] !== undefined) {
+      return { typeName: undefined, isArray: false, isVoid: false, primitiveType: 'string' }
+    }
+
+    if (content['application/octet-stream'] !== undefined) {
+      return { typeName: undefined, isArray: false, isVoid: false, primitiveType: 'Uint8Array' }
+    }
+  }
+
+  if (responses['204'] !== undefined) {
+    return { typeName: undefined, isArray: false, isVoid: true }
+  }
+
+  return { typeName: undefined, isArray: false, isVoid: true }
+}
+
+interface OperationInfo {
+  methodName: string
+  httpMethod: SupportedMethod
+  path: string
+  pathParams: string[]
+  queryParams: QueryParam[]
+  bodyInfo: BodyInfo | undefined
+  returnInfo: ReturnInfo & { isSynthesizedResponse?: boolean }
+}
+
+function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
+  const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
+  if (paths === undefined) return []
+
+  const operations: OperationInfo[] = []
+
+  for (const [path, pathItem] of Object.entries(paths)) {
+    for (const method of SUPPORTED_METHODS) {
+      const operation = pathItem[method] as OperationObject | undefined
+      if (operation === undefined) continue
+
+      const methodName = deriveMethodName(operation.operationId, method, path)
+      const pathParams = extractPathParamsFromPath(path)
+      const queryParams = getQueryParams(operation, spec)
+      const bodyInfo = getBodyInfo(operation)
+      const returnInfo = getReturnInfo(operation) as ReturnInfo & {
+        isSynthesizedResponse?: boolean
+      }
+
+      operations.push({ methodName, httpMethod: method, path, pathParams, queryParams, bodyInfo, returnInfo })
+    }
+  }
+
+  return operations
+}
+
+// ── Type resolution with schema-type awareness ────────────────────────────────
+
+/**
+ * Given a type name, return the appropriate TypeScript type string for use in the
+ * Fastify-typed service. If a matching schema exists in schemaNames, return the
+ * alias name (which maps to z.infer in schema-types.ts); otherwise return 'unknown'.
+ */
+function resolveAliasType(
+  typeName: string | undefined,
+  schemaNames: Set<string>
+): string {
+  if (typeName === undefined) return 'unknown'
+  if (schemaNames.has(`${typeName}Schema`)) return typeName
+  return 'unknown'
+}
+
+// fallow-ignore-next-line complexity
+function buildReturnType(
+  info: ReturnInfo & { isSynthesizedResponse?: boolean },
+  schemaNames: Set<string>
+): string {
+  if (info.isVoid) return 'Promise<void>'
+  if (info.primitiveType !== undefined) return `Promise<${info.primitiveType}>`
+
+  if (info.isMultiStatus === true) {
+    let bodyType: string
+    if (info.typeName !== undefined) {
+      const alias = resolveAliasType(info.typeName, schemaNames)
+      const baseType = alias !== 'unknown' ? alias : 'unknown'
+      bodyType = info.isArray ? `${baseType}[]` : baseType
+    } else {
+      bodyType = info.isArray ? 'unknown[]' : 'unknown'
+    }
+    return `Promise<{ status: number; body: ${bodyType} }>`
+  }
+
+  if (info.typeName !== undefined) {
+    const alias = resolveAliasType(info.typeName, schemaNames)
+    if (alias !== 'unknown') {
+      return info.isArray ? `Promise<${alias}[]>` : `Promise<${alias}>`
+    }
+  }
+
+  return info.isArray ? 'Promise<unknown[]>' : 'Promise<unknown>'
+}
+
+function buildMethodSignature(
+  op: OperationInfo,
+  schemaNames: Set<string>,
+  contextType?: string
+): string {
+  const args: string[] = []
+
+  for (const p of op.pathParams) {
+    args.push(`${sanitizeOperationId(p)}: string`)
+  }
+
+  if (op.bodyInfo !== undefined) {
+    // multipart/form-data and application/octet-stream bodies cannot be described by a
+    // Zod body schema: the router passes req.body as unknown/Buffer for those content types.
+    // A same-named schema (e.g. LabGallerySchema) may exist for the RESPONSE, not the body,
+    // so we must not adopt it as the body param type here.
+    let bodyType: string
+    if (op.bodyInfo.contentType === 'multipart/form-data') {
+      bodyType = 'unknown'
+    } else if (op.bodyInfo.contentType === 'application/octet-stream') {
+      bodyType = 'Buffer'
+    } else if (op.bodyInfo.typeName !== undefined) {
+      bodyType = resolveAliasType(op.bodyInfo.typeName, schemaNames)
+    } else {
+      bodyType = 'unknown'
+    }
+    args.push(`body: ${bodyType}`)
+  }
+
+  if (op.queryParams.length > 0) {
+    const allOptional = op.queryParams.every((q) => !q.required)
+    const fields = op.queryParams.map((q) => `${q.name}${q.required ? '' : '?'}: ${q.tsType}`).join('; ')
+    const paramsToken = allOptional ? 'params?' : 'params'
+    args.push(`${paramsToken}: { ${fields} }`)
+  }
+
+  if (contextType !== undefined) {
+    args.push('ctx: Ctx')
+  }
+
+  const returnType = buildReturnType(op.returnInfo, schemaNames)
+  return `${op.methodName}(${args.join(', ')}): ${returnType}`
+}
+
+// ── Options shared by both generators ────────────────────────────────────────
+
+export interface FastifyServiceOptions {
+  schemaNames: Set<string>
+  schemaImportPath: string
+  contextType?: string
+}
+
+// ── schema-types.ts generator ─────────────────────────────────────────────────
+
+/**
+ * Emit schema-types.ts: a generated file of z.infer aliases for every schema
+ * in schemaNames. Both router.ts and service.ts import from this file instead
+ * of models.ts, making body/response casts unnecessary.
+ *
+ * z.infer is equivalent to z.output: it reflects the post-validation, post-transform
+ * shape. This is the correct type for a Fastify handler, where ZodTypeProvider has
+ * already run the schema through .parse(). When a schema uses .transform(), .default(),
+ * or coercion, this type will differ from the hand-authored models.ts interfaces.
+ *
+ * Alias naming: strip the trailing 'Schema' suffix.
+ * Example: PetSchema -> export type Pet = z.infer<typeof PetSchema>
+ */
+export function generateFastifyTypes(
+  schemaNames: Set<string>,
+  schemaImportPath: string
+): GeneratedFile {
+  // Collect aliases in sorted order for deterministic output.
+  const aliases: Array<{ typeName: string; schemaName: string }> = []
+  for (const schemaName of Array.from(schemaNames).sort()) {
+    if (!schemaName.endsWith('Schema')) continue
+    const typeName = schemaName.slice(0, -'Schema'.length)
+    if (typeName.length === 0) continue
+    aliases.push({ typeName, schemaName })
+  }
+
+  const lines: string[] = []
+  lines.push('// This file is auto-generated. Do not edit manually.')
+  lines.push('// Fastify-aligned type aliases derived from Zod schemas via z.infer (= z.output).')
+  lines.push('// These are post-validation, post-transform types: they reflect the shape after Zod')
+  lines.push('// has parsed and transformed the value, which can differ from models.ts when a schema')
+  lines.push('// uses .transform(), .default(), or coercion. Import from here in your Fastify service.')
+  lines.push('')
+  lines.push("import { z } from 'zod'")
+
+  if (aliases.length > 0) {
+    const sortedSchemaNames = aliases.map((a) => a.schemaName).join(', ')
+    lines.push(`import { ${sortedSchemaNames} } from '${schemaImportPath}'`)
+  }
+
+  lines.push('')
+
+  for (const { typeName, schemaName } of aliases) {
+    lines.push(`export type ${typeName} = z.infer<typeof ${schemaName}>`)
+  }
+
+  lines.push('')
+
+  return {
+    filename: 'schema-types.ts',
+    content: lines.join('\n'),
+  }
+}
+
+// ── Fastify-typed service.ts generator ───────────────────────────────────────
+
+/**
+ * Emit service.ts for the Fastify zero-cast path.
+ *
+ * Method signatures use z.infer-derived alias types (from schema-types.ts) wherever
+ * a matching schema exists. When no schema is available, the type falls back to unknown.
+ * This matches what ZodTypeProvider infers for req.body and reply.send, so the generated
+ * router.ts can pass req.body directly without any `as ModelType` cast.
+ */
+// fallow-ignore-next-line complexity
+export function generateFastifyTypedService(
+  spec: OpenAPIV3_1.Document,
+  options: FastifyServiceOptions
+): GeneratedFile {
+  const serviceName = deriveServiceName(spec)
+  const operations = collectOperations(spec)
+  const { schemaNames, contextType } = options
+
+  // Collect which alias type names are actually referenced in method signatures.
+  const usedAliases = new Set<string>()
+  for (const op of operations) {
+    // Skip non-JSON bodies: their param type is always unknown/Buffer regardless of schemaNames.
+    const isNonJsonBody =
+      op.bodyInfo?.contentType === 'multipart/form-data' ||
+      op.bodyInfo?.contentType === 'application/octet-stream'
+    if (!isNonJsonBody && op.bodyInfo?.typeName !== undefined) {
+      const alias = resolveAliasType(op.bodyInfo.typeName, schemaNames)
+      if (alias !== 'unknown') usedAliases.add(alias)
+    }
+    if (op.returnInfo.typeName !== undefined) {
+      const alias = resolveAliasType(op.returnInfo.typeName, schemaNames)
+      if (alias !== 'unknown') usedAliases.add(alias)
+    }
+  }
+
+  const lines: string[] = []
+  lines.push('// This file is auto-generated. Do not edit manually.')
+  lines.push('')
+
+  if (usedAliases.size > 0) {
+    const sorted = Array.from(usedAliases).sort()
+    lines.push(`import type { ${sorted.join(', ')} } from './schema-types.js'`)
+    lines.push('')
+  }
+
+  const interfaceDecl =
+    contextType !== undefined
+      ? `export interface ${serviceName}<Ctx = never> {`
+      : `export interface ${serviceName} {`
+  lines.push(interfaceDecl)
+
+  for (const op of operations) {
+    lines.push(`  /** ${op.httpMethod.toUpperCase()} ${op.path} */`)
+    lines.push(`  ${buildMethodSignature(op, schemaNames, contextType)}`)
+  }
+
+  lines.push('}')
+  lines.push('')
+
+  return {
+    filename: 'service.ts',
+    content: lines.join('\n'),
+  }
+}

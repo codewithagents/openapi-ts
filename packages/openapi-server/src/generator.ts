@@ -4,6 +4,7 @@ import { parseSpec } from 'openapi-zod-ts'
 import { runProjects } from 'openapi-zod-ts/config-core'
 import { loadConfigs, type ServerConfig } from './config.js'
 import { generateService, type ServiceOptions } from './plugins/service.js'
+import { generateFastifyTypes, generateFastifyTypedService } from './plugins/fastify-service.js'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from './plugins/router.js'
 
 async function formatTs(content: string, filePath: string): Promise<string> {
@@ -12,11 +13,23 @@ async function formatTs(content: string, filePath: string): Promise<string> {
   return format(content, { ...config, parser: 'typescript' })
 }
 
+/** Shared base options accepted by all three router generators. */
+interface BaseRouterOptions {
+  schemaNames?: Set<string>
+  schemaImportPath?: string
+  contextType?: string
+}
+
+/** Extended options for the Fastify zero-cast path. */
+interface FastifyRouterOptions extends BaseRouterOptions {
+  zeroCast?: boolean
+}
+
 /** Pick the framework-specific router generator for a first or second pass. */
 function buildRouterFile(
   spec: Awaited<ReturnType<typeof parseSpec>>,
   framework: 'hono' | 'express' | 'fastify',
-  options?: Parameters<typeof generateRouter>[1]
+  options?: FastifyRouterOptions
 ): ReturnType<typeof generateRouter> {
   if (framework === 'hono') return generateRouter(spec, options)
   if (framework === 'express') return generateExpressRouter(spec, options)
@@ -91,6 +104,35 @@ async function generateSchemaEnhancedRouter(
   const relPath = relative(outputDir, schemaPath).replace(/\\/g, '/')
   const schemaImportPath = relPath.startsWith('.') ? relPath : `./${relPath}`
   const schemaImportPathJs = schemaImportPath.replace(/\.ts$/, '.js')
+
+  // For Fastify: emit schema-types.ts (z.infer aliases) and re-emit service.ts using those
+  // aliases. This enables the zero-cast router path where req.body and service params align.
+  if (framework === 'fastify') {
+    const schemaTypesFile = generateFastifyTypes(exportedSchemas, schemaImportPathJs)
+    const schemaTypesPath = join(outputDir, schemaTypesFile.filename)
+    await writeFile(schemaTypesPath, await formatTs(schemaTypesFile.content, schemaTypesPath), 'utf-8')
+    console.log(`${prefix}  ✓ schema-types.ts (z.infer aliases for ${exportedSchemas.size} schema(s))`)
+
+    const fastifyServiceFile = generateFastifyTypedService(spec, {
+      schemaNames: exportedSchemas,
+      schemaImportPath: schemaImportPathJs,
+      contextType: config.context_type,
+    })
+    const fastifyServicePath = join(outputDir, fastifyServiceFile.filename)
+    await writeFile(fastifyServicePath, await formatTs(fastifyServiceFile.content, fastifyServicePath), 'utf-8')
+    console.log(`${prefix}  ✓ service.ts (Fastify-typed, imports from schema-types.js)`)
+
+    const routerFile = buildRouterFile(spec, framework, {
+      schemaNames: exportedSchemas,
+      schemaImportPath: schemaImportPathJs,
+      zeroCast: true,
+      contextType: config.context_type,
+    })
+    const routerPath = join(outputDir, routerFile.filename)
+    await writeFile(routerPath, await formatTs(routerFile.content, routerPath), 'utf-8')
+    console.log(`${prefix}  ✓ router.ts (Fastify zero-cast, ${exportedSchemas.size} schema(s))`)
+    return
+  }
 
   const routerFile = buildRouterFile(spec, framework, {
     schemaNames: exportedSchemas,

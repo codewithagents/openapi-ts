@@ -30,9 +30,7 @@ function buildApp(service: PetstoreService) {
   const app = Fastify()
   app.register(fastifyFormbody)
   app.register(fastifyMultipart, { attachFieldsToBody: true })
-  app.register(async (instance) => {
-    createRouter(instance, service)
-  })
+  app.register(createRouter(service))
   return app
 }
 
@@ -209,7 +207,7 @@ describe('lab-routes inject() suite', () => {
   it('#318 multipart body on POST /lab/gallery returns 200 without 415', async () => {
     const service = makeStub({
       async labGallery(_body) {
-        return { uploaded: 1 }
+        return { count: 1 }
       },
     })
     const app = buildApp(service)
@@ -338,6 +336,34 @@ describe('lab-routes inject() suite', () => {
     const app = buildApp(service)
     const res = await app.inject({ method: 'GET', url: '/lab/query?tier=gold&count=7&code=ABC' })
     // serializerCompiler throws; the custom error handler re-throws non-HttpError -> default 500.
+    expect(res.statusCode).toBe(500)
+  })
+
+  it('C2 GET /lab/inline-response returns 200 validated against LabInlineResponseSchema', async () => {
+    // The router wires schema.response for this route because LabInlineResponseSchema
+    // was added to schemas.ts and is picked up by the synthesized-response-schema lookup.
+    // The serializerCompiler validates { ok, note } against LabInlineResponseSchema.
+    const service = makeStub({
+      async labInlineResponse() {
+        return { ok: true, note: 'inline response' }
+      },
+    })
+    const app = buildApp(service)
+    const res = await app.inject({ method: 'GET', url: '/lab/inline-response' })
+    expect(res.statusCode).toBe(200)
+    expect(res.json<{ ok: boolean; note: string }>()).toEqual({ ok: true, note: 'inline response' })
+  })
+
+  it('C2 GET /lab/inline-response response serializer rejects an off-spec value', async () => {
+    // Verifies that LabInlineResponseSchema is enforced at serialization time.
+    const service = makeStub({
+      async labInlineResponse() {
+        // ok must be boolean per schema; returning a string triggers serializer rejection.
+        return { ok: 'yes', note: 'bad' } as never
+      },
+    })
+    const app = buildApp(service)
+    const res = await app.inject({ method: 'GET', url: '/lab/inline-response' })
     expect(res.statusCode).toBe(500)
   })
 })

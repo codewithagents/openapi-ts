@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from '../plugins/router.js'
+import { generateFastifyTypes, generateFastifyTypedService } from '../plugins/fastify-service.js'
 
 // ── Fixture helpers ────────────────────────────────────────────────────────────
 
@@ -1019,18 +1020,22 @@ describe('generateFastifyRouter', () => {
     expect(result.content).toMatch(/^\/\/ This file is auto-generated/)
   })
 
-  it('imports FastifyInstance from fastify', () => {
+  it('imports FastifyPluginAsyncZod from fastify-type-provider-zod', () => {
     const spec = makeSpec({})
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain("import type { FastifyInstance } from 'fastify'")
+    expect(result.content).toContain(
+      "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
+    )
+    expect(result.content).not.toContain("from 'fastify'")
   })
 
-  it('exports createRouter function with void return type', () => {
+  it('exports createRouter function returning FastifyPluginAsyncZod', () => {
     const spec = makeSpec({})
     const result = generateFastifyRouter(spec)
     expect(result.content).toContain('export function createRouter(')
-    expect(result.content).toContain('FastifyInstance')
-    expect(result.content).toContain('): void {')
+    expect(result.content).toContain('): FastifyPluginAsyncZod {')
+    expect(result.content).toContain('return async (app) => {')
+    expect(result.content).not.toContain('): void {')
   })
 
   it('GET route uses app.get', () => {
@@ -1318,10 +1323,11 @@ describe('generateFastifyRouter', () => {
     expect(result.content).not.toContain('app.get<')
   })
 
-  it('returns empty void router when no operations', () => {
+  it('returns empty plugin factory when no operations', () => {
     const spec = makeSpec({})
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain('): void {')
+    expect(result.content).toContain('): FastifyPluginAsyncZod {')
+    expect(result.content).toContain('return async (app) => {')
     expect(result.content).not.toContain('app.get(')
   })
 })
@@ -2161,10 +2167,10 @@ describe('context type option (issue #310)', () => {
   })
 
   describe('Fastify — with contextType', () => {
-    it('createRouter signature uses the generic service reference', () => {
+    it('createRouter signature uses the generic service reference and returns FastifyPluginAsyncZod', () => {
       const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
       expect(content).toContain(
-        'createRouter(app: FastifyInstance, service: PetStoreService<RequestContext>): void'
+        'createRouter(service: PetStoreService<RequestContext>): FastifyPluginAsyncZod'
       )
     })
 
@@ -2289,7 +2295,7 @@ describe('issue #308: Fastify schema.response wiring', () => {
       schemaImportPath: './schemas.js',
     })
     // The options object must be between the path and the handler (no per-route generics).
-    expect(content).toMatch(/_app\.get\("\/pets\/:id", \{ schema:/)
+    expect(content).toMatch(/app\.get\("\/pets\/:id", \{ schema:/)
   })
 
   it('array-of-$ref response: emits z.array(TypeSchema) in schema.response', () => {
@@ -2373,7 +2379,7 @@ describe('issue #308: Fastify schema.response wiring', () => {
       "import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'"
     )
     expect(content).toContain(
-      "import type { ZodTypeProvider } from 'fastify-type-provider-zod'"
+      "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
     )
   })
 
@@ -2674,5 +2680,280 @@ describe('issue #318: Fastify octet-stream request body parser', () => {
 
     const expressContent = generateExpressRouter(octetRequestSpec).content
     expect(expressContent).not.toContain('addContentTypeParser')
+  })
+})
+
+// ── Component B: zero-cast path (zeroCast: true) ──────────────────────────────
+
+describe('generateFastifyTypes (schema-types.ts emitter)', () => {
+  const petSchemas = new Set(['PetSchema', 'CreatePetRequestSchema', 'ErrorSchema'])
+
+  it('returns filename schema-types.ts', () => {
+    const result = generateFastifyTypes(petSchemas, '../schemas.js')
+    expect(result.filename).toBe('schema-types.ts')
+  })
+
+  it('emits z.infer alias for every schema in schemaNames', () => {
+    const result = generateFastifyTypes(petSchemas, '../schemas.js')
+    expect(result.content).toContain('export type Pet = z.infer<typeof PetSchema>')
+    expect(result.content).toContain(
+      'export type CreatePetRequest = z.infer<typeof CreatePetRequestSchema>'
+    )
+    expect(result.content).toContain('export type Error = z.infer<typeof ErrorSchema>')
+  })
+
+  it('imports all schema names from the provided schemaImportPath', () => {
+    const result = generateFastifyTypes(petSchemas, '../schemas.js')
+    expect(result.content).toContain("from '../schemas.js'")
+    expect(result.content).toContain('PetSchema')
+    expect(result.content).toContain('CreatePetRequestSchema')
+  })
+
+  it('imports z from zod', () => {
+    const result = generateFastifyTypes(petSchemas, '../schemas.js')
+    expect(result.content).toContain("import { z } from 'zod'")
+  })
+
+  it('skips schema names that do not end with Schema', () => {
+    const mixed = new Set(['PetSchema', 'SomeHelper'])
+    const result = generateFastifyTypes(mixed, '../schemas.js')
+    expect(result.content).toContain('export type Pet = z.infer<typeof PetSchema>')
+    expect(result.content).not.toContain('SomeHelper')
+  })
+
+  it('produces deterministic sorted output', () => {
+    const unsorted = new Set(['ZSchema', 'ASchema', 'MSchema'])
+    const result = generateFastifyTypes(unsorted, '../schemas.js')
+    const lines = result.content.split('\n')
+    const exportLines = lines.filter((l) => l.startsWith('export type'))
+    expect(exportLines[0]).toContain('A =')
+    expect(exportLines[1]).toContain('M =')
+    expect(exportLines[2]).toContain('Z =')
+  })
+})
+
+describe('generateFastifyTypedService (service.ts emitter for zero-cast path)', () => {
+  const postSpec = makeSpec({
+    '/pets': {
+      post: {
+        operationId: 'createPet',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'created',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+          },
+        },
+      },
+    },
+  })
+
+  const schemaNames = new Set(['PetSchema', 'CreatePetRequestSchema'])
+
+  it('returns filename service.ts', () => {
+    const result = generateFastifyTypedService(postSpec, {
+      schemaNames,
+      schemaImportPath: '../schemas.js',
+    })
+    expect(result.filename).toBe('service.ts')
+  })
+
+  it('imports alias types from schema-types.js (not models.js)', () => {
+    const result = generateFastifyTypedService(postSpec, {
+      schemaNames,
+      schemaImportPath: '../schemas.js',
+    })
+    expect(result.content).toContain("from './schema-types.js'")
+    expect(result.content).not.toContain("from './models.js'")
+  })
+
+  it('uses schema-derived alias types for body and response', () => {
+    const result = generateFastifyTypedService(postSpec, {
+      schemaNames,
+      schemaImportPath: '../schemas.js',
+    })
+    expect(result.content).toContain('body: CreatePetRequest')
+    expect(result.content).toContain('Promise<Pet>')
+  })
+
+  it('falls back to unknown when no schema matches', () => {
+    const result = generateFastifyTypedService(postSpec, {
+      schemaNames: new Set<string>(),
+      schemaImportPath: '../schemas.js',
+    })
+    // No matching schemas: body and return type fall back to unknown.
+    expect(result.content).toContain('body: unknown')
+    expect(result.content).toContain('Promise<unknown>')
+  })
+})
+
+describe('generateFastifyRouter zero-cast path (zeroCast: true)', () => {
+  const postSpec = makeSpec({
+    '/pets': {
+      post: {
+        operationId: 'createPet',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'created',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+          },
+        },
+      },
+    },
+  })
+
+  const zeroOpts = {
+    schemaNames: new Set(['PetSchema', 'CreatePetRequestSchema']),
+    schemaImportPath: '../schemas.js',
+    zeroCast: true,
+  }
+
+  it('does not import from models.js when zeroCast is set', () => {
+    const result = generateFastifyRouter(postSpec, zeroOpts)
+    expect(result.content).not.toContain("from './models.js'")
+  })
+
+  it('passes req.body without a cast to the service call', () => {
+    const result = generateFastifyRouter(postSpec, zeroOpts)
+    // Zero-cast: no `as CreatePetRequest`, no `as any`.
+    expect(result.content).toContain('service.createPet(req.body)')
+    expect(result.content).not.toContain('req.body as CreatePetRequest')
+    expect(result.content).not.toContain('req.body as any')
+  })
+
+  it('does not emit a response cast when zeroCast is set', () => {
+    const getSpec = makeSpec({
+      '/pets/{id}': {
+        get: {
+          operationId: 'getPet',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+            },
+          },
+        },
+      },
+    })
+    const result = generateFastifyRouter(getSpec, {
+      schemaNames: new Set(['PetSchema']),
+      schemaImportPath: '../schemas.js',
+      zeroCast: true,
+    })
+    // Zero-cast: no `as z.infer<...>` appended to the service call result.
+    expect(result.content).not.toContain('as z.infer<typeof PetSchema>')
+    // The send call should include the service result without a trailing cast.
+    expect(result.content).toContain('reply.send((await service.getPet(')
+  })
+
+  it('still applies body schema for Fastify native validation', () => {
+    const result = generateFastifyRouter(postSpec, zeroOpts)
+    expect(result.content).toContain('body: CreatePetRequestSchema')
+  })
+
+  it('falls back to req.body as unknown for multipart/form-data (no body schema)', () => {
+    const multipartSpec = makeSpec({
+      '/gallery': {
+        post: {
+          operationId: 'uploadGallery',
+          requestBody: {
+            required: true,
+            content: { 'multipart/form-data': { schema: { type: 'object' } } },
+          },
+          responses: { '204': { description: 'accepted' } },
+        },
+      },
+    })
+    const result = generateFastifyRouter(multipartSpec, {
+      schemaNames: new Set<string>(),
+      schemaImportPath: '../schemas.js',
+      zeroCast: true,
+    })
+    expect(result.content).toContain('req.body as unknown')
+  })
+
+  it('legacy path (no zeroCast) still emits the body cast', () => {
+    const result = generateFastifyRouter(postSpec, {
+      schemaNames: new Set(['PetSchema', 'CreatePetRequestSchema']),
+      schemaImportPath: '../schemas.js',
+    })
+    expect(result.content).toContain('req.body as CreatePetRequest')
+  })
+})
+
+// ── Component C2: synthesized response schema lookup (C2) ─────────────────────
+
+describe('generateFastifyRouter synthesized response schema (C2)', () => {
+  const inlineResponseSpec = makeSpec({
+    '/lab/inline-response': {
+      get: {
+        operationId: 'labInlineResponse',
+        responses: {
+          '200': {
+            description: 'ok',
+            content: {
+              'application/json': {
+                schema: { type: 'object', properties: { ok: { type: 'boolean' }, note: { type: 'string' } } },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+
+  it('wires schema.response when a synthesized response schema is in schemaNames', () => {
+    const result = generateFastifyRouter(inlineResponseSpec, {
+      schemaNames: new Set(['LabInlineResponseSchema']),
+      schemaImportPath: '../schemas.js',
+    })
+    expect(result.content).toContain('response: { 200: LabInlineResponseSchema }')
+  })
+
+  it('does NOT wire schema.response when the synthesized schema is absent from schemaNames', () => {
+    const result = generateFastifyRouter(inlineResponseSpec, {
+      schemaNames: new Set<string>(),
+      schemaImportPath: '../schemas.js',
+    })
+    expect(result.content).not.toContain('response: { 200: LabInlineResponseSchema }')
+  })
+
+  it('does not misidentify a body schema as a response schema (collision guard)', () => {
+    const collidingSpec = makeSpec({
+      '/lab/form-body': {
+        post: {
+          operationId: 'labFormBody',
+          requestBody: {
+            required: true,
+            content: { 'application/x-www-form-urlencoded': { schema: { type: 'object' } } },
+          },
+          responses: {
+            '200': {
+              description: 'echoed',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+          },
+        },
+      },
+    })
+    // LabFormBodySchema exists for body validation but must NOT be wired as response schema.
+    const result = generateFastifyRouter(collidingSpec, {
+      schemaNames: new Set(['LabFormBodySchema']),
+      schemaImportPath: '../schemas.js',
+    })
+    expect(result.content).toContain('body: LabFormBodySchema')
+    expect(result.content).not.toContain('response: { 200: LabFormBodySchema }')
   })
 })
