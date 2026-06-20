@@ -1,5 +1,5 @@
 /**
- * Runtime inject() suite for the generated Fastify router.
+ * Runtime inject() suite for the generated Fastify router (type-provider-zod edition).
  * Uses a local stub service (not the real petService) with canned returns
  * so each test controls exactly what the service layer does.
  *
@@ -12,7 +12,11 @@
  *   - form-urlencoded body parsed without 415 (#318)
  *   - multipart body parsed without 415 (#318)
  *   - 200-vs-202 dual-status selection
- *   - async HttpError(404) from service → statusCode 404 (#315)
+ *   - async HttpError(404) from service returns 404 (#315)
+ *   - invalid query validation now returns 400 (ajv/Zod validatorCompiler, not 422)
+ *   - deepObject preValidation reshaping + coercion for /lab/deep-filter (real request)
+ *   - delimiter preValidation reshaping for /lab/delimited-query (real request)
+ *   - response serialization via serializerCompiler: strips unknown keys, rejects off-spec values
  */
 import { describe, it, expect } from 'vitest'
 import Fastify from 'fastify'
@@ -99,7 +103,7 @@ describe('lab-routes inject() suite', () => {
     expect(typeof capturedParams?.count).toBe('number')
   })
 
-  it('#314 invalid count (non-numeric) returns 422 query validation error', async () => {
+  it('#314 invalid count (non-numeric) returns 400 from validatorCompiler (not 422)', async () => {
     const service = makeStub({
       async labQuery(params) {
         return { tier: params.tier, count: params.count, code: params.code }
@@ -110,8 +114,9 @@ describe('lab-routes inject() suite', () => {
       method: 'GET',
       url: '/lab/query?tier=gold&count=notanumber&code=ABC',
     })
-    expect(res.statusCode).toBe(422)
-    expect(res.json<{ error: string }>().error).toBe('Invalid query parameters')
+    // fastify-type-provider-zod validatorCompiler returns 400 FST_ERR_VALIDATION (not 422).
+    expect(res.statusCode).toBe(400)
+    expect(res.json<{ code: string }>().code).toBe('FST_ERR_VALIDATION')
   })
 
   it('#313 lowercase X-Lab-Token header validates successfully: GET /lab/header returns 200', async () => {
@@ -132,7 +137,7 @@ describe('lab-routes inject() suite', () => {
     expect(res.json<{ token: string }>()).toMatchObject({ token: 'tok-1234' })
   })
 
-  it('#313 missing X-Lab-Token header returns 422', async () => {
+  it('#313 missing X-Lab-Token header returns 400 from validatorCompiler (not 422)', async () => {
     const service = makeStub({
       async labHeader() {
         return { token: '' }
@@ -140,8 +145,9 @@ describe('lab-routes inject() suite', () => {
     })
     const app = buildApp(service)
     const res = await app.inject({ method: 'GET', url: '/lab/header' })
-    expect(res.statusCode).toBe(422)
-    expect(res.json<{ error: string }>().error).toBe('Invalid request headers')
+    // schema.headers is validated by fastify-type-provider-zod validatorCompiler: returns 400 FST_ERR_VALIDATION.
+    expect(res.statusCode).toBe(400)
+    expect(res.json<{ code: string }>().code).toBe('FST_ERR_VALIDATION')
   })
 
   it('DELETE /pets/:id returns 204 with empty body', async () => {
@@ -254,5 +260,84 @@ describe('lab-routes inject() suite', () => {
     const res = await app.inject({ method: 'GET', url: '/pets/nonexistent' })
     expect(res.statusCode).toBe(404)
     expect(res.json<{ error: string }>().error).toBe('pet not found')
+  })
+
+  it('#322 deepObject filter[...] params are reshaped and coerced: GET /lab/deep-filter returns 200', async () => {
+    let captured: { filter: { gte?: number; lte?: number; color?: string } } | undefined
+    const service = makeStub({
+      async labDeepFilter(params) {
+        captured = params
+        return {
+          gte: params.filter.gte ?? 0,
+          lte: params.filter.lte ?? 0,
+          color: params.filter.color,
+        }
+      },
+    })
+    const app = buildApp(service)
+    // bracket-style deepObject keys are flattened by the preValidation hook,
+    // then the querystring schema coerces filter.gte from "10" to the number 10.
+    const res = await app.inject({
+      method: 'GET',
+      url: '/lab/deep-filter?filter[gte]=10&filter[color]=red',
+    })
+    expect(res.statusCode).toBe(200)
+    expect(captured?.filter).toEqual({ gte: 10, color: 'red' })
+    expect(typeof captured?.filter.gte).toBe('number')
+    expect(res.json<{ gte: number; color?: string }>()).toMatchObject({ gte: 10, color: 'red' })
+  })
+
+  it('#322 delimited query params are split by their delimiter: GET /lab/delimited-query returns 200', async () => {
+    let captured: { csv: string[]; ssv: string[]; psv: string[] } | undefined
+    const service = makeStub({
+      async labDelimitedQuery(params) {
+        captured = params
+        return { csv: params.csv, ssv: params.ssv, psv: params.psv }
+      },
+    })
+    const app = buildApp(service)
+    // csv -> comma, ssv -> space (%20), psv -> pipe (%7C); the hook splits each before validation.
+    const res = await app.inject({
+      method: 'GET',
+      url: '/lab/delimited-query?csv=a,b,c&ssv=x%20y%20z&psv=p%7Cq',
+    })
+    expect(res.statusCode).toBe(200)
+    expect(captured?.csv).toEqual(['a', 'b', 'c'])
+    expect(captured?.ssv).toEqual(['x', 'y', 'z'])
+    expect(captured?.psv).toEqual(['p', 'q'])
+  })
+
+  it('OQ2 response serializer strips keys not in the response schema: GET /lab/query', async () => {
+    const service = makeStub({
+      async labQuery(params) {
+        // Return an extra field the response schema (LabQueryEchoSchema) does not declare.
+        return {
+          tier: params.tier,
+          count: params.count,
+          code: params.code,
+          leaked: 'secret',
+        } as never
+      },
+    })
+    const app = buildApp(service)
+    const res = await app.inject({ method: 'GET', url: '/lab/query?tier=gold&count=7&code=ABC' })
+    expect(res.statusCode).toBe(200)
+    const body = res.json<Record<string, unknown>>()
+    // serializerCompiler parsed the payload through the schema, dropping the undeclared key.
+    expect(body).toEqual({ tier: 'gold', count: 7, code: 'ABC' })
+    expect(body.leaked).toBeUndefined()
+  })
+
+  it('OQ2 response serializer rejects an off-spec value: GET /lab/query yields 500', async () => {
+    const service = makeStub({
+      async labQuery() {
+        // count must be an integer per LabQueryEchoSchema; 1.5 fails serialization.
+        return { tier: 'gold', count: 1.5, code: 'ABC' } as never
+      },
+    })
+    const app = buildApp(service)
+    const res = await app.inject({ method: 'GET', url: '/lab/query?tier=gold&count=7&code=ABC' })
+    // serializerCompiler throws; the custom error handler re-throws non-HttpError -> default 500.
+    expect(res.statusCode).toBe(500)
   })
 })

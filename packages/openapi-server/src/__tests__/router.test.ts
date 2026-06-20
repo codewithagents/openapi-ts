@@ -1022,7 +1022,7 @@ describe('generateFastifyRouter', () => {
   it('imports FastifyInstance from fastify', () => {
     const spec = makeSpec({})
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain("import type { FastifyInstance, FastifyReply } from 'fastify'")
+    expect(result.content).toContain("import type { FastifyInstance } from 'fastify'")
   })
 
   it('exports createRouter function with void return type', () => {
@@ -1096,7 +1096,7 @@ describe('generateFastifyRouter', () => {
     expect(result.content).toContain('req.params.id')
   })
 
-  it('path param generates Params generic', () => {
+  it('path param adds a params schema (z.string())', () => {
     const spec = makeSpec({
       '/pets/{id}': {
         get: {
@@ -1107,11 +1107,11 @@ describe('generateFastifyRouter', () => {
       },
     })
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain('Params:')
-    expect(result.content).toContain('id: string')
+    expect(result.content).toContain('params:')
+    expect(result.content).toContain('id: z.string()')
   })
 
-  it('query params extracted via req.query dot notation', () => {
+  it('query params passed via req.query to the service', () => {
     const spec = makeSpec({
       '/pets': {
         get: {
@@ -1124,10 +1124,10 @@ describe('generateFastifyRouter', () => {
       },
     })
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain('req.query.species')
+    expect(result.content).toContain('req.query')
   })
 
-  it('query params generate Querystring generic', () => {
+  it('query params add a querystring schema', () => {
     const spec = makeSpec({
       '/pets': {
         get: {
@@ -1140,11 +1140,11 @@ describe('generateFastifyRouter', () => {
       },
     })
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain('Querystring:')
-    expect(result.content).toContain('species?: string')
+    expect(result.content).toContain('querystring:')
+    expect(result.content).toContain('species: z.string().optional()')
   })
 
-  it('POST body extracted via req.body with Body generic', () => {
+  it('POST body cast to the model type in the service call', () => {
     const spec = makeSpec({
       '/pets': {
         post: {
@@ -1160,8 +1160,7 @@ describe('generateFastifyRouter', () => {
       },
     })
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain('req.body')
-    expect(result.content).toContain('Body: CreatePetRequest')
+    expect(result.content).toContain('req.body as CreatePetRequest')
   })
 
   it('imports body type from models.js when typed body used', () => {
@@ -1216,7 +1215,7 @@ describe('generateFastifyRouter', () => {
     })
     const result = generateFastifyRouter(spec)
     expect(result.content).toContain('reply.status(201)')
-    expect(result.content).toContain('return await service.createPet(')
+    expect(result.content).toContain('await service.createPet(')
   })
 
   it('DELETE with 204 uses reply.status(204).send()', () => {
@@ -1254,7 +1253,7 @@ describe('generateFastifyRouter', () => {
     })
     const result = generateFastifyRouter(spec)
     expect(result.content).toContain('reply.status(202)')
-    expect(result.content).toContain('return await service.enqueueJob(')
+    expect(result.content).toContain('await service.enqueueJob(')
   })
 
   it('Bug #10 — GET with 200+202 declared emits envelope dispatch: reply.status(_envelope.status).send(_envelope.body)', () => {
@@ -1301,7 +1300,7 @@ describe('generateFastifyRouter', () => {
       },
     })
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain('return await service.listPets(')
+    expect(result.content).toContain('await service.listPets(')
   })
 
   it('route with no params has no generic type argument', () => {
@@ -1420,37 +1419,36 @@ describe('generateFastifyRouter with schemaNames (Zod validation)', () => {
     },
   })
 
-  it('adds safeParse validation when schema is in schemaNames', () => {
+  it('attaches the matched body schema to the route for native validation', () => {
     const result = generateFastifyRouter(postSpec, {
       schemaNames: new Set(['CreatePetRequestSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(result.content).toContain('CreatePetRequestSchema.safeParse(req.body)')
-    expect(result.content).toContain('parseResult.success')
-    expect(result.content).toContain('422')
+    // No hand-rolled safeParse: the body schema drives Fastify's native validatorCompiler.
+    expect(result.content).toContain('body: CreatePetRequestSchema')
+    expect(result.content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(result.content).not.toContain('safeParse(req.body)')
   })
 
-  it('uses validatedBody (coerced parseResult.data) in service call when schema is present', () => {
+  it('passes req.body (cast to the model type) in the service call when schema is present', () => {
     const result = generateFastifyRouter(postSpec, {
       schemaNames: new Set(['CreatePetRequestSchema']),
       schemaImportPath: './schemas.js',
     })
-    // The service call uses parseResult.data (cast to the declared model type), not the
-    // raw req.body, so Zod coercion is preserved (e.g. form-urlencoded numeric fields).
-    // The cast keeps the service-call type correct even when the schema infers a
-    // different shape (e.g. z.unknown() on inline-union properties).
-    expect(result.content).toContain('const validatedBody = parseResult.data as CreatePetRequest')
-    expect(result.content).toContain('service.createPet(validatedBody')
+    // req.body is validated by the validatorCompiler and typed by the ZodTypeProvider; we cast
+    // to the declared model type for the service call (specific and safe, since validation ran).
+    expect(result.content).toContain('service.createPet(req.body as CreatePetRequest)')
   })
 
-  it('returns 422 via reply.status(422).send()', () => {
+  it('uses native validation (no hand-rolled 422 envelope for the body)', () => {
     const result = generateFastifyRouter(postSpec, {
       schemaNames: new Set(['CreatePetRequestSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(result.content).toContain('return (reply as FastifyReply).status(422).send(')
-    expect(result.content).toContain("error: 'Invalid request body'")
-    expect(result.content).toContain('parseResult.error.issues')
+    // Body validation errors are now native (400 FST_ERR_VALIDATION), not the old 422 envelope.
+    expect(result.content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(result.content).not.toContain("error: 'Invalid request body'")
+    expect(result.content).not.toContain('(reply as FastifyReply).status(422)')
   })
 
   it('imports schema and z from schemaImportPath', () => {
@@ -1659,10 +1657,11 @@ describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps 
     expect(content).toContain('public readonly status: number')
   })
 
-  it('Fastify: GET service call wrapped in try/catch with HttpError mapping', () => {
+  it('Fastify: central setErrorHandler maps HttpError to its status', () => {
     const { content } = generateFastifyRouter(spec)
+    expect(content).toContain('app.setErrorHandler(')
     expect(content).toContain('if (err instanceof HttpError)')
-    expect(content).toContain('return (reply as FastifyReply).status(err.status).send({ error: err.message })')
+    expect(content).toContain('return reply.status(err.status).send({ error: err.message })')
     expect(content).toContain('throw err')
   })
 
@@ -1682,7 +1681,7 @@ describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps 
       },
     })
     const { content } = generateFastifyRouter(jsonSpec)
-    expect(content).toContain('return await service.getPet(')
+    expect(content).toContain('await service.getPet(')
   })
 
   it('Fastify: 201 JSON branch awaits service call so async HttpError is caught', () => {
@@ -1700,7 +1699,7 @@ describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps 
       },
     })
     const { content } = generateFastifyRouter(jsonSpec)
-    expect(content).toContain('return await service.createPet(')
+    expect(content).toContain('await service.createPet(')
   })
 })
 
@@ -1785,11 +1784,10 @@ describe('bug #1 fix: inline JSON request body synthesizes schema name from oper
       schemaNames: new Set(['LabInlineBodySchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(content).toContain('LabInlineBodySchema.safeParse(req.body)')
-    expect(content).toContain('422')
-    // Synthesized name must not leak into Fastify generic type (uses unknown instead)
-    expect(content).not.toContain('Body: LabInlineBody')
-    expect(content).toContain('Body: unknown')
+    expect(content).toContain('body: LabInlineBodySchema')
+    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    // No per-route generics in the type-provider emitter.
+    expect(content).not.toContain('post<')
   })
 })
 
@@ -1871,8 +1869,8 @@ describe('bug #7 fix: form-urlencoded request body uses parseBody() not JSON.par
       schemaNames: new Set(['LabFormBodySchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(content).toContain('LabFormBodySchema.safeParse(req.body)')
-    expect(content).toContain('422')
+    expect(content).toContain('body: LabFormBodySchema')
+    expect(content).toContain('req.body')
   })
 })
 
@@ -2220,8 +2218,8 @@ describe('context type option (issue #310)', () => {
 
     it('Fastify: arg order is path, body, query params, req', () => {
       const { content } = generateFastifyRouter(fullArgSpec, { contextType: 'RequestContext' })
-      // Fastify dot notation for path param; body is req.body; query bundle is params; ctx is req
-      expect(content).toContain('service.updatePet(req.params.id, req.body, params, req)')
+      // Fastify dot notation for path param; body is req.body (cast to model); query is req.query; ctx is req
+      expect(content).toContain('service.updatePet(req.params.id, req.body as UpdatePetRequest, req.query, req)')
     })
   })
 })
@@ -2282,7 +2280,7 @@ describe('issue #308: Fastify schema.response wiring', () => {
       schemaNames: new Set(['PetSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(content).toContain('schema: { response: { 200: PetSchema } }')
+    expect(content).toContain('response: { 200: PetSchema }')
   })
 
   it('direct $ref response: schema.response appears in the route registration options', () => {
@@ -2290,8 +2288,8 @@ describe('issue #308: Fastify schema.response wiring', () => {
       schemaNames: new Set(['PetSchema']),
       schemaImportPath: './schemas.js',
     })
-    // The options object must be between the path and the handler
-    expect(content).toMatch(/app\.get<[^>]+>\("\/pets\/:id", \{ schema:/)
+    // The options object must be between the path and the handler (no per-route generics).
+    expect(content).toMatch(/_app\.get\("\/pets\/:id", \{ schema:/)
   })
 
   it('array-of-$ref response: emits z.array(TypeSchema) in schema.response', () => {
@@ -2310,14 +2308,14 @@ describe('issue #308: Fastify schema.response wiring', () => {
     expect(content).toContain("import { z } from 'zod'")
   })
 
-  it('no schema in schemaNames: route uses two-argument form without options object', () => {
+  it('no matching response schema: route still uses an options object (params + config, no response)', () => {
     const { content } = generateFastifyRouter(noSchemaSpec, {
       schemaNames: new Set(['SomeOtherSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(content).not.toContain('schema: { response:')
-    // Route registration must still work without options
-    expect(content).toContain('app.get<')
+    expect(content).not.toContain('response: {')
+    // The options object is always present (path-param schema + config.operationId).
+    expect(content).toContain("config: { operationId: 'getPet' }")
     expect(content).toContain('"/pets/:id",')
   })
 
@@ -2365,26 +2363,30 @@ describe('issue #308: Fastify schema.response wiring', () => {
     expect(importMatch![1]).toContain('PetSchema')
   })
 
-  it('setSerializerCompiler is added when response schemas are used', () => {
+  it('setSerializerCompiler uses the fastify-type-provider-zod compiler', () => {
     const { content } = generateFastifyRouter(getPetSpec, {
       schemaNames: new Set(['PetSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(content).toContain('app.setSerializerCompiler(')
-    expect(content).toContain('zodSchema.parse(data)')
+    expect(content).toContain('app.setSerializerCompiler(serializerCompiler)')
+    expect(content).toContain(
+      "import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod'"
+    )
   })
 
-  it('setSerializerCompiler is NOT added when no response schemas are matched', () => {
+  it('compilers are registered once regardless of response-schema matches', () => {
     const { content } = generateFastifyRouter(getPetSpec, {
       schemaNames: new Set(['SomeOtherSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(content).not.toContain('app.setSerializerCompiler(')
+    expect(content).toContain('app.setSerializerCompiler(serializerCompiler)')
+    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
   })
 
-  it('setSerializerCompiler is NOT added when schemaNames is not provided', () => {
+  it('compilers are registered once even when schemaNames is not provided', () => {
     const { content } = generateFastifyRouter(getPetSpec)
-    expect(content).not.toContain('app.setSerializerCompiler(')
+    expect(content).toContain('app.setSerializerCompiler(serializerCompiler)')
+    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
   })
 
   it('void (DELETE 204) operation: no schema.response added', () => {
@@ -2454,18 +2456,16 @@ describe('issue #308: Fastify schema.response wiring', () => {
       schemaNames: new Set(['CreatePetRequestSchema', 'PetSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(content).toContain('schema: { response: { 201: PetSchema } }')
+    expect(content).toContain('response: { 201: PetSchema }')
   })
 
-  it('response schema without body schema: no z import needed for direct $ref', () => {
-    // Direct $ref response uses PetSchema directly, no z.array() needed — no z import
+  it('z is imported when the route needs it (e.g. a params schema)', () => {
     const { content } = generateFastifyRouter(getPetSpec, {
       schemaNames: new Set(['PetSchema']),
       schemaImportPath: './schemas.js',
     })
-    // z is NOT needed for direct $ref responses (only for array responses or param validation)
-    // This test verifies we don't import z unnecessarily for the simple case
-    expect(content).not.toMatch(/^import \{ z \} from 'zod'/m)
+    // getPetSpec has a path param whose params schema uses z.string(), so z is imported.
+    expect(content).toMatch(/^import \{ z \} from 'zod'/m)
   })
 
   it('Hono and Express generators are unaffected by response schema options', () => {
@@ -2558,10 +2558,9 @@ describe('issue #309: Fastify config.operationId in every route', () => {
       schemaNames: new Set(['PetSchema']),
       schemaImportPath: './schemas.js',
     })
-    // Both must appear in a single options object literal on the route registration line
-    expect(content).toContain(
-      "{ schema: { response: { 200: PetSchema } }, config: { operationId: 'getPet' } }"
-    )
+    // Both must appear in the same options object on the route registration line.
+    expect(content).toContain('response: { 200: PetSchema }')
+    expect(content).toContain("config: { operationId: 'getPet' }")
   })
 
   it('void (DELETE 204) route also gets config.operationId', () => {

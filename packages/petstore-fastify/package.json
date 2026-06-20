@@ -7,17 +7,20 @@
     "generate": "node node_modules/openapi-zod-ts/dist/cli.cjs && node node_modules/@codewithagents/openapi-server/dist/cli.cjs",
     "start": "pnpm generate && tsx src/server/index.ts",
     "test": "pnpm generate && vitest run",
+    "test:e2e": "pnpm generate && playwright test",
     "typecheck": "pnpm generate && tsc --noEmit -p tsconfig.typecheck.json"
   },
   "dependencies": {
+    "@codewithagents/openapi-server": "workspace:*",
     "@fastify/formbody": "^8.0.0",
     "@fastify/multipart": "^9.0.0",
     "fastify": "^5.0.0",
-    "zod": "catalog:",
+    "fastify-type-provider-zod": "^6.1.0",
     "openapi-zod-ts": "workspace:*",
-    "@codewithagents/openapi-server": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/node": "catalog:",
     "tsx": "^4.0.0",
     "typescript": "catalog:",
