@@ -253,6 +253,9 @@ function getResponseStatus(
 }
 
 // fallow-ignore-next-line complexity
+// fallow-ignore-next-line code-duplication
+// Parallel response-type resolver to router.ts getResponseTypeName; each emitter
+// needs its own independent lookup pass; coupling them would violate generation separation.
 function getResponseTypeName(
   operation: OperationObject,
   schemaNames?: Set<string>
@@ -262,6 +265,9 @@ function getResponseTypeName(
     | undefined
   if (responses === undefined) return undefined
 
+  // fallow-ignore-next-line code-duplication
+  // Priority list mirrors the one in router.ts; both emitters scan the same response
+  // priority ordering but for different purposes (type names vs. schema expressions).
   const priority = [
     '200',
     '201',

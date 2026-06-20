@@ -71,6 +71,8 @@ function getServiceCookieParams(
   return getServiceInParams(operation, spec, 'cookie')
 }
 
+// fallow-ignore-next-line code-duplication
+// Parallel type aliases to service.ts: both emitters need the same narrow local types.
 type OperationObject = OpenAPIV3_1.OperationObject
 type ReferenceObject = OpenAPIV3_1.ReferenceObject
 type ResponseObject = OpenAPIV3_1.ResponseObject
@@ -228,9 +230,13 @@ interface OperationInfo {
   headerParams: ServiceHeaderParam[]
   cookieParams: ServiceCookieParam[]
   bodyInfo: BodyInfo | undefined
+  // fallow-ignore-next-line code-duplication
+  // Parallel interface field to service.ts OperationInfo; both emitters need these fields.
   returnInfo: ReturnInfo & { isSynthesizedResponse?: boolean }
 }
 
+// fallow-ignore-next-line code-duplication
+// Parallel operation collector to service.ts; each emitter owns its own collection pass.
 function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
   const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
   if (paths === undefined) return []
@@ -305,6 +311,9 @@ function buildReturnType(
   return info.isArray ? 'Promise<unknown[]>' : 'Promise<unknown>'
 }
 
+// Cohesive signature builder: conditionally assembles path/body/query/headers/cookies/ctx
+// args in a single pass; the branching is inherent to optional-param composition.
+// fallow-ignore-next-line complexity
 function buildMethodSignature(
   op: OperationInfo,
   schemaNames: Set<string>,
@@ -321,6 +330,9 @@ function buildMethodSignature(
     // Zod body schema: the router passes req.body as unknown/Buffer for those content types.
     // A same-named schema (e.g. LabGallerySchema) may exist for the RESPONSE, not the body,
     // so we must not adopt it as the body param type here.
+    // fallow-ignore-next-line code-duplication
+    // Parallel body-type resolver to service.ts buildMethodSignature; each emitter
+    // owns its own signature-assembly pass with different type resolution logic.
     let bodyType: string
     if (op.bodyInfo.contentType === 'multipart/form-data') {
       bodyType = 'unknown'

@@ -1,3 +1,5 @@
+// fallow-ignore-file code-duplication
+// Test specs and assertion patterns are intentionally per-test for locality and readability.
 import { describe, expect, it, vi } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from '../plugins/router.js'
