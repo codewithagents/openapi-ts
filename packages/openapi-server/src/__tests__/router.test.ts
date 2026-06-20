@@ -3203,3 +3203,83 @@ describe('generateFastifyRouter: response schema collision fallback (item 2b)', 
     }
   })
 })
+
+// ── Item 1: header + cookie forwarding ────────────────────────────────────────
+
+describe('generateFastifyRouter: header + cookie forwarding to service (item 1)', () => {
+  it('emits { "x-api-key": req.headers["x-api-key"] } in service call with no cast', () => {
+    const spec = makeSpec({
+      '/secure': {
+        get: {
+          operationId: 'getSecure',
+          parameters: [
+            { name: 'X-Api-Key', in: 'header', required: true, schema: { type: 'string' } },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    // Service call must include the header object with no `as` cast.
+    expect(content).toContain('req.headers["x-api-key"]')
+    expect(content).not.toContain('as string')
+    expect(content).not.toContain('as string | undefined')
+  })
+
+  it('header key is lowercased in schema.headers and in the service arg object', () => {
+    const spec = makeSpec({
+      '/secure': {
+        get: {
+          operationId: 'getSecure',
+          parameters: [
+            { name: 'X-Trace-ID', in: 'header', required: false, schema: { type: 'string' } },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    // schema.headers key is lowercase; the service arg object key must be lowercase too.
+    expect(content).toContain('"x-trace-id"')
+    expect(content).not.toContain('"X-Trace-ID"')
+  })
+
+  it('emits _ckv.data as cookies arg after validation block', () => {
+    const spec = makeSpec({
+      '/me': {
+        get: {
+          operationId: 'getMe',
+          parameters: [
+            { name: 'session', in: 'cookie', required: true, schema: { type: 'string' } },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    // Cookie validation via _ckv safeParse must be present.
+    expect(content).toContain('_ckv')
+    // Service call must pass _ckv.data (the validated cookie object).
+    expect(content).toContain('_ckv.data')
+    // No `as` cast on the cookie arg.
+    expect(content).not.toContain('_ckv.data as')
+  })
+
+  it('operation with no headers or cookies has neither in service call', () => {
+    const spec = makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            { name: 'q', in: 'query', required: false, schema: { type: 'string' } },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    // No header or cookie forwarding when params are absent.
+    expect(content).not.toContain('req.headers[')
+    expect(content).not.toContain('_ckv.data')
+  })
+})

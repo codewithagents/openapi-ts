@@ -805,6 +805,26 @@ function buildFastifyTypeProviderHandler(
     serviceArgs.push('req.query')
   }
 
+  // Headers: construct a fresh object from the declared header fields.
+  // ZodTypeProvider narrows req.headers['x'] to string (required) or string | undefined (optional)
+  // for each field in schema.headers. We build a fresh object to match the precise service type.
+  // No `as` cast: each property access is correctly typed by ZodTypeProvider.
+  if (op.headerParams.length > 0) {
+    const fields = op.headerParams
+      .map((h) => {
+        const key = JSON.stringify(h.rawName.toLowerCase())
+        return `${key}: req.headers[${key}]`
+      })
+      .join(', ')
+    serviceArgs.push(`{ ${fields} }`)
+  }
+
+  // Cookies: _ckv.data is the validated cookie object, available here because the
+  // _ckv.success guard above returns early on failure. Pass it directly.
+  if (op.cookieParams.length > 0) {
+    serviceArgs.push('_ckv.data')
+  }
+
   // Context: pass Fastify Request object when contextType is set.
   if (contextType !== undefined) {
     serviceArgs.push('req')

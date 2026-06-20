@@ -25,6 +25,51 @@ import {
   getBodyInfo,
 } from './shared.js'
 
+// ── Simple header/cookie param descriptors (service-interface generation only) ─
+
+/** Minimal shape needed to emit service method headers arg. */
+export interface ServiceHeaderParam {
+  /** Raw header name as it appears in the spec (original casing). */
+  rawName: string
+  required: boolean
+}
+
+/** Minimal shape needed to emit service method cookies arg. */
+export interface ServiceCookieParam {
+  rawName: string
+  required: boolean
+}
+
+function getServiceHeaderParams(
+  operation: OpenAPIV3_1.OperationObject,
+  spec: OpenAPIV3_1.Document
+): ServiceHeaderParam[] {
+  const parameters = operation.parameters as (OpenAPIV3_1.ParameterObject | OpenAPIV3_1.ReferenceObject)[] | undefined
+  if (parameters === undefined) return []
+  const result: ServiceHeaderParam[] = []
+  for (const p of parameters) {
+    const resolved = resolveParam(p, spec)
+    if (resolved === undefined || resolved.in !== 'header') continue
+    result.push({ rawName: resolved.name, required: resolved.required === true })
+  }
+  return result
+}
+
+function getServiceCookieParams(
+  operation: OpenAPIV3_1.OperationObject,
+  spec: OpenAPIV3_1.Document
+): ServiceCookieParam[] {
+  const parameters = operation.parameters as (OpenAPIV3_1.ParameterObject | OpenAPIV3_1.ReferenceObject)[] | undefined
+  if (parameters === undefined) return []
+  const result: ServiceCookieParam[] = []
+  for (const p of parameters) {
+    const resolved = resolveParam(p, spec)
+    if (resolved === undefined || resolved.in !== 'cookie') continue
+    result.push({ rawName: resolved.name, required: resolved.required === true })
+  }
+  return result
+}
+
 type OperationObject = OpenAPIV3_1.OperationObject
 type ReferenceObject = OpenAPIV3_1.ReferenceObject
 type ResponseObject = OpenAPIV3_1.ResponseObject
@@ -174,6 +219,8 @@ interface OperationInfo {
   path: string
   pathParams: string[]
   queryParams: QueryParam[]
+  headerParams: ServiceHeaderParam[]
+  cookieParams: ServiceCookieParam[]
   bodyInfo: BodyInfo | undefined
   returnInfo: ReturnInfo & { isSynthesizedResponse?: boolean }
 }
@@ -192,12 +239,14 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
       const methodName = deriveMethodName(operation.operationId, method, path)
       const pathParams = extractPathParamsFromPath(path)
       const queryParams = getQueryParams(operation, spec)
+      const headerParams = getServiceHeaderParams(operation, spec)
+      const cookieParams = getServiceCookieParams(operation, spec)
       const bodyInfo = getBodyInfo(operation)
       const returnInfo = getReturnInfo(operation) as ReturnInfo & {
         isSynthesizedResponse?: boolean
       }
 
-      operations.push({ methodName, httpMethod: method, path, pathParams, queryParams, bodyInfo, returnInfo })
+      operations.push({ methodName, httpMethod: method, path, pathParams, queryParams, headerParams, cookieParams, bodyInfo, returnInfo })
     }
   }
 
@@ -284,6 +333,32 @@ function buildMethodSignature(
     const fields = op.queryParams.map((q) => `${q.name}${q.required ? '' : '?'}: ${q.tsType}`).join('; ')
     const paramsToken = allOptional ? 'params?' : 'params'
     args.push(`${paramsToken}: { ${fields} }`)
+  }
+
+  // headers?: { 'x-api-key': string; 'x-trace-id'?: string }
+  // The outer arg is always optional (?) so callers without header params are unaffected.
+  // Inner fields reflect each header's required flag (required -> string, optional -> string | undefined).
+  if (op.headerParams.length > 0) {
+    const fields = op.headerParams
+      .map((h) => {
+        const key = JSON.stringify(h.rawName.toLowerCase())
+        const valType = h.required ? 'string' : 'string | undefined'
+        return `${key}${h.required ? '' : '?'}: ${valType}`
+      })
+      .join('; ')
+    args.push(`headers?: { ${fields} }`)
+  }
+
+  // cookies?: { session: string; preferences?: string | undefined }
+  if (op.cookieParams.length > 0) {
+    const fields = op.cookieParams
+      .map((ck) => {
+        const key = JSON.stringify(ck.rawName)
+        const valType = ck.required ? 'string' : 'string | undefined'
+        return `${key}${ck.required ? '' : '?'}: ${valType}`
+      })
+      .join('; ')
+    args.push(`cookies?: { ${fields} }`)
   }
 
   if (contextType !== undefined) {
