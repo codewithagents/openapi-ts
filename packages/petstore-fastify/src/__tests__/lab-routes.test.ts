@@ -30,9 +30,7 @@ function buildApp(service: PetstoreService) {
   const app = Fastify()
   app.register(fastifyFormbody)
   app.register(fastifyMultipart, { attachFieldsToBody: true })
-  app.register(async (instance) => {
-    createRouter(instance, service)
-  })
+  app.register(createRouter(service))
   return app
 }
 

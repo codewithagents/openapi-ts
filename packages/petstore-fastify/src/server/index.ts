@@ -13,12 +13,7 @@ const app = Fastify()
 app.register(fastifyFormbody)
 app.register(fastifyMultipart, { attachFieldsToBody: true })
 
-app.register(
-  async (instance) => {
-    createRouter(instance, petService)
-  },
-  { prefix: '/api' }
-)
+app.register(createRouter(petService), { prefix: '/api' })
 
 const PORT = Number(process.env.PORT ?? 3003)
 app.listen({ port: PORT }, () =>

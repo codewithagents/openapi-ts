@@ -5,8 +5,9 @@
  * that uses fastify-type-provider-zod for request validation and type inference.
  *
  * Key design points (decided, not re-litigated):
- * - withTypeProvider<ZodTypeProvider>() + setValidatorCompiler + setSerializerCompiler registered once
- * - Single setErrorHandler maps HttpError to its .status code (no per-route try/catch)
+ * - createRouter(service) returns a FastifyPluginAsyncZod; mount via app.register(createRouter(service), { prefix })
+ * - FastifyPluginAsyncZod carries ZodTypeProvider: no withTypeProvider() call needed inside the plugin
+ * - setValidatorCompiler, setSerializerCompiler, setErrorHandler are scoped to the plugin instance
  * - Per route: schema.body, schema.params, schema.querystring, schema.headers, schema.response, config.operationId
  * - preValidation hook for deepObject and delimiter-style query params (emitted per-route, not globally)
  * - Cookie params use manual _ckv safeParse: Fastify 5's FastifySchema only exposes body/querystring/params/headers/response, so there is no cookie slot in the type-provider path
@@ -648,7 +649,7 @@ function buildFastifyTypeProviderHandler(
 
   const routeOpts = buildRouteOptions(schemaParts, preValidationLines, op.methodName)
   lines.push(
-    `${indent}_app.${op.httpMethod}(${JSON.stringify(op.honoPath)}, ${routeOpts}, async (req, reply) => {`
+    `${indent}app.${op.httpMethod}(${JSON.stringify(op.honoPath)}, ${routeOpts}, async (req, reply) => {`
   )
 
   // ── Cookie validation (manual _ckv: Fastify 5's FastifySchema has no cookie slot,
@@ -835,9 +836,8 @@ export function generateFastifyRouter(
     "import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'"
   )
   lines.push(
-    "import type { ZodTypeProvider } from 'fastify-type-provider-zod'"
+    "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
   )
-  lines.push("import type { FastifyInstance } from 'fastify'")
   if (sortedBodyTypes.length > 0) {
     lines.push(`import type { ${sortedBodyTypes.join(', ')} } from './models.js'`)
   }
@@ -858,33 +858,33 @@ export function generateFastifyRouter(
   lines.push('')
   for (const l of httpErrorClassLines()) lines.push(l)
   lines.push('')
-  lines.push(`export function createRouter(app: FastifyInstance, service: ${serviceRef}): void {`)
+  lines.push(`export function createRouter(service: ${serviceRef}): FastifyPluginAsyncZod {`)
+  lines.push('  return async (app) => {')
 
-  // Register type-provider compilers and a single error handler once at the top.
-  // withTypeProvider returns a new typed FastifyInstance; routes must be registered on _app so
-  // ZodTypeProvider can infer req.body/req.query/req.params from the schema blocks.
-  lines.push('  const _app = app.withTypeProvider<ZodTypeProvider>()')
-  lines.push('  app.setValidatorCompiler(validatorCompiler)')
-  lines.push('  app.setSerializerCompiler(serializerCompiler)')
-  lines.push('  app.setErrorHandler((err, _req, reply) => {')
-  lines.push('    if (err instanceof HttpError) {')
-  lines.push('      return reply.status(err.status).send({ error: err.message })')
-  lines.push('    }')
-  lines.push('    throw err')
-  lines.push('  })')
+  // FastifyPluginAsyncZod carries ZodTypeProvider: no withTypeProvider() call needed.
+  // Compilers and error handler are scoped to the plugin instance, not the root app.
+  lines.push('    app.setValidatorCompiler(validatorCompiler)')
+  lines.push('    app.setSerializerCompiler(serializerCompiler)')
+  lines.push('    app.setErrorHandler((err, _req, reply) => {')
+  lines.push('      if (err instanceof HttpError) {')
+  lines.push('        return reply.status(err.status).send({ error: err.message })')
+  lines.push('      }')
+  lines.push('      throw err')
+  lines.push('    })')
 
   // Register a content-type parser for application/octet-stream when needed.
   if (hasOctetStreamRequestBody) {
     lines.push(
-      "  app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
+      "    app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
     )
   }
 
   for (const op of operations) {
     lines.push('')
-    lines.push(buildFastifyTypeProviderHandler(op, '  ', spec, options?.schemaNames, ctx))
+    lines.push(buildFastifyTypeProviderHandler(op, '    ', spec, options?.schemaNames, ctx))
   }
 
+  lines.push('  }')
   lines.push('}')
   lines.push('')
 

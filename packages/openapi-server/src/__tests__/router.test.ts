@@ -1019,18 +1019,22 @@ describe('generateFastifyRouter', () => {
     expect(result.content).toMatch(/^\/\/ This file is auto-generated/)
   })
 
-  it('imports FastifyInstance from fastify', () => {
+  it('imports FastifyPluginAsyncZod from fastify-type-provider-zod', () => {
     const spec = makeSpec({})
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain("import type { FastifyInstance } from 'fastify'")
+    expect(result.content).toContain(
+      "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
+    )
+    expect(result.content).not.toContain("from 'fastify'")
   })
 
-  it('exports createRouter function with void return type', () => {
+  it('exports createRouter function returning FastifyPluginAsyncZod', () => {
     const spec = makeSpec({})
     const result = generateFastifyRouter(spec)
     expect(result.content).toContain('export function createRouter(')
-    expect(result.content).toContain('FastifyInstance')
-    expect(result.content).toContain('): void {')
+    expect(result.content).toContain('): FastifyPluginAsyncZod {')
+    expect(result.content).toContain('return async (app) => {')
+    expect(result.content).not.toContain('): void {')
   })
 
   it('GET route uses app.get', () => {
@@ -1318,10 +1322,11 @@ describe('generateFastifyRouter', () => {
     expect(result.content).not.toContain('app.get<')
   })
 
-  it('returns empty void router when no operations', () => {
+  it('returns empty plugin factory when no operations', () => {
     const spec = makeSpec({})
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain('): void {')
+    expect(result.content).toContain('): FastifyPluginAsyncZod {')
+    expect(result.content).toContain('return async (app) => {')
     expect(result.content).not.toContain('app.get(')
   })
 })
@@ -2161,10 +2166,10 @@ describe('context type option (issue #310)', () => {
   })
 
   describe('Fastify — with contextType', () => {
-    it('createRouter signature uses the generic service reference', () => {
+    it('createRouter signature uses the generic service reference and returns FastifyPluginAsyncZod', () => {
       const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
       expect(content).toContain(
-        'createRouter(app: FastifyInstance, service: PetStoreService<RequestContext>): void'
+        'createRouter(service: PetStoreService<RequestContext>): FastifyPluginAsyncZod'
       )
     })
 
@@ -2289,7 +2294,7 @@ describe('issue #308: Fastify schema.response wiring', () => {
       schemaImportPath: './schemas.js',
     })
     // The options object must be between the path and the handler (no per-route generics).
-    expect(content).toMatch(/_app\.get\("\/pets\/:id", \{ schema:/)
+    expect(content).toMatch(/app\.get\("\/pets\/:id", \{ schema:/)
   })
 
   it('array-of-$ref response: emits z.array(TypeSchema) in schema.response', () => {
@@ -2373,7 +2378,7 @@ describe('issue #308: Fastify schema.response wiring', () => {
       "import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'"
     )
     expect(content).toContain(
-      "import type { ZodTypeProvider } from 'fastify-type-provider-zod'"
+      "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
     )
   })
 

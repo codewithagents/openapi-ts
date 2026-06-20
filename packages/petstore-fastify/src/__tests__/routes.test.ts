@@ -5,12 +5,7 @@ import { petService, resetPets } from '../server/petService.js'
 
 function buildApp() {
   const app = Fastify()
-  app.register(
-    async (instance) => {
-      createRouter(instance, petService)
-    },
-    { prefix: '/api' }
-  )
+  app.register(createRouter(petService), { prefix: '/api' })
   return app
 }
 

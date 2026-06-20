@@ -306,7 +306,7 @@ Invalid requests get a structured `422` response instead of reaching your servic
 | `"none"` | Only `service.ts`. Wire the interface yourself. |
 | `"hono"` | `service.ts` + a ready-to-mount `router.ts` using [Hono](https://hono.dev). Includes optional Zod request validation via `input_schema`. |
 | `"express"` | `service.ts` + a ready-to-mount `router.ts` using [Express](https://expressjs.com) `Router`. Apply `express.json()` middleware before mounting. |
-| `"fastify"` | `service.ts` + a route-registering `router.ts` using [Fastify](https://fastify.dev) with [`fastify-type-provider-zod`](https://github.com/turkerdev/fastify-type-provider-zod) for native request/response validation. Routes are registered onto a `FastifyInstance`; see mount pattern below. Requires `fastify` and `fastify-type-provider-zod` in your `dependencies`. |
+| `"fastify"` | `service.ts` + a `router.ts` that returns a `FastifyPluginAsyncZod` factory via `createRouter(service)`. Mount with `app.register(createRouter(service), { prefix })`. Uses [`fastify-type-provider-zod`](https://github.com/turkerdev/fastify-type-provider-zod) for native request/response validation. Requires `fastify` and `fastify-type-provider-zod` in your `dependencies`. |
 
 The framework package must be in your own `dependencies`. This package adds nothing at runtime.
 
@@ -320,8 +320,8 @@ app.route('/api', createRouter(service))
 app.use(express.json())
 app.use('/api', createRouter(service))
 
-// Fastify: createRouter registers routes onto the instance rather than returning one
-fastify.register(async (instance) => { createRouter(instance, service) }, { prefix: '/api' })
+// Fastify: createRouter(service) returns a FastifyPluginAsyncZod; mount it with register
+fastify.register(createRouter(service), { prefix: '/api' })
 ```
 
 The `"none"` path is always available and keeps the zero-footprint promise: the generated code has no runtime dependencies that you did not already choose.
@@ -348,7 +348,7 @@ Cookies are not forwarded to the service method signature. They are validated in
 import fastifyCookie from '@fastify/cookie'
 
 fastify.register(fastifyCookie)
-fastify.register(async (instance) => { createRouter(instance, service) }, { prefix: '/api' })
+fastify.register(createRouter(service), { prefix: '/api' })
 ```
 
 **Express setup:**
@@ -407,7 +407,7 @@ fastify.setErrorHandler((err, request, reply) => {
   return reply.status(500).send({ error: 'Internal server error' })
 })
 
-fastify.register(async (instance) => { createRouter(instance, petService) }, { prefix: '/api' })
+fastify.register(createRouter(petService), { prefix: '/api' })
 ```
 
 The same pattern applies to Express error middleware (`app.use((err, req, res, next) => { ... })`) and to Hono's `app.onError((err, c) => { ... })`.
@@ -522,7 +522,7 @@ pnpm add @fastify/formbody
 import fastifyFormbody from '@fastify/formbody'
 
 fastify.register(fastifyFormbody)
-fastify.register(async (instance) => { createRouter(instance, service) }, { prefix: '/api' })
+fastify.register(createRouter(service), { prefix: '/api' })
 ```
 
 Without this plugin, `req.body` is `undefined` for form-urlencoded requests and the handler receives no body.
@@ -539,7 +539,7 @@ pnpm add @fastify/multipart
 import fastifyMultipart from '@fastify/multipart'
 
 fastify.register(fastifyMultipart, { attachFieldsToBody: true })
-fastify.register(async (instance) => { createRouter(instance, service) }, { prefix: '/api' })
+fastify.register(createRouter(service), { prefix: '/api' })
 ```
 
 The `attachFieldsToBody` option is required. Without it, `@fastify/multipart` v10 exposes uploaded files only via async iterators (`request.parts()`), not via `req.body`. The generated router reads `req.body` and passes it to the service method, so `attachFieldsToBody: true` must be set.
