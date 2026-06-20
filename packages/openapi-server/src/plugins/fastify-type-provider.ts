@@ -418,7 +418,8 @@ function queryParamBaseExpr(param: QueryParam): string {
   if (param.isDeepObject === true && param.deepObjectProperties !== undefined) {
     const propFields = param.deepObjectProperties.map((p) => {
       const coerced = p.tsType === 'number' ? 'z.coerce.number()' : 'z.string()'
-      return `${p.key}: ${coerced}.optional()`
+      const key = /[^a-zA-Z0-9_$]/.test(p.key) ? JSON.stringify(p.key) : p.key
+      return `${key}: ${coerced}.optional()`
     })
     return `z.object({ ${propFields.join(', ')} })`
   }
@@ -506,19 +507,20 @@ function buildPreValidationLines(queryParams: QueryParam[]): string[] | undefine
 
   const reshapedFields: string[] = []
   for (const q of queryParams) {
+    const key = /[^a-zA-Z0-9_$]/.test(q.name) ? JSON.stringify(q.name) : q.name
     if (q.isDeepObject === true) {
       const prefixLen = q.rawName.length + 1
       const bracketPrefix = q.rawName + '['
       reshapedFields.push(
-        `        ${q.name}: Object.fromEntries(Object.entries(_dq).filter(([k]) => k.startsWith(${JSON.stringify(bracketPrefix)}) && k.endsWith(']')).map(([k, v]) => [k.slice(${prefixLen}, -1), v]))`
+        `        ${key}: Object.fromEntries(Object.entries(_dq).filter(([k]) => k.startsWith(${JSON.stringify(bracketPrefix)}) && k.endsWith(']')).map(([k, v]) => [k.slice(${prefixLen}, -1), v]))`
       )
     } else if (q.delimiterStyle !== undefined) {
       const delim = JSON.stringify(delimiterChar(q.delimiterStyle))
       reshapedFields.push(
-        `        ${q.name}: typeof _dq[${JSON.stringify(q.rawName)}] === 'string' ? _dq[${JSON.stringify(q.rawName)}]!.split(${delim}) : undefined`
+        `        ${key}: typeof _dq[${JSON.stringify(q.rawName)}] === 'string' ? _dq[${JSON.stringify(q.rawName)}]!.split(${delim}) : undefined`
       )
     } else {
-      reshapedFields.push(`        ${q.name}: _dq[${JSON.stringify(q.rawName)}]`)
+      reshapedFields.push(`        ${key}: _dq[${JSON.stringify(q.rawName)}]`)
     }
   }
 
@@ -589,7 +591,12 @@ function buildFastifyTypeProviderHandler(
   // (z.object/z.array) that match the shape after preValidation mutates req.query.
   let querystringSchemaExpr: string | undefined
   if (op.queryParams.length > 0) {
-    const fields = op.queryParams.map((q) => `${q.name}: ${queryParamZodExpr(q)}`).join(', ')
+    const fields = op.queryParams
+      .map((q) => {
+        const key = /[^a-zA-Z0-9_$]/.test(q.name) ? JSON.stringify(q.name) : q.name
+        return `${key}: ${queryParamZodExpr(q)}`
+      })
+      .join(', ')
     querystringSchemaExpr = `z.object({ ${fields} })`
   }
 
