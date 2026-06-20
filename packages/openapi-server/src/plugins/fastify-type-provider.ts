@@ -90,6 +90,13 @@ interface RouteOperation {
 interface RouterOptions {
   schemaNames?: Set<string>
   schemaImportPath?: string
+  /**
+   * When set, the router imports alias types from this path (schema-types.js) and emits
+   * zero-cast body/response handlers. Only used with the Fastify zero-cast path
+   * (framework=fastify + input_schema configured). When absent, the old models-import
+   * and cast-based output is produced.
+   */
+  schemaTypesImportPath?: string
   contextType?: string
 }
 
@@ -575,7 +582,8 @@ function buildFastifyTypeProviderHandler(
   indent: string,
   spec: OpenAPIV3_1.Document,
   schemaNames?: Set<string>,
-  contextType?: string
+  contextType?: string,
+  zeroCast?: boolean
 ): string {
   const lines: string[] = []
   const inner = `${indent}  `
@@ -695,15 +703,30 @@ function buildFastifyTypeProviderHandler(
     }
   }
 
-  // Body: the validatorCompiler validates req.body at runtime before the handler runs, and the
-  // ZodTypeProvider infers req.body as the schema's output type. That type usually matches the
-  // service interface's parameter type, but can diverge structurally for some constructs (a
-  // passthrough object adds an index signature; loose/synthesized shapes infer differently). We
-  // therefore assert the body to the service's named model type where one exists (specific and
-  // safe, since validation already happened), and fall back to `any` only for synthesized/inline
-  // shapes that have no nameable type.
+  // Body: pass req.body to the service.
+  //
+  // Zero-cast path (zeroCast=true, enabled when framework=fastify + input_schema configured):
+  // The service parameter is z.infer of the body schema, which is exactly what ZodTypeProvider
+  // infers for req.body after the validatorCompiler validates it. No cast needed.
+  //
+  // Legacy path (zeroCast=false): The service parameter is a TypeScript interface from models.ts
+  // which may differ structurally from z.infer (e.g. passthrough adds an index signature). We cast
+  // to the named model type (safe: validation already ran) or fall back to `any` for synthesized.
   if (op.bodyInfo !== undefined) {
-    if (op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized) {
+    if (zeroCast === true) {
+      // Zero-cast: req.body aligns with z.infer<BodySchema> which aligns with service param.
+      // For content types without Zod validation (octet-stream, multipart), fall back to unknown.
+      const hasBodySchema = bodySchemaExpr !== undefined
+      if (
+        hasBodySchema ||
+        (op.bodyInfo.contentType !== 'application/octet-stream' &&
+          op.bodyInfo.contentType !== 'multipart/form-data')
+      ) {
+        serviceArgs.push('req.body')
+      } else {
+        serviceArgs.push('req.body as unknown')
+      }
+    } else if (op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized) {
       serviceArgs.push(`req.body as ${op.bodyInfo.typeName}`)
     } else if (bodySchemaExpr !== undefined) {
       serviceArgs.push('req.body as any')
@@ -728,14 +751,23 @@ function buildFastifyTypeProviderHandler(
   // Response cast: the serializerCompiler validates the response at runtime against the response
   // schema. At compile time the ZodTypeProvider constrains reply.send() to the schema's inferred
   // type, which can diverge structurally from the service's return (model) type (e.g. a passthrough
-  // object adds an index signature). When the response schema is a named schema we assert to its
-  // inferred type (specific and runtime-validated); inline response schemas fall back to `any`.
-  const responseCast =
-    responseSchemaExpr === undefined
-      ? ''
-      : /^[A-Za-z_$][\w$]*$/.test(responseSchemaExpr)
-        ? ` as z.infer<typeof ${responseSchemaExpr}>`
-        : ' as any'
+  // object adds an index signature).
+  //
+  // Zero-cast path: both service.ts and router.ts use z.infer aliases so they align exactly.
+  // No cast needed.
+  //
+  // Legacy path: when the response schema is a named schema we assert to its inferred type (safe:
+  // serializerCompiler validates at runtime); inline response schemas fall back to `any`.
+  let responseCast: string
+  if (zeroCast === true) {
+    responseCast = ''
+  } else if (responseSchemaExpr === undefined) {
+    responseCast = ''
+  } else if (/^[A-Za-z_$][\w$]*$/.test(responseSchemaExpr)) {
+    responseCast = ` as z.infer<typeof ${responseSchemaExpr}>`
+  } else {
+    responseCast = ' as any'
+  }
 
   // ── Response (no per-route try/catch: setErrorHandler handles HttpError) ──
 
@@ -808,11 +840,10 @@ export function generateFastifyRouter(
       : new Set<string>()
   const allUsedSchemaNames = new Set([...usedSchemaNames, ...usedResponseSchemaNames])
 
-  // Collect body type names for model imports. All named body types are imported because
-  // the handler casts req.body to the service model type (e.g. req.body as unknown as LabNumeric)
-  // regardless of whether a schema is present. The cast is needed because the Zod-inferred type
-  // from fastify-type-provider-zod may differ structurally from the TypeScript interface.
-  const sortedBodyTypes = collectSortedBodyTypes(operations)
+  // Collect body type names for model imports. Only needed in the legacy (non-zero-cast) path.
+  // When schemaTypesImportPath is set we are on the zero-cast path and models.ts is not imported.
+  const zeroCast = options?.schemaTypesImportPath !== undefined
+  const sortedBodyTypes = zeroCast ? [] : collectSortedBodyTypes(operations)
 
   // z is always needed: schema.params/querystring/headers/response use z.object/z.array/z.string.
   // Even with no operations, the cookie _ckv block uses z.
@@ -881,7 +912,7 @@ export function generateFastifyRouter(
 
   for (const op of operations) {
     lines.push('')
-    lines.push(buildFastifyTypeProviderHandler(op, '    ', spec, options?.schemaNames, ctx))
+    lines.push(buildFastifyTypeProviderHandler(op, '    ', spec, options?.schemaNames, ctx, zeroCast))
   }
 
   lines.push('  }')
