@@ -236,9 +236,19 @@ function buildMethodSignature(
   }
 
   if (op.bodyInfo !== undefined) {
-    let bodyType = 'unknown'
-    if (op.bodyInfo.typeName !== undefined) {
+    // multipart/form-data and application/octet-stream bodies cannot be described by a
+    // Zod body schema: the router passes req.body as unknown/Buffer for those content types.
+    // A same-named schema (e.g. LabGallerySchema) may exist for the RESPONSE, not the body,
+    // so we must not adopt it as the body param type here.
+    let bodyType: string
+    if (op.bodyInfo.contentType === 'multipart/form-data') {
+      bodyType = 'unknown'
+    } else if (op.bodyInfo.contentType === 'application/octet-stream') {
+      bodyType = 'Buffer'
+    } else if (op.bodyInfo.typeName !== undefined) {
       bodyType = resolveAliasType(op.bodyInfo.typeName, schemaNames)
+    } else {
+      bodyType = 'unknown'
     }
     args.push(`body: ${bodyType}`)
   }
@@ -344,7 +354,11 @@ export function generateFastifyTypedService(
   // Collect which alias type names are actually referenced in method signatures.
   const usedAliases = new Set<string>()
   for (const op of operations) {
-    if (op.bodyInfo?.typeName !== undefined) {
+    // Skip non-JSON bodies: their param type is always unknown/Buffer regardless of schemaNames.
+    const isNonJsonBody =
+      op.bodyInfo?.contentType === 'multipart/form-data' ||
+      op.bodyInfo?.contentType === 'application/octet-stream'
+    if (!isNonJsonBody && op.bodyInfo?.typeName !== undefined) {
       const alias = resolveAliasType(op.bodyInfo.typeName, schemaNames)
       if (alias !== 'unknown') usedAliases.add(alias)
     }
