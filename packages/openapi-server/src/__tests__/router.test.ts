@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from '../plugins/router.js'
 import { generateFastifyTypes, generateFastifyTypedService } from '../plugins/fastify-service.js'
+import { emitFastifyErrorsFile } from '../plugins/fastify-type-provider.js'
 
 // ── Fixture helpers ────────────────────────────────────────────────────────────
 
@@ -1657,10 +1658,11 @@ describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps 
     expect(content).toContain('throw err')
   })
 
-  it('Fastify: emits exported HttpError class', () => {
+  it('Fastify: imports HttpError from ./errors.js (class moved to errors.ts)', () => {
     const { content } = generateFastifyRouter(spec)
-    expect(content).toContain('export class HttpError extends Error')
-    expect(content).toContain('public readonly status: number')
+    expect(content).toContain("import { HttpError } from './errors.js'")
+    // HttpError class must NOT be inlined in router.ts
+    expect(content).not.toContain('export class HttpError extends Error')
   })
 
   it('Fastify: central setErrorHandler maps HttpError to its status', () => {
@@ -2955,5 +2957,52 @@ describe('generateFastifyRouter synthesized response schema (C2)', () => {
     })
     expect(result.content).toContain('body: LabFormBodySchema')
     expect(result.content).not.toContain('response: { 200: LabFormBodySchema }')
+  })
+})
+
+// ── Item 6: HttpError extracted to errors.ts ──────────────────────────────────
+
+describe('emitFastifyErrorsFile: HttpError in generated errors.ts', () => {
+  it('returns filename errors.ts', () => {
+    const result = emitFastifyErrorsFile()
+    expect(result.filename).toBe('errors.ts')
+  })
+
+  it('errors.ts starts with auto-generated header', () => {
+    const result = emitFastifyErrorsFile()
+    expect(result.content).toMatch(/^\/\/ This file is auto-generated/)
+  })
+
+  it('errors.ts exports HttpError class', () => {
+    const result = emitFastifyErrorsFile()
+    expect(result.content).toContain('export class HttpError extends Error {')
+  })
+
+  it('errors.ts HttpError class accepts status and message constructor params', () => {
+    const result = emitFastifyErrorsFile()
+    expect(result.content).toContain(
+      'constructor(public readonly status: number, message: string)'
+    )
+  })
+
+  it('generateFastifyRouter imports HttpError from ./errors.js (not inline)', () => {
+    const spec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain("import { HttpError } from './errors.js'")
+    // HttpError class must NOT be inlined in router.ts
+    expect(content).not.toContain('export class HttpError extends Error')
+  })
+
+  it('generateFastifyRouter does NOT contain HttpError class definition', () => {
+    const spec = makeSpec({})
+    const { content } = generateFastifyRouter(spec)
+    expect(content).not.toContain('class HttpError')
   })
 })

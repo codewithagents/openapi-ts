@@ -920,7 +920,7 @@ export function generateFastifyRouter(
   lines.push('  }')
   lines.push('}')
   lines.push('')
-  for (const l of httpErrorClassLines()) lines.push(l)
+  lines.push("import { HttpError } from './errors.js'")
   lines.push('')
   lines.push(`export function createRouter(service: ${serviceRef}): FastifyPluginAsyncZod {`)
   lines.push('  return async (app) => {')
@@ -954,6 +954,31 @@ export function generateFastifyRouter(
 
   return {
     filename: 'router.ts',
+    content: lines.join('\n'),
+  }
+}
+
+// ── errors.ts emitter ─────────────────────────────────────────────────────────
+
+/**
+ * Emit errors.ts: the generated module containing the HttpError class.
+ * The generated router.ts imports HttpError from this file instead of defining it inline.
+ * Emitted for all Fastify targets (both passes) so the import path is consistent
+ * regardless of whether input_schema is configured.
+ */
+export function emitFastifyErrorsFile(): GeneratedFile {
+  const lines: string[] = []
+  lines.push('// This file is auto-generated. Do not edit manually.')
+  lines.push('')
+  lines.push('export class HttpError extends Error {')
+  lines.push('  constructor(public readonly status: number, message: string) {')
+  lines.push('    super(message)')
+  lines.push("    this.name = 'HttpError'")
+  lines.push('  }')
+  lines.push('}')
+  lines.push('')
+  return {
+    filename: 'errors.ts',
     content: lines.join('\n'),
   }
 }

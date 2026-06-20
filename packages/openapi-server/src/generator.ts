@@ -6,6 +6,7 @@ import { loadConfigs, type ServerConfig } from './config.js'
 import { generateService, type ServiceOptions } from './plugins/service.js'
 import { generateFastifyTypes, generateFastifyTypedService } from './plugins/fastify-service.js'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from './plugins/router.js'
+import { emitFastifyErrorsFile } from './plugins/fastify-type-provider.js'
 
 async function formatTs(content: string, filePath: string): Promise<string> {
   const { format, resolveConfig } = await import('prettier')
@@ -56,6 +57,10 @@ async function generateOne(cwd: string, config: ServerConfig, label?: string): P
         contextType: config.context_type,
       })
     )
+    // For Fastify: emit errors.ts so the router.ts import is satisfied from the first pass.
+    if (framework === 'fastify') {
+      generatedFiles.push(emitFastifyErrorsFile())
+    }
   }
 
   console.log(`${prefix}Writing output to: ${outputDir}`)
@@ -108,6 +113,11 @@ async function generateSchemaEnhancedRouter(
   // For Fastify: emit schema-types.ts (z.infer aliases) and re-emit service.ts using those
   // aliases. This enables the zero-cast router path where req.body and service params align.
   if (framework === 'fastify') {
+    const errorsFile = emitFastifyErrorsFile()
+    const errorsPath = join(outputDir, errorsFile.filename)
+    await writeFile(errorsPath, await formatTs(errorsFile.content, errorsPath), 'utf-8')
+    console.log(`${prefix}  ✓ errors.ts (HttpError class)`)
+
     const schemaTypesFile = generateFastifyTypes(exportedSchemas, schemaImportPathJs)
     const schemaTypesPath = join(outputDir, schemaTypesFile.filename)
     await writeFile(schemaTypesPath, await formatTs(schemaTypesFile.content, schemaTypesPath), 'utf-8')
