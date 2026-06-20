@@ -102,18 +102,25 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
         return { typeName: undefined, isArray: true, isVoid: false, isMultiStatus }
       }
 
-      // Inline JSON response: check for synthesized response schema name.
+      // Inline JSON response: check for a synthesized response schema name.
+      // Naming: toTypeName(operationId) + 'Schema' (e.g. LabInlineResponseSchema).
+      // The schemaNames check in buildReturnType/resolveAliasType will confirm presence.
+      //
+      // Guard: skip when the synthesized name would collide with the body schema name.
       const operationId = operation.operationId
       if (operationId !== undefined && operationId.length > 0) {
-        // Synthesized response schema name: operationId + 'Response' + 'Schema' (resolved later).
-        const synthesizedTypeName = toTypeName(operationId) + 'Response'
-        return {
-          typeName: synthesizedTypeName,
-          isArray: false,
-          isVoid: false,
-          isMultiStatus,
-          isSynthesizedResponse: true,
-        } as ReturnInfo & { isSynthesizedResponse?: boolean }
+        const synthesizedName = toTypeName(operationId)
+        const bodyInfo = getBodyInfo(operation)
+        const collidesWithBody =
+          bodyInfo?.typeName !== undefined && bodyInfo.typeName === synthesizedName
+        if (!collidesWithBody) {
+          return {
+            typeName: synthesizedName,
+            isArray: false,
+            isVoid: false,
+            isMultiStatus,
+          }
+        }
       }
 
       return { typeName: undefined, isArray: false, isVoid: false, isMultiStatus }

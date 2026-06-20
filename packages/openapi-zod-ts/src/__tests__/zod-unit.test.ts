@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateZodSchemas } from '../plugins/zod.js'
+import { generateZodSchemas, collectSynthesizedResponseSchemaNames } from '../plugins/zod.js'
 import type { OpenAPIV3_1 } from 'openapi-types'
 
 function gen(
@@ -887,5 +887,172 @@ describe('additionalProperties handling in zod', () => {
     expect(out).not.toContain('[object Object]')
     // Non-primitive enum values widen to z.unknown(), present in the record value expression
     expect(out).toContain('z.unknown()')
+  })
+})
+
+// ── Component C1: inline response schema synthesis ─────────────────────────────
+
+function makeSpecWithPaths(
+  paths: OpenAPIV3_1.PathsObject,
+  components?: Record<string, OpenAPIV3_1.SchemaObject | OpenAPIV3_1.ReferenceObject>
+): OpenAPIV3_1.Document {
+  return {
+    openapi: '3.1.0',
+    info: { title: 'Test', version: '1.0.0' },
+    paths,
+    ...(components !== undefined ? { components: { schemas: components } } : {}),
+  }
+}
+
+describe('generateZodSchemas - inline response synthesis (C1)', () => {
+  it('emits a synthesized schema for an operation with an inline JSON response', () => {
+    const spec = makeSpecWithPaths({
+      '/items': {
+        get: {
+          operationId: 'labInlineResponse',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', properties: { ok: { type: 'boolean' } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    const out = generateZodSchemas(spec).content
+    expect(out).toContain('export const LabInlineResponseSchema =')
+    expect(out).toContain('z.object(')
+  })
+
+  it('emits z.union for an operation with multiple 2xx inline responses', () => {
+    const spec = makeSpecWithPaths({
+      '/shapes': {
+        post: {
+          operationId: 'labResponseUnion',
+          responses: {
+            '200': {
+              description: 'circle',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { kind: { type: 'string', const: 'circle' }, radius: { type: 'number' } },
+                  },
+                },
+              },
+            },
+            '201': {
+              description: 'square',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { kind: { type: 'string', const: 'square' }, side: { type: 'number' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    const out = generateZodSchemas(spec).content
+    expect(out).toContain('export const LabResponseUnionSchema = z.union([')
+  })
+
+  it('does NOT synthesize a schema for a $ref response (already has a component schema)', () => {
+    const spec = makeSpecWithPaths(
+      {
+        '/pets': {
+          get: {
+            operationId: 'listPets',
+            responses: {
+              '200': {
+                description: 'ok',
+                content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+              },
+            },
+          },
+        },
+      },
+      { Pet: { type: 'object', properties: { id: { type: 'string' } } } }
+    )
+    const out = generateZodSchemas(spec).content
+    // The $ref response uses the existing PetSchema; no synthesized 'ListPetsSchema' should be emitted.
+    expect(out).not.toContain('ListPetsSchema')
+    expect(out).toContain('PetSchema')
+  })
+
+  it('does NOT synthesize a schema for a void (204) response', () => {
+    const spec = makeSpecWithPaths({
+      '/pets/{id}': {
+        delete: {
+          operationId: 'deletePet',
+          responses: { '204': { description: 'deleted' } },
+        },
+      },
+    })
+    const out = generateZodSchemas(spec).content
+    expect(out).not.toContain('DeletePetSchema')
+  })
+
+  it('skips operations without operationId', () => {
+    const spec = makeSpecWithPaths({
+      '/anon': {
+        get: {
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+          },
+        },
+      },
+    })
+    const out = generateZodSchemas(spec).content
+    // No schema should be emitted for an operation without operationId.
+    expect(out).not.toContain('Schema = z.object(')
+  })
+})
+
+describe('collectSynthesizedResponseSchemaNames (C1 drift detection)', () => {
+  it('returns the set of synthesized response schema names', () => {
+    const spec = makeSpecWithPaths({
+      '/items': {
+        get: {
+          operationId: 'labInlineResponse',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+          },
+        },
+      },
+    })
+    const names = collectSynthesizedResponseSchemaNames(spec)
+    expect(names.has('LabInlineResponseSchema')).toBe(true)
+  })
+
+  it('returns empty set when all responses are $refs', () => {
+    const spec = makeSpecWithPaths({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+            },
+          },
+        },
+      },
+    })
+    const names = collectSynthesizedResponseSchemaNames(spec)
+    expect(names.size).toBe(0)
   })
 })

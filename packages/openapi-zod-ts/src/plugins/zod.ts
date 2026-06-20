@@ -2,6 +2,7 @@ import type { OpenAPIV3_1 } from 'openapi-types'
 import { toPropertyKey, toTypeName } from '../utils/naming.js'
 import type { GeneratedFile } from './types.js'
 
+type OperationObject = OpenAPIV3_1.OperationObject
 type SchemaObject = OpenAPIV3_1.SchemaObject
 type ArraySchemaObject = OpenAPIV3_1.ArraySchemaObject
 type ReferenceObject = OpenAPIV3_1.ReferenceObject
@@ -514,6 +515,117 @@ function generateSchemaDeclaration(
   return `export const ${safeName}Schema = ${schemaToZod(schema)}`
 }
 
+// ── Inline response schema synthesis ─────────────────────────────────────────
+//
+// When an operation has an inline JSON response (not a $ref), we synthesize a
+// named Zod schema for it. This enables openapi-server to wire schema.response
+// and produce typed service return types.
+//
+// Naming: toTypeName(operationId) + 'Schema'
+// (e.g. labInlineResponse -> LabInlineResponseSchema, labResponseUnion -> LabResponseUnionSchema)
+// The operationId encodes the context; no extra suffix is needed.
+//
+// Multi-status: when multiple 2xx codes have inline responses, a union schema is
+// emitted: LabResponseUnionSchema = z.union([...]) wrapping each code's schema.
+
+interface InlineResponseSchema {
+  /** The synthesized schema name, e.g. 'LabInlineResponse'. */
+  name: string
+  /** The emitted Zod declaration string (without 'export const' prefix). */
+  zodDecl: string
+}
+
+function collectContentfulTwoxxResponses(
+  responses: Record<string, OpenAPIV3_1.ResponseObject | ReferenceObject>
+): Array<{ code: string; schema: SchemaObject }> {
+  const result: Array<{ code: string; schema: SchemaObject }> = []
+  for (const code of Object.keys(responses).filter((k) => /^2\d\d$/.test(k) && k !== '204').sort()) {
+    const resp = responses[code]!
+    if (isRef(resp)) continue
+    const r = resp as OpenAPIV3_1.ResponseObject
+    const content = r.content as
+      | Record<string, { schema?: SchemaObject | ReferenceObject }>
+      | undefined
+    if (content === undefined) continue
+    const json = content['application/json']
+    if (json === undefined || json.schema === undefined) continue
+    // Skip $ref responses: they already have a named component schema.
+    if (isRef(json.schema)) continue
+    result.push({ code, schema: json.schema as SchemaObject })
+  }
+  return result
+}
+
+/**
+ * Synthesize Zod schema declarations for operations with inline (non-$ref) JSON responses.
+ * Returns one entry per operation that has at least one inline response schema.
+ *
+ * Single-code operations: export const LabInlineResponseSchema = <zodExpr>
+ * Multi-code operations (multiple 2xx): export const LabResponseUnionSchema = z.union([...])
+ */
+// fallow-ignore-next-line complexity
+function synthesizeInlineResponseSchemas(spec: OpenAPIV3_1.Document): InlineResponseSchema[] {
+  const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
+  if (paths === undefined) return []
+
+  const METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'] as const
+  const result: InlineResponseSchema[] = []
+
+  for (const pathItem of Object.values(paths)) {
+    for (const method of METHODS) {
+      const operation = pathItem[method] as OperationObject | undefined
+      if (operation === undefined) continue
+
+      const operationId = operation.operationId
+      if (operationId === undefined || operationId.length === 0) continue
+
+      const responses = operation.responses as
+        | Record<string, OpenAPIV3_1.ResponseObject | ReferenceObject>
+        | undefined
+      if (responses === undefined) continue
+
+      const inlineResps = collectContentfulTwoxxResponses(responses)
+      if (inlineResps.length === 0) continue
+
+      // The schema variable name is toTypeName(operationId) + 'Schema'.
+      // For 'labInlineResponse' this produces 'LabInlineResponseSchema'.
+      // The operationId itself already encodes the context, so no extra suffix is added.
+      const baseName = toTypeName(operationId)
+
+      if (inlineResps.length === 1) {
+        // Single inline response: emit a plain schema.
+        const zodExpr = schemaToZod(inlineResps[0]!.schema)
+        result.push({
+          name: baseName,
+          zodDecl: `${baseName}Schema = ${zodExpr}`,
+        })
+      } else {
+        // Multiple 2xx inline responses: emit z.union([...]).
+        const variants = inlineResps.map((r) => schemaToZod(r.schema))
+        result.push({
+          name: baseName,
+          zodDecl: `${baseName}Schema = z.union([${variants.join(', ')}])`,
+        })
+      }
+    }
+  }
+
+  return result
+}
+
+/**
+ * Return the set of synthesized response schema names that the spec would generate.
+ * Used by openapi-server's drift detection: warns if any of these are absent from
+ * the user-owned schemas.ts. Exported so the server generator can call it directly.
+ */
+export function collectSynthesizedResponseSchemaNames(spec: OpenAPIV3_1.Document): Set<string> {
+  const names = new Set<string>()
+  for (const entry of synthesizeInlineResponseSchemas(spec)) {
+    names.add(`${entry.name}Schema`)
+  }
+  return names
+}
+
 export function generateZodSchemas(spec: OpenAPIV3_1.Document): GeneratedFile {
   const schemas = spec.components?.schemas as
     | Record<string, SchemaObject | ReferenceObject>
@@ -557,6 +669,23 @@ export function generateZodSchemas(spec: OpenAPIV3_1.Document): GeneratedFile {
     for (const name of sorted) {
       const schema = sanitizedSchemas[name]!
       lines.push(generateSchemaDeclaration(name, schema, cyclic.has(name)))
+      lines.push('')
+    }
+  }
+
+  // Synthesize named schemas for operations with inline (non-$ref) JSON responses.
+  // These are emitted after component schemas so any referenced component schemas are
+  // already declared and available. Naming: toTypeName(operationId) + 'Schema'.
+  const inlineResponseSchemas = synthesizeInlineResponseSchemas(spec)
+  if (inlineResponseSchemas.length > 0) {
+    lines.push(
+      '// Synthesized schemas for inline JSON responses (operationId-based naming).',
+      '// These are used by openapi-server to wire schema.response for Fastify routes.',
+      '// Add refinements here as needed; the generator will not overwrite this file.',
+    )
+    lines.push('')
+    for (const entry of inlineResponseSchemas) {
+      lines.push(`export const ${entry.zodDecl}`)
       lines.push('')
     }
   }

@@ -2892,3 +2892,68 @@ describe('generateFastifyRouter zero-cast path (schemaTypesImportPath set)', () 
     expect(result.content).toContain('req.body as CreatePetRequest')
   })
 })
+
+// ── Component C2: synthesized response schema lookup (C2) ─────────────────────
+
+describe('generateFastifyRouter synthesized response schema (C2)', () => {
+  const inlineResponseSpec = makeSpec({
+    '/lab/inline-response': {
+      get: {
+        operationId: 'labInlineResponse',
+        responses: {
+          '200': {
+            description: 'ok',
+            content: {
+              'application/json': {
+                schema: { type: 'object', properties: { ok: { type: 'boolean' }, note: { type: 'string' } } },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+
+  it('wires schema.response when a synthesized response schema is in schemaNames', () => {
+    const result = generateFastifyRouter(inlineResponseSpec, {
+      schemaNames: new Set(['LabInlineResponseSchema']),
+      schemaImportPath: '../schemas.js',
+    })
+    expect(result.content).toContain('response: { 200: LabInlineResponseSchema }')
+  })
+
+  it('does NOT wire schema.response when the synthesized schema is absent from schemaNames', () => {
+    const result = generateFastifyRouter(inlineResponseSpec, {
+      schemaNames: new Set<string>(),
+      schemaImportPath: '../schemas.js',
+    })
+    expect(result.content).not.toContain('response: { 200: LabInlineResponseSchema }')
+  })
+
+  it('does not misidentify a body schema as a response schema (collision guard)', () => {
+    const collidingSpec = makeSpec({
+      '/lab/form-body': {
+        post: {
+          operationId: 'labFormBody',
+          requestBody: {
+            required: true,
+            content: { 'application/x-www-form-urlencoded': { schema: { type: 'object' } } },
+          },
+          responses: {
+            '200': {
+              description: 'echoed',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
+          },
+        },
+      },
+    })
+    // LabFormBodySchema exists for body validation but must NOT be wired as response schema.
+    const result = generateFastifyRouter(collidingSpec, {
+      schemaNames: new Set(['LabFormBodySchema']),
+      schemaImportPath: '../schemas.js',
+    })
+    expect(result.content).toContain('body: LabFormBodySchema')
+    expect(result.content).not.toContain('response: { 200: LabFormBodySchema }')
+  })
+})

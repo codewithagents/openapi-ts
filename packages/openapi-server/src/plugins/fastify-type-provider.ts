@@ -16,6 +16,7 @@
  */
 import type { OpenAPIV3_1 } from 'openapi-types'
 import type { GeneratedFile } from 'openapi-zod-ts'
+import { toTypeName } from 'openapi-zod-ts'
 import {
   SUPPORTED_METHODS,
   type SupportedMethod,
@@ -246,7 +247,8 @@ function getResponseStatus(
 
 // fallow-ignore-next-line complexity
 function getResponseTypeName(
-  operation: OperationObject
+  operation: OperationObject,
+  schemaNames?: Set<string>
 ): { typeName: string; isArray: boolean } | undefined {
   const responses = operation.responses as
     | Record<string, ResponseObject | ReferenceObject>
@@ -281,12 +283,35 @@ function getResponseTypeName(
     }
   }
 
+  // Synthesized response schema fallback: when the response is inline (no $ref) and
+  // a synthesized schema name exists in the user-owned schemas.ts, use it. This enables
+  // schema.response wiring and typed service return types for labInlineResponse etc.
+  //
+  // Naming: toTypeName(operationId) + 'Schema' = 'LabInlineResponseSchema' for
+  // operationId 'labInlineResponse'. The distinction from body schemas is that the
+  // operationId itself encodes the context (e.g. labInlineBody -> LabInlineBodySchema,
+  // labInlineResponse -> LabInlineResponseSchema).
+  //
+  // Guard: skip if the synthesized name collides with the operation's body schema name.
+  // This prevents a form-body or inline-body schema (e.g. LabFormBodySchema) from being
+  // misidentified as a response schema for the same operation.
+  if (schemaNames !== undefined && operation.operationId !== undefined && operation.operationId.length > 0) {
+    const synthesizedName = toTypeName(operation.operationId)
+    const synthesizedSchemaName = `${synthesizedName}Schema`
+    const bodyInfo = getBodyInfo(operation)
+    const bodySchemaName =
+      bodyInfo?.typeName !== undefined ? `${bodyInfo.typeName}Schema` : undefined
+    if (schemaNames.has(synthesizedSchemaName) && synthesizedSchemaName !== bodySchemaName) {
+      return { typeName: synthesizedName, isArray: false }
+    }
+  }
+
   return undefined
 }
 
 // ── Operation collection ──────────────────────────────────────────────────────
 
-function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
+function collectOperations(spec: OpenAPIV3_1.Document, schemaNames?: Set<string>): RouteOperation[] {
   const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
   if (paths === undefined) return []
 
@@ -304,7 +329,8 @@ function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
       const cookieParams = getCookieParams(operation, spec)
       const bodyInfo = getBodyInfo(operation)
       const responseStatus = getResponseStatus(operation, method)
-      const responseTypeInfo = getResponseTypeName(operation)
+      // Pass schemaNames so synthesized response schema names are recognised.
+      const responseTypeInfo = getResponseTypeName(operation, schemaNames)
 
       operations.push({
         methodName,
@@ -827,7 +853,7 @@ export function generateFastifyRouter(
   options?: RouterOptions
 ): GeneratedFile {
   const serviceName = deriveServiceName(spec)
-  const operations = collectOperations(spec)
+  const operations = collectOperations(spec, options?.schemaNames)
 
   // Collect schema names used for body and response wiring.
   const usedSchemaNames =
