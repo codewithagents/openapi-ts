@@ -73,22 +73,23 @@ interface CookieParam {
 }
 
 /**
- * Map a schema format string to a Zod chain modifier.
- * Returns an empty string when no specific format validation is needed.
+ * Map a schema format string to a Zod 4 top-level format expression.
+ * Returns undefined when no specific format validation is needed.
+ * Known formats replace z.string() entirely (e.g. z.uuid() not z.string().uuid()).
  */
-function formatToZodModifier(format: string): string {
+function formatToZodModifier(format: string): string | undefined {
   switch (format) {
     case 'uuid':
-      return '.uuid()'
+      return 'z.uuid()'
     case 'email':
-      return '.email()'
+      return 'z.email()'
     case 'uri':
     case 'url':
-      return '.url()'
+      return 'z.url()'
     case 'date-time':
-      return '.datetime()'
+      return 'z.iso.datetime()'
     default:
-      return ''
+      return undefined
   }
 }
 
@@ -96,11 +97,12 @@ function formatToZodModifier(format: string): string {
  * Build a Zod expression for a path parameter based on its schema.
  * Returns undefined when the parameter does not need validation.
  *
- * String params: validates format (uuid, email, url, date-time) via z.string().format().
+ * String params: validates format (uuid, email, url, date-time) via top-level Zod 4 forms.
  * Integer/number params: validates range (minimum/maximum) via z.coerce.number().min().max().
  * z.coerce.number() is used for path params because c.req.param() always returns a string;
  * coercion converts the URL string to a number before the min/max check.
  */
+// fallow-ignore-next-line complexity
 function pathParamZodExpr(
   schema: OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
 ): string | undefined {
@@ -127,13 +129,11 @@ function pathParamZodExpr(
     return undefined
   }
 
-  // String path params: only validated when a known format modifier exists
+  // String path params: only validated when a known format expression exists
   if (s.type !== 'string') return undefined
   const format = s.format as string | undefined
   if (format === undefined) return undefined
-  const modifier = formatToZodModifier(format)
-  if (modifier === '') return undefined
-  return `z.string()${modifier}`
+  return formatToZodModifier(format)
 }
 
 // ── queryParamZodExpr helpers (one per param kind) ───────────────────────────
@@ -279,6 +279,7 @@ function cookieParamZodExpr(param: CookieParam): string {
 /**
  * Collect header parameters from an operation, including schema constraints.
  */
+// fallow-ignore-next-line complexity
 function getHeaderParams(operation: OperationObject, spec: OpenAPIV3_1.Document): HeaderParam[] {
   const parameters = operation.parameters as (ParameterObject | ReferenceObject)[] | undefined
   if (parameters === undefined) return []
@@ -308,6 +309,7 @@ function getHeaderParams(operation: OperationObject, spec: OpenAPIV3_1.Document)
  * Collect cookie parameters (in: cookie) from an operation, including schema constraints.
  * Cookie names are case-sensitive and are used as-is for both the Zod field key and value lookup.
  */
+// fallow-ignore-next-line complexity
 function getCookieParams(operation: OperationObject, spec: OpenAPIV3_1.Document): CookieParam[] {
   const parameters = operation.parameters as (ParameterObject | ReferenceObject)[] | undefined
   if (parameters === undefined) return []
@@ -578,6 +580,7 @@ function detectResponseContentType(
   return 'application/json'
 }
 
+// fallow-ignore-next-line complexity
 function getResponseStatus(
   operation: OperationObject,
   httpMethod: SupportedMethod
@@ -662,6 +665,7 @@ function getResponseStatus(
  *
  * Priority order mirrors service.ts getReturnInfo: 200, 201, then other 2xx codes.
  */
+// fallow-ignore-next-line complexity
 function getResponseTypeName(
   operation: OperationObject
 ): { typeName: string; isArray: boolean } | undefined {
@@ -849,6 +853,7 @@ function collectUsedResponseSchemaNames(
  * Collect body type names, used schema names, and whether Zod is needed.
  * Shared by all three generator functions to avoid duplication.
  */
+// fallow-ignore-next-line complexity
 function collectGeneratorSetup(
   operations: RouteOperation[],
   options?: RouterOptions

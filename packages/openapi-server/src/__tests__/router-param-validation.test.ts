@@ -128,10 +128,10 @@ describe('path param with format:uuid generates Zod validation', () => {
     },
   })
 
-  it('Hono: generates _pv with z.string().uuid() for uuid path param', () => {
+  it('Hono: generates _pv with z.uuid() for uuid path param (Zod 4 top-level form)', () => {
     const { content } = generateRouter(uuidSpec)
     expect(content).toContain('_pv')
-    expect(content).toContain('z.string().uuid()')
+    expect(content).toContain('z.uuid()')
     expect(content).toContain("import { z } from 'zod'")
   })
 
@@ -148,10 +148,10 @@ describe('path param with format:uuid generates Zod validation', () => {
     expect(content).toContain('422')
   })
 
-  it('Express: generates _pv with z.string().uuid()', () => {
+  it('Express: generates _pv with z.uuid() (Zod 4 top-level form)', () => {
     const { content } = generateExpressRouter(uuidSpec)
     expect(content).toContain('_pv')
-    expect(content).toContain('z.string().uuid()')
+    expect(content).toContain('z.uuid()')
     expect(content).toContain("import { z } from 'zod'")
   })
 
@@ -168,13 +168,13 @@ describe('path param with format:uuid generates Zod validation', () => {
     expect(content).toContain('_pv.error.issues')
   })
 
-  it('Fastify: wires z.string().uuid() in schema.params (native validation)', () => {
+  it('Fastify: wires z.uuid() in schema.params (native validation, Zod 4 top-level form)', () => {
     const { content } = generateFastifyRouter(uuidSpec)
     expect(content).not.toContain('_pv')
-    expect(content).toContain('z.string().uuid()')
+    expect(content).toContain('z.uuid()')
     expect(content).toContain("import { z } from 'zod'")
     // Validation via schema.params using native type-provider
-    expect(content).toContain('params: z.object({ id: z.string().uuid() })')
+    expect(content).toContain('params: z.object({ id: z.uuid() })')
   })
 
   it('Fastify: path param accessed via req.params.id (ZodTypeProvider infers from schema.params)', () => {
@@ -204,7 +204,7 @@ describe('path param with format:uuid generates Zod validation', () => {
     })
     const { content } = generateRouter(plainSpec)
     expect(content).not.toContain('_pv')
-    expect(content).not.toContain('z.string().uuid()')
+    expect(content).not.toContain('z.uuid()')
   })
 })
 
@@ -554,7 +554,7 @@ describe('path param with hyphens uses quoted key in Zod object', () => {
 
   it('Hono: uses quoted "job-id" key in z.object()', () => {
     const { content } = generateRouter(hyphenSpec)
-    expect(content).toContain('"job-id": z.string().uuid()')
+    expect(content).toContain('"job-id": z.uuid()')
   })
 
   it('Hono: passes c.req.param("job-id") to safeParse', () => {
@@ -576,7 +576,7 @@ describe('path param with hyphens uses quoted key in Zod object', () => {
 // ── Other format constraints ───────────────────────────────────────────────────
 
 describe('additional format constraints generate appropriate Zod modifiers', () => {
-  it('email format generates z.string().email()', () => {
+  it('email format generates z.email() (Zod 4 top-level form)', () => {
     const spec = makeSpec({
       '/users/{email}': {
         get: {
@@ -594,10 +594,10 @@ describe('additional format constraints generate appropriate Zod modifiers', () 
       },
     })
     const { content } = generateRouter(spec)
-    expect(content).toContain('z.string().email()')
+    expect(content).toContain('z.email()')
   })
 
-  it('date-time format generates z.string().datetime()', () => {
+  it('date-time format generates z.iso.datetime() (Zod 4 top-level form)', () => {
     const spec = makeSpec({
       '/events/{ts}': {
         get: {
@@ -615,10 +615,10 @@ describe('additional format constraints generate appropriate Zod modifiers', () 
       },
     })
     const { content } = generateRouter(spec)
-    expect(content).toContain('z.string().datetime()')
+    expect(content).toContain('z.iso.datetime()')
   })
 
-  it('uri format generates z.string().url()', () => {
+  it('uri format generates z.url() (Zod 4 top-level form)', () => {
     const spec = makeSpec({
       '/resources/{url}': {
         get: {
@@ -631,7 +631,7 @@ describe('additional format constraints generate appropriate Zod modifiers', () 
       },
     })
     const { content } = generateRouter(spec)
-    expect(content).toContain('z.string().url()')
+    expect(content).toContain('z.url()')
   })
 
   it('unknown format does not generate path param validation', () => {
@@ -759,7 +759,7 @@ describe('$ref path params resolve to their schema for validation', () => {
       },
     }
     const { content } = generateRouter(spec)
-    expect(content).toContain('z.string().uuid()')
+    expect(content).toContain('z.uuid()')
     expect(content).toContain('_pv')
   })
 })
@@ -1205,9 +1205,12 @@ describe('required cookie param generates Zod validation', () => {
     expect(content).toContain('_ckv.error.issues')
   })
 
-  it('Fastify: reads cookie via req.cookies["session"]', () => {
+  it('Fastify: reads cookie via guarded _cookies["session"] (safe when @fastify/cookie is absent)', () => {
     const { content } = generateFastifyRouter(cookieSpec)
-    expect(content).toContain('req.cookies["session"]')
+    expect(content).toContain('_cookies["session"]')
+    expect(content).toContain(
+      '(req as { cookies?: Record<string, string | undefined> }).cookies ?? {}'
+    )
   })
 
   it('Fastify: returns 422 via reply.status(422).send() on cookie failure', () => {
@@ -1239,10 +1242,10 @@ describe('cookie param names are case-sensitive: no lowercasing applied', () => 
     expect(content).not.toContain('getCookie(c, "sessiontoken")')
   })
 
-  it('Fastify: uses exact cookie name in req.cookies lookup', () => {
+  it('Fastify: uses exact cookie name in _cookies lookup (case-sensitive, guarded read)', () => {
     const { content } = generateFastifyRouter(mixedCaseCookieSpec)
-    expect(content).toContain('req.cookies["SessionToken"]')
-    expect(content).not.toContain('req.cookies["sessiontoken"]')
+    expect(content).toContain('_cookies["SessionToken"]')
+    expect(content).not.toContain('_cookies["sessiontoken"]')
   })
 
   it('Express: uses exact cookie name in req.cookies lookup', () => {
