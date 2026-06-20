@@ -218,14 +218,13 @@ function getResponseStatus(
   if (twoxxKeys.length === 1) {
     const code = parseInt(twoxxKeys[0], 10)
     const resp = responses[twoxxKeys[0]]
-    const isVoid =
-      isRef(resp)
-        ? false
-        : (() => {
-            const r = resp as ResponseObject
-            const content = r.content as Record<string, unknown> | undefined
-            return content === undefined || Object.keys(content).length === 0
-          })()
+    const isVoid = isRef(resp)
+      ? false
+      : (() => {
+          const r = resp as ResponseObject
+          const content = r.content as Record<string, unknown> | undefined
+          return content === undefined || Object.keys(content).length === 0
+        })()
     return { status: code, isVoid, responseContentType: detectResponseContentType(resp) }
   }
 
@@ -367,65 +366,77 @@ function delimiterChar(style: 'csv' | 'ssv' | 'psv'): string {
   return ','
 }
 
-function queryParamZodExpr(param: QueryParam): string {
-  let base: string
-  if (param.delimiterStyle !== undefined) {
-    base = 'z.array(z.string())'
-  } else if (param.isDeepObject === true && param.deepObjectProperties !== undefined) {
+/** Append .min/.max/.regex string constraints in a stable order. */
+function stringConstraintSuffix(p: {
+  minLength?: number
+  maxLength?: number
+  pattern?: string
+}): string {
+  let s = ''
+  if (p.minLength !== undefined) s += `.min(${p.minLength})`
+  if (p.maxLength !== undefined) s += `.max(${p.maxLength})`
+  if (p.pattern !== undefined) s += `.regex(/${p.pattern}/)`
+  return s
+}
+
+/** Append .min/.max/.gt/.lt numeric constraints in a stable order. */
+function numberConstraintSuffix(p: {
+  minimum?: number
+  maximum?: number
+  exclusiveMinimum?: number
+  exclusiveMaximum?: number
+}): string {
+  let s = ''
+  if (p.minimum !== undefined) s += `.min(${p.minimum})`
+  if (p.maximum !== undefined) s += `.max(${p.maximum})`
+  if (p.exclusiveMinimum !== undefined) s += `.gt(${p.exclusiveMinimum})`
+  if (p.exclusiveMaximum !== undefined) s += `.lt(${p.exclusiveMaximum})`
+  return s
+}
+
+/** z.enum([...]) when an enum is present, else z.string(), plus string constraints. */
+function enumOrStringExpr(p: {
+  enum?: string[]
+  minLength?: number
+  maxLength?: number
+  pattern?: string
+}): string {
+  const base =
+    p.enum !== undefined && p.enum.length > 0
+      ? `z.enum([${p.enum.map((v) => JSON.stringify(v)).join(', ')}])`
+      : 'z.string()'
+  return base + stringConstraintSuffix(p)
+}
+
+/** Wrap a Zod expression in .optional() unless the param is required. */
+function withOptional(base: string, required: boolean): string {
+  return required ? base : `${base}.optional()`
+}
+
+function queryParamBaseExpr(param: QueryParam): string {
+  if (param.delimiterStyle !== undefined) return 'z.array(z.string())'
+  if (param.isDeepObject === true && param.deepObjectProperties !== undefined) {
     const propFields = param.deepObjectProperties.map((p) => {
       const coerced = p.tsType === 'number' ? 'z.coerce.number()' : 'z.string()'
       return `${p.key}: ${coerced}.optional()`
     })
-    base = `z.object({ ${propFields.join(', ')} })`
-  } else if (param.tsType === 'number') {
-    base = 'z.coerce.number()'
-    if (param.minimum !== undefined) base += `.min(${param.minimum})`
-    if (param.maximum !== undefined) base += `.max(${param.maximum})`
-    if (param.exclusiveMinimum !== undefined) base += `.gt(${param.exclusiveMinimum})`
-    if (param.exclusiveMaximum !== undefined) base += `.lt(${param.exclusiveMaximum})`
-  } else if (param.tsType === 'boolean') {
-    base = 'z.boolean()'
-  } else if (param.enum !== undefined && param.enum.length > 0) {
-    const members = param.enum.map((v) => JSON.stringify(v)).join(', ')
-    base = `z.enum([${members}])`
-    if (param.minLength !== undefined) base += `.min(${param.minLength})`
-    if (param.maxLength !== undefined) base += `.max(${param.maxLength})`
-    if (param.pattern !== undefined) base += `.regex(/${param.pattern}/)`
-  } else {
-    base = 'z.string()'
-    if (param.minLength !== undefined) base += `.min(${param.minLength})`
-    if (param.maxLength !== undefined) base += `.max(${param.maxLength})`
-    if (param.pattern !== undefined) base += `.regex(/${param.pattern}/)`
+    return `z.object({ ${propFields.join(', ')} })`
   }
-  return param.required ? base : `${base}.optional()`
+  if (param.tsType === 'number') return `z.coerce.number()${numberConstraintSuffix(param)}`
+  if (param.tsType === 'boolean') return 'z.boolean()'
+  return enumOrStringExpr(param)
+}
+
+function queryParamZodExpr(param: QueryParam): string {
+  return withOptional(queryParamBaseExpr(param), param.required)
 }
 
 function headerParamZodExpr(param: HeaderParam): string {
-  let base: string
-  if (param.enum !== undefined && param.enum.length > 0) {
-    const members = param.enum.map((v) => JSON.stringify(v)).join(', ')
-    base = `z.enum([${members}])`
-  } else {
-    base = 'z.string()'
-  }
-  if (param.minLength !== undefined) base += `.min(${param.minLength})`
-  if (param.maxLength !== undefined) base += `.max(${param.maxLength})`
-  if (param.pattern !== undefined) base += `.regex(/${param.pattern}/)`
-  return param.required ? base : `${base}.optional()`
+  return withOptional(enumOrStringExpr(param), param.required)
 }
 
 function cookieParamZodExpr(param: CookieParam): string {
-  let base: string
-  if (param.enum !== undefined && param.enum.length > 0) {
-    const members = param.enum.map((v) => JSON.stringify(v)).join(', ')
-    base = `z.enum([${members}])`
-  } else {
-    base = 'z.string()'
-  }
-  if (param.minLength !== undefined) base += `.min(${param.minLength})`
-  if (param.maxLength !== undefined) base += `.max(${param.maxLength})`
-  if (param.pattern !== undefined) base += `.regex(/${param.pattern}/)`
-  return param.required ? base : `${base}.optional()`
+  return withOptional(enumOrStringExpr(param), param.required)
 }
 
 // ── Path param schema builder ─────────────────────────────────────────────────
@@ -455,9 +466,7 @@ function buildParamsSchemaExpr(op: RouteOperation, spec: OpenAPIV3_1.Document): 
   if (op.pathParams.length === 0) return undefined
 
   const paramByName = new Map<string, ParameterObject>()
-  const parameters = op.rawOperation.parameters as
-    | (ParameterObject | ReferenceObject)[]
-    | undefined
+  const parameters = op.rawOperation.parameters as (ParameterObject | ReferenceObject)[] | undefined
   if (parameters !== undefined) {
     for (const p of parameters) {
       const resolved = resolveParam(p, spec)
@@ -580,9 +589,7 @@ function buildFastifyTypeProviderHandler(
   // (z.object/z.array) that match the shape after preValidation mutates req.query.
   let querystringSchemaExpr: string | undefined
   if (op.queryParams.length > 0) {
-    const fields = op.queryParams
-      .map((q) => `${q.name}: ${queryParamZodExpr(q)}`)
-      .join(', ')
+    const fields = op.queryParams.map((q) => `${q.name}: ${queryParamZodExpr(q)}`).join(', ')
     querystringSchemaExpr = `z.object({ ${fields} })`
   }
 
@@ -854,9 +861,7 @@ export function generateFastifyRouter(
 
   for (const op of operations) {
     lines.push('')
-    lines.push(
-      buildFastifyTypeProviderHandler(op, '  ', spec, options?.schemaNames, ctx)
-    )
+    lines.push(buildFastifyTypeProviderHandler(op, '  ', spec, options?.schemaNames, ctx))
   }
 
   lines.push('}')

@@ -33,8 +33,12 @@
     "fastify-type-provider-zod": "^6"
   },
   "peerDependenciesMeta": {
-    "fastify": { "optional": true },
-    "fastify-type-provider-zod": { "optional": true }
+    "fastify": {
+      "optional": true
+    },
+    "fastify-type-provider-zod": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@stryker-mutator/core": "catalog:",
@@ -43,8 +47,6 @@
     "@vitest/coverage-v8": "catalog:",
     "esbuild": "catalog:",
     "fast-check": "catalog:",
-    "fastify": "^5.5.0",
-    "fastify-type-provider-zod": "^6.1.0",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
