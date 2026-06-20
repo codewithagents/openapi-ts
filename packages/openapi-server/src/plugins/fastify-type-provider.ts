@@ -934,6 +934,13 @@ export function generateFastifyRouter(
   const hasOctetStreamRequestBody = operations.some(
     (op) => op.bodyInfo?.contentType === 'application/octet-stream'
   )
+  const hasFormUrlencodedBody = operations.some(
+    (op) => op.bodyInfo?.contentType === 'application/x-www-form-urlencoded'
+  )
+  const hasMultipartBody = operations.some(
+    (op) => op.bodyInfo?.contentType === 'multipart/form-data'
+  )
+  const hasAnyParserNeeded = hasOctetStreamRequestBody || hasFormUrlencodedBody || hasMultipartBody
 
   const ctx = options?.contextType
   const serviceRef = ctx !== undefined ? `${serviceName}<${ctx}>` : serviceName
@@ -941,10 +948,10 @@ export function generateFastifyRouter(
   const lines: string[] = []
   lines.push('// This file is auto-generated. Do not edit manually.')
   lines.push(
-    '// Fastify: register @fastify/formbody before this router for application/x-www-form-urlencoded bodies.'
+    '// @fastify/formbody and @fastify/multipart are auto-registered inside the plugin for the content types your spec uses.'
   )
   lines.push(
-    '// For multipart/form-data bodies, register @fastify/multipart with { attachFieldsToBody: true } before this router.'
+    '// Pass registerParsers: false in CreateRouterOptions to opt out (e.g. to set custom size limits).'
   )
   lines.push('')
   lines.push(
@@ -1020,13 +1027,24 @@ export function generateFastifyRouter(
   lines.push('      })')
   lines.push('    }')
 
-  // Register a content-type parser for application/octet-stream when needed,
-  // gated on registerParsers !== false so callers can opt out.
-  if (hasOctetStreamRequestBody) {
+  // Auto-register body parsers for content types the spec uses, gated on registerParsers !== false.
+  // Callers who need custom options (e.g. upload size limits) should pass registerParsers: false
+  // and register the plugins themselves before mounting this router.
+  if (hasAnyParserNeeded) {
     lines.push('    if (options?.registerParsers !== false) {')
-    lines.push(
-      "      app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
-    )
+    if (hasFormUrlencodedBody) {
+      lines.push("      const _formbody = await import('@fastify/formbody')")
+      lines.push('      await app.register(_formbody.default ?? _formbody)')
+    }
+    if (hasMultipartBody) {
+      lines.push("      const _multipart = await import('@fastify/multipart')")
+      lines.push('      await app.register(_multipart.default ?? _multipart, { attachFieldsToBody: true })')
+    }
+    if (hasOctetStreamRequestBody) {
+      lines.push(
+        "      app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
+      )
+    }
     lines.push('    }')
   }
 

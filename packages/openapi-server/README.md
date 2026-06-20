@@ -508,41 +508,34 @@ export const petService: PetstoreService<Context> = {
 
 ## Non-JSON request bodies (Fastify)
 
-Fastify 5 natively parses only `application/json` and `text/plain` request bodies. For other content types you must register the appropriate plugin before the generated router.
+Fastify 5 natively parses only `application/json` and `text/plain` request bodies. The generated router automatically registers the required plugins for any content types declared in your spec.
 
 ### application/x-www-form-urlencoded
 
-Install and register [`@fastify/formbody`](https://github.com/fastify/fastify-formbody):
+When your spec has form-urlencoded request bodies, the generated router auto-registers [`@fastify/formbody`](https://github.com/fastify/fastify-formbody) inside the plugin closure. You only need to install it:
 
 ```bash
 pnpm add @fastify/formbody
 ```
 
-```ts
-import fastifyFormbody from '@fastify/formbody'
-
-fastify.register(fastifyFormbody)
-fastify.register(createRouter(service), { prefix: '/api' })
-```
-
-Without this plugin, `req.body` is `undefined` for form-urlencoded requests and the handler receives no body.
+No manual registration needed — `fastify.register(createRouter(service))` handles it.
 
 ### multipart/form-data
 
-Install and register [`@fastify/multipart`](https://github.com/fastify/fastify-multipart) with `attachFieldsToBody: true`:
+When your spec has multipart request bodies, the generated router auto-registers [`@fastify/multipart`](https://github.com/fastify/fastify-multipart) with `attachFieldsToBody: true` inside the plugin closure:
 
 ```bash
 pnpm add @fastify/multipart
 ```
 
+No manual registration needed. The `attachFieldsToBody: true` option is set automatically so `req.body` is populated for all fields.
+
+**Custom options (e.g. upload size limits):** pass `registerParsers: false` in `CreateRouterOptions` and register the plugin yourself before mounting the router:
+
 ```ts
-import fastifyMultipart from '@fastify/multipart'
-
-fastify.register(fastifyMultipart, { attachFieldsToBody: true })
-fastify.register(createRouter(service), { prefix: '/api' })
+fastify.register(fastifyMultipart, { attachFieldsToBody: true, limits: { fileSize: 10_000_000 } })
+fastify.register(createRouter(service, { registerParsers: false }), { prefix: '/api' })
 ```
-
-The `attachFieldsToBody` option is required. Without it, `@fastify/multipart` v10 exposes uploaded files only via async iterators (`request.parts()`), not via `req.body`. The generated router reads `req.body` and passes it to the service method, so `attachFieldsToBody: true` must be set.
 
 ### application/octet-stream
 

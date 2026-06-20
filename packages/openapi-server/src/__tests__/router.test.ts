@@ -3370,3 +3370,78 @@ describe('generateFastifyRouter: CreateRouterOptions escape hatch (commit 6)', (
     expect(content).not.toContain('options?.registerParsers !== false')
   })
 })
+
+// ── Commit 7: auto-register formbody/multipart ───────────────────────────────
+
+describe('generateFastifyRouter: auto-register formbody/multipart (commit 7)', () => {
+  it('emits dynamic import of @fastify/formbody when spec has form-urlencoded body', () => {
+    const spec = makeSpec({
+      '/submit': {
+        post: {
+          operationId: 'submit',
+          requestBody: {
+            required: true,
+            content: { 'application/x-www-form-urlencoded': { schema: { type: 'object' } } },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain("import('@fastify/formbody')")
+    expect(content).toContain('app.register(_formbody.default ?? _formbody)')
+    // Gated on registerParsers check.
+    expect(content).toContain('options?.registerParsers !== false')
+  })
+
+  it('emits dynamic import of @fastify/multipart when spec has multipart body', () => {
+    const spec = makeSpec({
+      '/upload': {
+        post: {
+          operationId: 'uploadFile',
+          requestBody: {
+            required: true,
+            content: { 'multipart/form-data': { schema: { type: 'object' } } },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain("import('@fastify/multipart')")
+    expect(content).toContain('app.register(_multipart.default ?? _multipart, { attachFieldsToBody: true })')
+  })
+
+  it('spec with only JSON body emits neither formbody nor multipart imports', () => {
+    const spec = makeSpec({
+      '/pets': {
+        post: {
+          operationId: 'createPet',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: { '201': { description: 'created' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    // No dynamic plugin imports when spec has only JSON bodies.
+    expect(content).not.toContain("import('@fastify/formbody')")
+    expect(content).not.toContain("import('@fastify/multipart')")
+    expect(content).not.toContain('_formbody')
+    expect(content).not.toContain('_multipart')
+  })
+
+  it('generated router header comment mentions auto-registration and registerParsers opt-out', () => {
+    // The header comment is the same for all specs (not conditional on body types).
+    const spec = makeSpec({
+      '/items': {
+        get: { operationId: 'listItems', responses: { '200': { description: 'ok' } } },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain('auto-registered inside the plugin')
+    expect(content).toContain('registerParsers: false')
+  })
+})
