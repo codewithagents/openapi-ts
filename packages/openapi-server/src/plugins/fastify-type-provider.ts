@@ -929,9 +929,25 @@ export function generateFastifyRouter(
   // Compilers and error handler are scoped to the plugin instance, not the root app.
   lines.push('    app.setValidatorCompiler(validatorCompiler)')
   lines.push('    app.setSerializerCompiler(serializerCompiler)')
+  // Emit a small status-code-to-code lookup for the error envelope. This mirrors the
+  // FST_ERR_VALIDATION shape (statusCode, code, error, message) so HttpError responses
+  // are structurally consistent with Fastify's built-in validation errors.
+  lines.push('    const _HTTP_CODES: Record<number, string> = {')
+  lines.push("      400: 'BAD_REQUEST',")
+  lines.push("      401: 'UNAUTHORIZED',")
+  lines.push("      403: 'FORBIDDEN',")
+  lines.push("      404: 'NOT_FOUND',")
+  lines.push("      409: 'CONFLICT',")
+  lines.push("      410: 'GONE',")
+  lines.push("      422: 'UNPROCESSABLE_ENTITY',")
+  lines.push("      429: 'TOO_MANY_REQUESTS',")
+  lines.push("      500: 'INTERNAL_ERROR',")
+  lines.push('    }')
   lines.push('    app.setErrorHandler((err, _req, reply) => {')
   lines.push('      if (err instanceof HttpError) {')
-  lines.push('        return reply.status(err.status).send({ error: err.message })')
+  lines.push("        const _errCode = _HTTP_CODES[err.status] ?? 'APP_ERROR'")
+  lines.push('        const _errReply = reply.status(err.status)')
+  lines.push('        return _errReply.send({ statusCode: err.status, code: _errCode, error: err.message, message: err.message })')
   lines.push('      }')
   lines.push('      throw err')
   lines.push('    })')

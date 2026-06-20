@@ -1665,12 +1665,17 @@ describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps 
     expect(content).not.toContain('export class HttpError extends Error')
   })
 
-  it('Fastify: central setErrorHandler maps HttpError to its status', () => {
+  it('Fastify: central setErrorHandler maps HttpError to its status with native envelope', () => {
     const { content } = generateFastifyRouter(spec)
     expect(content).toContain('app.setErrorHandler(')
     expect(content).toContain('if (err instanceof HttpError)')
-    expect(content).toContain('return reply.status(err.status).send({ error: err.message })')
+    expect(content).toContain('statusCode: err.status')
+    expect(content).toContain("_HTTP_CODES[err.status] ?? 'APP_ERROR'")
+    expect(content).toContain('error: err.message')
+    expect(content).toContain('message: err.message')
     expect(content).toContain('throw err')
+    // Old single-field envelope must not remain
+    expect(content).not.toContain('send({ error: err.message })')
   })
 
   it('Fastify: 200 JSON branch awaits service call so async HttpError is caught', () => {
@@ -3004,5 +3009,49 @@ describe('emitFastifyErrorsFile: HttpError in generated errors.ts', () => {
     const spec = makeSpec({})
     const { content } = generateFastifyRouter(spec)
     expect(content).not.toContain('class HttpError')
+  })
+})
+
+// ── Item 5: native error envelope ─────────────────────────────────────────────
+
+describe('generateFastifyRouter: native HttpError envelope (FST_ERR_VALIDATION shape)', () => {
+  const spec = makeSpec({
+    '/pets': {
+      get: {
+        operationId: 'listPets',
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  })
+
+  it('emits _HTTP_CODES lookup object in the plugin body', () => {
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain('_HTTP_CODES')
+    expect(content).toContain("400: 'BAD_REQUEST'")
+    expect(content).toContain("404: 'NOT_FOUND'")
+    expect(content).toContain("500: 'INTERNAL_ERROR'")
+  })
+
+  it('send() uses statusCode, code, error, and message fields', () => {
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain('statusCode: err.status')
+    expect(content).toContain("_HTTP_CODES[err.status] ?? 'APP_ERROR'")
+    expect(content).toContain('error: err.message')
+    expect(content).toContain('message: err.message')
+  })
+
+  it('reply.status(err.status) is still set correctly', () => {
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain('reply.status(err.status)')
+  })
+
+  it('Hono and Express generators are unaffected (still have try/catch with HttpError)', () => {
+    const honoContent = generateRouter(spec).content
+    expect(honoContent).toContain('if (err instanceof HttpError)')
+    expect(honoContent).not.toContain('_HTTP_CODES')
+
+    const expressContent = generateExpressRouter(spec).content
+    expect(expressContent).toContain('if (err instanceof HttpError)')
+    expect(expressContent).not.toContain('_HTTP_CODES')
   })
 })
