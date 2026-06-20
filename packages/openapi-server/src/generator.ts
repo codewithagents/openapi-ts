@@ -24,6 +24,8 @@ interface BaseRouterOptions {
 /** Extended options for the Fastify zero-cast path. */
 interface FastifyRouterOptions extends BaseRouterOptions {
   zeroCast?: boolean
+  /** Forward emit_response_validation config opt-in to the Fastify emitter. */
+  emitResponseValidation?: boolean
 }
 
 /** Pick the framework-specific router generator for a first or second pass. */
@@ -55,6 +57,7 @@ async function generateOne(cwd: string, config: ServerConfig, label?: string): P
     generatedFiles.push(
       buildRouterFile(spec, framework, {
         contextType: config.context_type,
+        emitResponseValidation: config.emit_response_validation === true,
       })
     )
     // For Fastify: emit errors.ts so the router.ts import is satisfied from the first pass.
@@ -137,6 +140,7 @@ async function generateSchemaEnhancedRouter(
       schemaImportPath: schemaImportPathJs,
       zeroCast: true,
       contextType: config.context_type,
+      emitResponseValidation: config.emit_response_validation === true,
     })
     const routerPath = join(outputDir, routerFile.filename)
     await writeFile(routerPath, await formatTs(routerFile.content, routerPath), 'utf-8')

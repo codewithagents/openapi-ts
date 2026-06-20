@@ -99,6 +99,13 @@ interface RouterOptions {
    */
   zeroCast?: boolean
   contextType?: string
+  /**
+   * When true, synthesize inline Zod response schema expressions for schema.response
+   * when the response schema is flat (no $ref, allOf, oneOf, anyOf, nested objects).
+   * Falls back to z.unknown() for complex shapes. Default: false.
+   * For best coverage, use input_schema to wire your own Zod schemas instead.
+   */
+  emitResponseValidation?: boolean
 }
 
 // ── Shared path conversion ────────────────────────────────────────────────────
@@ -482,6 +489,80 @@ function withOptional(base: string, required: boolean): string {
   return required ? base : `${base}.optional()`
 }
 
+// ── Inline response schema synthesizer (emit_response_validation) ─────────────
+
+/**
+ * Synthesize a Zod expression string for an inline response schema property type.
+ * Handles only primitive types and simple string enums. Everything else is z.unknown().
+ * This is intentionally conservative: complex shapes (nested objects, $ref, allOf,
+ * oneOf, anyOf) are out of scope; use input_schema for those.
+ */
+function synthesizePropExpr(
+  schema: OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
+): string {
+  if (schema === undefined || isRef(schema)) return 'z.unknown()'
+  const s = schema as OpenAPIV3_1.SchemaObject
+  if (s.type === 'string') {
+    if (Array.isArray(s.enum) && s.enum.length > 0) {
+      return `z.enum([${(s.enum as unknown[]).map((v) => JSON.stringify(v)).join(', ')}])`
+    }
+    return `z.string()${stringConstraintSuffix(s as { minLength?: number; maxLength?: number; pattern?: string })}`
+  }
+  if (s.type === 'number' || s.type === 'integer') return `z.number()${numberConstraintSuffix(s as { minimum?: number; maximum?: number; exclusiveMinimum?: number; exclusiveMaximum?: number })}`
+  if (s.type === 'boolean') return 'z.boolean()'
+  // Array with simple items.
+  if (s.type === 'array' && s.items !== undefined && !isRef(s.items)) {
+    const itemExpr = synthesizePropExpr(s.items as OpenAPIV3_1.SchemaObject)
+    if (!itemExpr.startsWith('z.unknown')) return `z.array(${itemExpr})`
+  }
+  return 'z.unknown()'
+}
+
+/**
+ * Synthesize a Zod schema expression for an inline (non-$ref) response schema.
+ * Only handles flat z.object({...}) shapes with primitive properties. Returns
+ * z.unknown() for: $ref, allOf, oneOf, anyOf, nested objects, or missing types.
+ * Always returns a string — callers can use the result directly in schema.response.
+ */
+function synthesizeResponseSchemaExpr(
+  schema: OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
+): string {
+  if (schema === undefined || isRef(schema)) return 'z.unknown()'
+  const s = schema as OpenAPIV3_1.SchemaObject & {
+    allOf?: unknown
+    oneOf?: unknown
+    anyOf?: unknown
+  }
+  // Bail out for composition keywords: these require the user to supply their own Zod schema.
+  if (s.allOf !== undefined || s.oneOf !== undefined || s.anyOf !== undefined) return 'z.unknown()'
+  // Array type with inline items.
+  if (s.type === 'array') {
+    if (s.items === undefined) return 'z.array(z.unknown())'
+    if (isRef(s.items)) return 'z.unknown()'
+    const itemExpr = synthesizePropExpr(s.items as OpenAPIV3_1.SchemaObject)
+    return `z.array(${itemExpr})`
+  }
+  // Object type with properties.
+  if (s.type === 'object' && s.properties !== undefined) {
+    const required = Array.isArray(s.required) ? new Set(s.required as string[]) : new Set<string>()
+    const fields = Object.entries(s.properties as Record<string, OpenAPIV3_1.SchemaObject | ReferenceObject>)
+      .map(([key, propSchema]) => {
+        // Nested objects fall back to z.unknown().
+        if (!isRef(propSchema) && (propSchema as OpenAPIV3_1.SchemaObject).type === 'object') {
+          const safeKey = /[^a-zA-Z0-9_$]/.test(key) ? JSON.stringify(key) : key
+          return `${safeKey}: ${required.has(key) ? 'z.unknown()' : 'z.unknown().optional()'}`
+        }
+        const expr = synthesizePropExpr(propSchema)
+        const safeKey = /[^a-zA-Z0-9_$]/.test(key) ? JSON.stringify(key) : key
+        return `${safeKey}: ${required.has(key) ? expr : `${expr}.optional()`}`
+      })
+      .join(', ')
+    return `z.object({ ${fields} })`
+  }
+  // Primitive type at the top level.
+  return synthesizePropExpr(s)
+}
+
 function queryParamBaseExpr(param: QueryParam): string {
   if (param.delimiterStyle !== undefined) return 'z.array(z.string())'
   if (param.isDeepObject === true && param.deepObjectProperties !== undefined) {
@@ -640,7 +721,8 @@ function buildFastifyTypeProviderHandler(
   spec: OpenAPIV3_1.Document,
   schemaNames?: Set<string>,
   contextType?: string,
-  zeroCast?: boolean
+  zeroCast?: boolean,
+  emitResponseValidation?: boolean
 ): string {
   const lines: string[] = []
   const inner = `${indent}  `
@@ -703,6 +785,42 @@ function buildFastifyTypeProviderHandler(
     const schemaName = `${op.responseTypeName}Schema`
     if (schemaNames.has(schemaName)) {
       responseSchemaExpr = op.responseIsArray === true ? `z.array(${schemaName})` : schemaName
+    }
+  }
+
+  // ── Synthesized response schema (emit_response_validation opt-in) ─────────
+  // When emitResponseValidation is true and no named schema was found, synthesize
+  // an inline Zod expression from the first 2xx JSON response schema. Only flat
+  // schemas produce useful output: $ref, allOf, oneOf, anyOf, and nested objects
+  // fall back to z.unknown(). Use input_schema for those.
+  if (
+    emitResponseValidation === true &&
+    responseSchemaExpr === undefined &&
+    op.responseStatus.isMultiStatus !== true &&
+    !op.responseStatus.isVoid
+  ) {
+    const responses = op.rawOperation.responses as
+      | Record<string, ResponseObject | ReferenceObject>
+      | undefined
+    if (responses !== undefined) {
+      const priority = ['200', '201', ...Object.keys(responses).filter(
+        (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
+      )]
+      for (const code of priority) {
+        const response = responses[code]
+        if (response === undefined || isRef(response)) continue
+        const content = (response as ResponseObject).content as
+          | Record<string, { schema?: OpenAPIV3_1.SchemaObject | ReferenceObject }>
+          | undefined
+        if (content === undefined) continue
+        const jsonContent = content['application/json']
+        if (jsonContent?.schema === undefined) continue
+        // Only synthesize for inline schemas: $ref responses are handled via named schema lookup.
+        if (!isRef(jsonContent.schema)) {
+          responseSchemaExpr = synthesizeResponseSchemaExpr(jsonContent.schema)
+        }
+        break
+      }
     }
   }
 
@@ -1050,7 +1168,7 @@ export function generateFastifyRouter(
 
   for (const op of operations) {
     lines.push('')
-    lines.push(buildFastifyTypeProviderHandler(op, '    ', spec, options?.schemaNames, ctx, zeroCast))
+    lines.push(buildFastifyTypeProviderHandler(op, '    ', spec, options?.schemaNames, ctx, zeroCast, options?.emitResponseValidation))
   }
 
   lines.push('  }')

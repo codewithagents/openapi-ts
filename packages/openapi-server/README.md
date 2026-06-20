@@ -228,6 +228,7 @@ See the [full configuration reference](https://openapi.codewithagents.de/openapi
 | `framework` | No | `"none"` | Router framework to generate: `"hono"`, `"express"`, `"fastify"`, or `"none"`. Use `"none"` to generate only `service.ts` |
 | `input_schema` | No | none | Path to user-owned Zod schema file. Enables server-side request validation (see below) |
 | `context_type` | No | none | TypeScript type name to thread through service methods as a final `ctx` argument. See below. |
+| `emit_response_validation` | No | `false` | Fastify only. Synthesize inline Zod response schemas for flat inline schemas. See below. |
 
 Use `--config <path>` to point at a config file in a different location:
 
@@ -557,3 +558,29 @@ When a request arrives with an unsupported content type and no parser is registe
 | Fastify | 415 | `{ statusCode: 415, code: 'FST_ERR_CTP_INVALID_MEDIA_TYPE', error: 'Unsupported Media Type', message: '...' }` |
 
 Hono uses the shared `{ error }` envelope from the generated router. Fastify uses its own framework-level 415 envelope, which is emitted before the route handler runs. If you rely on a consistent error shape across frameworks, register the appropriate parser or add a Fastify `setErrorHandler` that normalises the response.
+
+---
+
+## Response validation opt-in (`emit_response_validation`, Fastify only)
+
+Set `emit_response_validation: true` in your config to instruct the Fastify emitter to synthesize inline Zod expressions for `schema.response` on routes that have no named schema from `input_schema`.
+
+```json
+{
+  "input_openapi": "./spec/api.json",
+  "output": "./generated",
+  "framework": "fastify",
+  "emit_response_validation": true
+}
+```
+
+**What the synthesizer does:**
+
+- Flat `object` schema with scalar properties: emits `z.object({ field: z.string(), count: z.number() })`
+- Scalar top-level responses: emits `z.string()`, `z.number()`, `z.boolean()`
+- Array of scalars: emits `z.array(z.string())` (or the appropriate item type)
+- `$ref`, `allOf`, `oneOf`, `anyOf`, or nested object properties: emits `z.unknown()` for that field or the whole response
+
+**Limitations.** The synthesizer is intentionally minimal and honest. It does not chase `$ref` pointers or handle composition keywords. Complex schemas fall back to `z.unknown()`, which passes through any value. If your spec uses `$ref` or composition heavily, wire `input_schema` instead for full coverage.
+
+**Recommendation.** Use `input_schema` (point it at the `schemas.ts` from `openapi-zod-ts`) for complete, type-safe response validation. `emit_response_validation` is a lightweight alternative for specs with simple flat inline response schemas where adding a full Zod schema file is not yet practical.

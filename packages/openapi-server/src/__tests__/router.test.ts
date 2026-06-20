@@ -3445,3 +3445,195 @@ describe('generateFastifyRouter: auto-register formbody/multipart (commit 7)', (
     expect(content).toContain('registerParsers: false')
   })
 })
+
+describe('generateFastifyRouter: emit_response_validation opt-in (commit 8)', () => {
+  it('default off: no schema.response emitted when emitResponseValidation is not set', () => {
+    const spec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', properties: { id: { type: 'string' } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    // No schema.response when emitResponseValidation is not enabled.
+    expect(content).not.toContain('response: {')
+  })
+
+  it('emitResponseValidation: true synthesizes z.object for flat inline object response', () => {
+    const spec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    required: ['id'],
+                    properties: {
+                      id: { type: 'string' },
+                      count: { type: 'integer' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec, { emitResponseValidation: true })
+    expect(content).toContain('response:')
+    expect(content).toContain('z.object({')
+    expect(content).toContain('id: z.string()')
+    expect(content).toContain('count: z.number()')
+    // count is not in required, should be optional.
+    expect(content).toContain('count: z.number().optional()')
+  })
+
+  it('emitResponseValidation: true falls back to z.unknown() for allOf response', () => {
+    const spec = makeSpec({
+      '/pets': {
+        get: {
+          operationId: 'listPets',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { type: 'object', properties: { id: { type: 'string' } } },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec, { emitResponseValidation: true })
+    // allOf triggers z.unknown() from synthesizeResponseSchemaExpr.
+    expect(content).toContain('response:')
+    expect(content).toContain('200: z.unknown()')
+  })
+
+  it('emitResponseValidation: true synthesizes z.array(z.string()) for array-of-string response', () => {
+    const spec = makeSpec({
+      '/tags': {
+        get: {
+          operationId: 'listTags',
+          responses: {
+            '200': {
+              description: 'ok',
+              content: {
+                'application/json': {
+                  schema: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec, { emitResponseValidation: true })
+    expect(content).toContain('response:')
+    expect(content).toContain('z.array(z.string())')
+  })
+
+  it('emitResponseValidation: true does NOT add schema.response for void (204) routes', () => {
+    const spec = makeSpec({
+      '/pets/{id}': {
+        delete: {
+          operationId: 'deletePet',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { '204': { description: 'no content' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec, { emitResponseValidation: true })
+    // Void operations must never get a response schema.
+    expect(content).not.toContain('response: {')
+  })
+
+  it('emitResponseValidation: true with 201 response uses 201 as the status key', () => {
+    const spec = makeSpec({
+      '/pets': {
+        post: {
+          operationId: 'createPet',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: {
+            '201': {
+              description: 'created',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    required: ['id'],
+                    properties: { id: { type: 'string' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec, { emitResponseValidation: true })
+    expect(content).toContain('response:')
+    // Status code 201 should appear in the response schema map.
+    expect(content).toContain('201:')
+    expect(content).toContain('z.object({')
+    expect(content).toContain('id: z.string()')
+  })
+
+  it('emitResponseValidation: true with $ref response schema emits nothing (isRef skipped)', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/pets': {
+          get: {
+            operationId: 'listPets',
+            responses: {
+              '200': {
+                description: 'ok',
+                content: {
+                  'application/json': {
+                    schema: { $ref: '#/components/schemas/Pet' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      components: {
+        schemas: {
+          Pet: { type: 'object', properties: { id: { type: 'string' } } },
+        },
+      },
+    }
+    const { content } = generateFastifyRouter(spec, { emitResponseValidation: true })
+    // $ref inline schemas are skipped by the synthesizer (isRef guard).
+    // No schema.response should be emitted.
+    expect(content).not.toContain('response: {')
+  })
+})
