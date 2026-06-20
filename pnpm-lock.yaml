@@ -278,6 +278,12 @@ importers:
 
   packages/openapi-server:
     dependencies:
+      '@fastify/formbody':
+        specifier: ^8
+        version: 8.0.2
+      '@fastify/multipart':
+        specifier: ^9
+        version: 9.4.0
       fastify:
         specifier: ^5
         version: 5.8.5
