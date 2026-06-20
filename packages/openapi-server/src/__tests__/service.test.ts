@@ -1085,3 +1085,94 @@ describe('issue #312: warn on untyped service responses', () => {
     }
   })
 })
+
+// ── Item 2a: enum literal-union tsType ────────────────────────────────────────
+
+describe('schemaToTsType: enum query param produces literal-union tsType', () => {
+  it('string enum produces literal-union type in generateService query params', () => {
+    const spec = makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            {
+              name: 'tier',
+              in: 'query',
+              required: true,
+              schema: { type: 'string', enum: ['bronze', 'silver', 'gold'] },
+            },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    // The service interface should use a literal-union type, not plain string.
+    // JSON.stringify produces double-quoted strings in the emitted TypeScript literal.
+    expect(content).toContain('tier: "bronze" | "silver" | "gold"')
+    expect(content).not.toContain('tier: string')
+  })
+
+  it('optional enum query param uses literal-union with ? in params object', () => {
+    const spec = makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            {
+              name: 'status',
+              in: 'query',
+              required: false,
+              schema: { type: 'string', enum: ['active', 'inactive'] },
+            },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('status?: "active" | "inactive"')
+  })
+
+  it('numeric type query param is unaffected (still number)', () => {
+    const spec = makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            {
+              name: 'count',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer' },
+            },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('count?: number')
+  })
+
+  it('string param without enum is still plain string', () => {
+    const spec = makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            {
+              name: 'search',
+              in: 'query',
+              required: false,
+              schema: { type: 'string' },
+            },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('search?: string')
+  })
+})
