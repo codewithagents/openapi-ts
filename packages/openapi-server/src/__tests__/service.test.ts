@@ -1191,7 +1191,7 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
   // Shared base options — every test in this block uses the same schema import path.
   const baseOpts = { schemaNames: new Set<string>(), schemaImportPath: '../schemas.js' }
 
-  it('required header param emits headers?: { "x-api-key": string }', () => {
+  it('required header param emits input: { headers: { "x-api-key": string } }', () => {
     const spec = makeFastifySpec({
       '/secure': {
         get: {
@@ -1204,12 +1204,12 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
       },
     })
     const { content } = generateFastifyTypedService(spec, baseOpts)
-    // Key is lowercased; outer arg is optional; inner type is string (required header).
-    expect(content).toContain('headers?: { "x-api-key": string }')
+    // Key is lowercased; headers is a facet inside the required input object.
+    expect(content).toContain('input: { headers: { "x-api-key": string } }')
     expect(content).not.toContain('"X-Api-Key"')
   })
 
-  it('optional header param emits headers?: { "x-trace-id"?: string | undefined }', () => {
+  it('optional header param emits input: { headers: { "x-trace-id"?: string | undefined } }', () => {
     const spec = makeFastifySpec({
       '/items': {
         get: {
@@ -1222,10 +1222,10 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
       },
     })
     const { content } = generateFastifyTypedService(spec, baseOpts)
-    expect(content).toContain('headers?: { "x-trace-id"?: string | undefined }')
+    expect(content).toContain('input: { headers: { "x-trace-id"?: string | undefined } }')
   })
 
-  it('required cookie param emits cookies?: { "session": string }', () => {
+  it('required cookie param emits input: { cookies: { "session": string } }', () => {
     const spec = makeFastifySpec({
       '/me': {
         get: {
@@ -1238,10 +1238,10 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
       },
     })
     const { content } = generateFastifyTypedService(spec, baseOpts)
-    expect(content).toContain('cookies?: { "session": string }')
+    expect(content).toContain('input: { cookies: { "session": string } }')
   })
 
-  it('operation without header/cookie params has no headers? or cookies? arg', () => {
+  it('operation without header/cookie params has no headers or cookies facet', () => {
     const spec = makeFastifySpec({
       '/items': {
         get: {
@@ -1254,11 +1254,11 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
       },
     })
     const { content } = generateFastifyTypedService(spec, baseOpts)
-    expect(content).not.toContain('headers?:')
-    expect(content).not.toContain('cookies?:')
+    expect(content).not.toContain('headers:')
+    expect(content).not.toContain('cookies:')
   })
 
-  it('headers? comes after query params and before ctx when contextType is set', () => {
+  it('query + headers facets appear inside input object and ctx follows as a separate arg', () => {
     const spec = makeFastifySpec({
       '/items': {
         get: {
@@ -1275,14 +1275,13 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
       ...baseOpts,
       contextType: 'FastifyRequest',
     })
-    // Check arg order: params (query), then headers?, then ctx.
-    const methodLine = content.split('\n').find((l) => l.includes('listItems('))
-    expect(methodLine).toBeDefined()
-    const paramsIdx = methodLine!.indexOf('params?')
-    const headersIdx = methodLine!.indexOf('headers?')
-    const ctxIdx = methodLine!.indexOf('ctx:')
-    expect(paramsIdx).toBeGreaterThanOrEqual(0)
-    expect(headersIdx).toBeGreaterThan(paramsIdx)
-    expect(ctxIdx).toBeGreaterThan(headersIdx)
+    // New shape: single input object containing both facets, followed by ctx as a separate arg.
+    expect(content).toContain('input: {')
+    expect(content).toContain('query:')
+    expect(content).toContain('headers:')
+    expect(content).toContain('}, ctx: Ctx)')
+    // There must be NO positional optional arg (no "?:" directly before ctx).
+    expect(content).not.toContain('headers?:')
+    expect(content).not.toContain('query?:')
   })
 })

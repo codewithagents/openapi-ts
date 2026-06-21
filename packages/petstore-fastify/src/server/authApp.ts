@@ -18,17 +18,18 @@ export const authLabService: AuthLabService<AuthContext> = {
   async getMe(ctx) {
     return { id: ctx.userId, name: `user-${ctx.userId}` }
   },
-  async login(body) {
+  async login(input) {
     // Issue a token equal to the username so it can be echoed back in tests.
+    const { username } = input.body
     return {
-      token: body.username,
-      user: { id: body.username, name: `user-${body.username}` },
+      token: username,
+      user: { id: username, name: `user-${username}` },
     }
   },
-  async contact(body, ctx) {
+  async contact(input, ctx) {
     // Acknowledge contact: echo the method back.
     void ctx
-    return { accepted: true, method: body.method }
+    return { accepted: true, method: input.body.method }
   },
 }
 

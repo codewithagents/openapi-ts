@@ -87,9 +87,9 @@ describe('lab-routes inject() suite', () => {
   it('#314 numeric + boolean query params are coerced: GET /lab/query with count=42 returns 200', async () => {
     let capturedParams: { tier: string; count: number; code: string } | undefined
     const service = makeStub({
-      async labQuery(params) {
-        capturedParams = params
-        return { tier: params.tier, count: params.count, code: params.code }
+      async labQuery(input) {
+        capturedParams = input.query
+        return { tier: input.query.tier, count: input.query.count, code: input.query.code }
       },
     })
     const app = buildApp(service)
@@ -104,8 +104,8 @@ describe('lab-routes inject() suite', () => {
 
   it('#314 invalid count (non-numeric) returns 400 from validatorCompiler (not 422)', async () => {
     const service = makeStub({
-      async labQuery(params) {
-        return { tier: params.tier, count: params.count, code: params.code }
+      async labQuery(input) {
+        return { tier: input.query.tier, count: input.query.count, code: input.query.code }
       },
     })
     const app = buildApp(service)
@@ -151,7 +151,7 @@ describe('lab-routes inject() suite', () => {
 
   it('DELETE /pets/:id returns 204 with empty body', async () => {
     const service = makeStub({
-      async deletePet(_id) {
+      async deletePet(_input) {
         // no-op, successful delete
       },
     })
@@ -191,7 +191,7 @@ describe('lab-routes inject() suite', () => {
 
   it('#318 form-urlencoded body on POST /lab/form-body returns 200 without 415', async () => {
     const service = makeStub({
-      async labFormBody(_body) {
+      async labFormBody(_input) {
         return { ok: true }
       },
     })
@@ -207,7 +207,7 @@ describe('lab-routes inject() suite', () => {
 
   it('#318 multipart body on POST /lab/gallery returns 200 without 415', async () => {
     const service = makeStub({
-      async labGallery(_body) {
+      async labGallery(_input) {
         return { count: 1 }
       },
     })
@@ -227,7 +227,7 @@ describe('lab-routes inject() suite', () => {
 
   it('GET /lab/dual-status returns 200 when prefer=immediate', async () => {
     const service = makeStub({
-      async labDualStatus(_params) {
+      async labDualStatus(_input) {
         return { status: 200, body: { phase: 'done' } }
       },
     })
@@ -239,7 +239,7 @@ describe('lab-routes inject() suite', () => {
 
   it('GET /lab/dual-status returns 202 when service returns status 202', async () => {
     const service = makeStub({
-      async labDualStatus(_params) {
+      async labDualStatus(_input) {
         return { status: 202, body: { phase: 'pending' } }
       },
     })
@@ -251,7 +251,7 @@ describe('lab-routes inject() suite', () => {
 
   it('#315 async service throwing HttpError(404) yields statusCode 404 not 500', async () => {
     const service = makeStub({
-      async getPet(_id) {
+      async getPet(_input) {
         throw new HttpError(404, 'pet not found')
       },
     })
@@ -269,12 +269,12 @@ describe('lab-routes inject() suite', () => {
   it('#322 deepObject filter[...] params are reshaped and coerced: GET /lab/deep-filter returns 200', async () => {
     let captured: { filter: { gte?: number; lte?: number; color?: string } } | undefined
     const service = makeStub({
-      async labDeepFilter(params) {
-        captured = params
+      async labDeepFilter(input) {
+        captured = input.query
         return {
-          gte: params.filter.gte ?? 0,
-          lte: params.filter.lte ?? 0,
-          color: params.filter.color,
+          gte: input.query.filter.gte ?? 0,
+          lte: input.query.filter.lte ?? 0,
+          color: input.query.filter.color,
         }
       },
     })
@@ -294,9 +294,9 @@ describe('lab-routes inject() suite', () => {
   it('#322 delimited query params are split by their delimiter: GET /lab/delimited-query returns 200', async () => {
     let captured: { csv: string[]; ssv: string[]; psv: string[] } | undefined
     const service = makeStub({
-      async labDelimitedQuery(params) {
-        captured = params
-        return { csv: params.csv, ssv: params.ssv, psv: params.psv }
+      async labDelimitedQuery(input) {
+        captured = input.query
+        return { csv: input.query.csv, ssv: input.query.ssv, psv: input.query.psv }
       },
     })
     const app = buildApp(service)
@@ -313,12 +313,12 @@ describe('lab-routes inject() suite', () => {
 
   it('OQ2 response serializer strips keys not in the response schema: GET /lab/query', async () => {
     const service = makeStub({
-      async labQuery(params) {
+      async labQuery(input) {
         // Return an extra field the response schema (LabQueryEchoSchema) does not declare.
         return {
-          tier: params.tier,
-          count: params.count,
-          code: params.code,
+          tier: input.query.tier,
+          count: input.query.count,
+          code: input.query.code,
           leaked: 'secret',
         } as never
       },
@@ -431,7 +431,7 @@ describe('issue #337: global hook options on createRouter (onRequest, onError)',
   it('onError hook fires when a service method throws an HttpError', async () => {
     let onErrorFired = false
     const service = makeStub({
-      async getPet(_id) {
+      async getPet(_input) {
         throw new HttpError(404, 'not found in hook test')
       },
     })
