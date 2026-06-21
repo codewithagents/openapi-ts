@@ -172,6 +172,18 @@ describe('schema-enhanced mode — drift gate (#336)', () => {
     await expect(generate(dir, configPath)).rejects.toThrow(/drift/i)
   })
 
+  it("config.drift 'error' failure is atomic: no output files are written", async () => {
+    const { configPath, tmpDir: dir, outDir, schemaPath } = await makeConfig(taskApiFixture, {
+      drift: 'error',
+    })
+    await writeFile(schemaPath, partialSchema, 'utf-8')
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await expect(generate(dir, configPath)).rejects.toThrow(/drift/i)
+    // The drift gate runs before any writes, so the output directory stays empty.
+    await expect(access(join(outDir, 'models.ts'))).rejects.toThrow()
+    await expect(access(join(outDir, 'client.ts'))).rejects.toThrow()
+  })
+
   it("config.drift 'warn' (the default) only warns and does NOT throw on drift", async () => {
     const { configPath, tmpDir: dir, schemaPath } = await makeConfig(taskApiFixture)
     await writeFile(schemaPath, partialSchema, 'utf-8')
