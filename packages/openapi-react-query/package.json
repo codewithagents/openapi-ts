@@ -15,8 +15,9 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && chmod +x dist/cli.js",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "vitest run --exclude 'src/__tests__/compat-matrix.test.ts'",
+    "test:matrix": "vitest run src/__tests__/compat-matrix.test.ts",
+    "test:coverage": "vitest run --coverage --exclude 'src/__tests__/compat-matrix.test.ts'",
     "test:mutation": "stryker run",
     "lint": "tsc -p tsconfig.build.json --noEmit"
   },

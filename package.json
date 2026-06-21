@@ -6,6 +6,8 @@
   "scripts": {
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
+    "test:matrix": "pnpm -r run test:matrix",
+    "test:coverage": "pnpm -r run test:coverage",
     "lint": "pnpm -r run lint",
     "lint:eslint": "eslint .",
     "lint:all": "pnpm lint && pnpm lint:eslint && pnpm format:check",

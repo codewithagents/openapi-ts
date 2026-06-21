@@ -15,8 +15,9 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && esbuild src/cli.ts --bundle --platform=node --format=cjs --target=node22 --external:prettier --external:msw --external:@faker-js/faker --outfile=dist/cli.cjs && chmod +x dist/cli.cjs",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "vitest run --exclude 'src/__tests__/compat-matrix.test.ts'",
+    "test:matrix": "vitest run src/__tests__/compat-matrix.test.ts",
+    "test:coverage": "vitest run --coverage --exclude 'src/__tests__/compat-matrix.test.ts'",
     "lint": "tsc -p tsconfig.build.json --noEmit"
   },
   "dependencies": {
