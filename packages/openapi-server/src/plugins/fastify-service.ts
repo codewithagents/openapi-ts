@@ -25,6 +25,54 @@ import {
   getBodyInfo,
 } from './shared.js'
 
+// ── Simple header/cookie param descriptors (service-interface generation only) ─
+
+/** Minimal shape needed to emit service method headers arg. */
+export interface ServiceHeaderParam {
+  /** Raw header name as it appears in the spec (original casing). */
+  rawName: string
+  required: boolean
+}
+
+/** Minimal shape needed to emit service method cookies arg. */
+export interface ServiceCookieParam {
+  rawName: string
+  required: boolean
+}
+
+/** Collect resolved parameters of a specific `in` kind from an operation. */
+function getServiceInParams(
+  operation: OpenAPIV3_1.OperationObject,
+  spec: OpenAPIV3_1.Document,
+  inKind: 'header' | 'cookie'
+): { rawName: string; required: boolean }[] {
+  const parameters = operation.parameters as (OpenAPIV3_1.ParameterObject | OpenAPIV3_1.ReferenceObject)[] | undefined
+  if (parameters === undefined) return []
+  const result: { rawName: string; required: boolean }[] = []
+  for (const p of parameters) {
+    const resolved = resolveParam(p, spec)
+    if (resolved === undefined || resolved.in !== inKind) continue
+    result.push({ rawName: resolved.name, required: resolved.required === true })
+  }
+  return result
+}
+
+function getServiceHeaderParams(
+  operation: OpenAPIV3_1.OperationObject,
+  spec: OpenAPIV3_1.Document
+): ServiceHeaderParam[] {
+  return getServiceInParams(operation, spec, 'header')
+}
+
+function getServiceCookieParams(
+  operation: OpenAPIV3_1.OperationObject,
+  spec: OpenAPIV3_1.Document
+): ServiceCookieParam[] {
+  return getServiceInParams(operation, spec, 'cookie')
+}
+
+// Parallel type aliases to service.ts: both emitters need the same narrow local types.
+// fallow-ignore-next-line code-duplication
 type OperationObject = OpenAPIV3_1.OperationObject
 type ReferenceObject = OpenAPIV3_1.ReferenceObject
 type ResponseObject = OpenAPIV3_1.ResponseObject
@@ -102,20 +150,46 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
         return { typeName: undefined, isArray: true, isVoid: false, isMultiStatus }
       }
 
-      // Inline JSON response: check for a synthesized response schema name.
-      // Naming: toTypeName(operationId) + 'Schema' (e.g. LabInlineResponseSchema).
-      // The schemaNames check in buildReturnType/resolveAliasType will confirm presence.
+      // Inline JSON response: try synthesized response schema name candidates in order.
       //
-      // Guard: skip when the synthesized name would collide with the body schema name.
+      // Fallback order (first match wins, checked via resolveAliasType at buildReturnType time):
+      //   1. toTypeName(operationId) + 'Schema'          e.g. LabInlineResponseSchema
+      //   2. toTypeName(operationId) + 'ResponseSchema'   e.g. LabInlineBodyResponseSchema
+      //   3. toTypeName(operationId) + statusCode + 'Schema' e.g. LabInlineBody200Schema
+      //
+      // Guard: skip when any candidate would collide with the body schema name.
       const operationId = operation.operationId
       if (operationId !== undefined && operationId.length > 0) {
         const synthesizedName = toTypeName(operationId)
         const bodyInfo = getBodyInfo(operation)
-        const collidesWithBody =
-          bodyInfo?.typeName !== undefined && bodyInfo.typeName === synthesizedName
-        if (!collidesWithBody) {
+        const bodyTypeName = bodyInfo?.typeName
+
+        // Candidate 1: operationId + Schema
+        if (bodyTypeName !== synthesizedName) {
           return {
             typeName: synthesizedName,
+            isArray: false,
+            isVoid: false,
+            isMultiStatus,
+          }
+        }
+
+        // Candidate 2: operationId + ResponseSchema (typeName without 'Schema' suffix)
+        const responseTypeName = `${synthesizedName}Response`
+        if (bodyTypeName !== responseTypeName) {
+          return {
+            typeName: responseTypeName,
+            isArray: false,
+            isVoid: false,
+            isMultiStatus,
+          }
+        }
+
+        // Candidate 3: operationId + statusCode + Schema (typeName without 'Schema' suffix)
+        const statusTypeName = `${synthesizedName}${code}`
+        if (bodyTypeName !== statusTypeName) {
+          return {
+            typeName: statusTypeName,
             isArray: false,
             isVoid: false,
             isMultiStatus,
@@ -126,6 +200,11 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
       return { typeName: undefined, isArray: false, isVoid: false, isMultiStatus }
     }
 
+    // fallow-ignore-next-line code-duplication
+    // Parallel to service.ts getReturnInfo — both emitters must handle text/plain,
+    // octet-stream, and 204 the same way. The return types differ (fastify-service.ts
+    // carries isMultiStatus) so a shared cross-file helper would require exposing an
+    // internal union type. Suppressed as inherent two-emitter parallel structure.
     if (content['text/plain'] !== undefined) {
       return { typeName: undefined, isArray: false, isVoid: false, primitiveType: 'string' }
     }
@@ -148,11 +227,17 @@ interface OperationInfo {
   path: string
   pathParams: string[]
   queryParams: QueryParam[]
+  headerParams: ServiceHeaderParam[]
+  cookieParams: ServiceCookieParam[]
   bodyInfo: BodyInfo | undefined
+  // fallow-ignore-next-line code-duplication
+  // Parallel interface field to service.ts OperationInfo; both emitters need these fields.
   returnInfo: ReturnInfo & { isSynthesizedResponse?: boolean }
 }
 
+// Parallel operation collector to service.ts; each emitter owns its own collection pass.
 function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
+  // fallow-ignore-next-line code-duplication
   const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
   if (paths === undefined) return []
 
@@ -166,12 +251,14 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
       const methodName = deriveMethodName(operation.operationId, method, path)
       const pathParams = extractPathParamsFromPath(path)
       const queryParams = getQueryParams(operation, spec)
+      const headerParams = getServiceHeaderParams(operation, spec)
+      const cookieParams = getServiceCookieParams(operation, spec)
       const bodyInfo = getBodyInfo(operation)
       const returnInfo = getReturnInfo(operation) as ReturnInfo & {
         isSynthesizedResponse?: boolean
       }
 
-      operations.push({ methodName, httpMethod: method, path, pathParams, queryParams, bodyInfo, returnInfo })
+      operations.push({ methodName, httpMethod: method, path, pathParams, queryParams, headerParams, cookieParams, bodyInfo, returnInfo })
     }
   }
 
@@ -224,6 +311,9 @@ function buildReturnType(
   return info.isArray ? 'Promise<unknown[]>' : 'Promise<unknown>'
 }
 
+// Cohesive signature builder: conditionally assembles path/body/query/headers/cookies/ctx
+// args in a single pass; the branching is inherent to optional-param composition.
+// fallow-ignore-next-line complexity
 function buildMethodSignature(
   op: OperationInfo,
   schemaNames: Set<string>,
@@ -240,6 +330,9 @@ function buildMethodSignature(
     // Zod body schema: the router passes req.body as unknown/Buffer for those content types.
     // A same-named schema (e.g. LabGallerySchema) may exist for the RESPONSE, not the body,
     // so we must not adopt it as the body param type here.
+    // Parallel body-type resolver to service.ts buildMethodSignature; each emitter
+    // owns its own signature-assembly pass with different type resolution logic.
+    // fallow-ignore-next-line code-duplication
     let bodyType: string
     if (op.bodyInfo.contentType === 'multipart/form-data') {
       bodyType = 'unknown'
@@ -250,6 +343,7 @@ function buildMethodSignature(
     } else {
       bodyType = 'unknown'
     }
+    // fallow-ignore-next-line code-duplication
     args.push(`body: ${bodyType}`)
   }
 
@@ -258,6 +352,32 @@ function buildMethodSignature(
     const fields = op.queryParams.map((q) => `${q.name}${q.required ? '' : '?'}: ${q.tsType}`).join('; ')
     const paramsToken = allOptional ? 'params?' : 'params'
     args.push(`${paramsToken}: { ${fields} }`)
+  }
+
+  // headers?: { 'x-api-key': string; 'x-trace-id'?: string }
+  // The outer arg is always optional (?) so callers without header params are unaffected.
+  // Inner fields reflect each header's required flag (required -> string, optional -> string | undefined).
+  if (op.headerParams.length > 0) {
+    const fields = op.headerParams
+      .map((h) => {
+        const key = JSON.stringify(h.rawName.toLowerCase())
+        const valType = h.required ? 'string' : 'string | undefined'
+        return `${key}${h.required ? '' : '?'}: ${valType}`
+      })
+      .join('; ')
+    args.push(`headers?: { ${fields} }`)
+  }
+
+  // cookies?: { session: string; preferences?: string | undefined }
+  if (op.cookieParams.length > 0) {
+    const fields = op.cookieParams
+      .map((ck) => {
+        const key = JSON.stringify(ck.rawName)
+        const valType = ck.required ? 'string' : 'string | undefined'
+        return `${key}${ck.required ? '' : '?'}: ${valType}`
+      })
+      .join('; ')
+    args.push(`cookies?: { ${fields} }`)
   }
 
   if (contextType !== undefined) {

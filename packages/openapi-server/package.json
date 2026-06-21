@@ -29,10 +29,18 @@
     "prettier": "catalog:"
   },
   "peerDependencies": {
+    "@fastify/formbody": "^8",
+    "@fastify/multipart": "^9",
     "fastify": "^5",
     "fastify-type-provider-zod": "^6"
   },
   "peerDependenciesMeta": {
+    "@fastify/formbody": {
+      "optional": true
+    },
+    "@fastify/multipart": {
+      "optional": true
+    },
     "fastify": {
       "optional": true
     },

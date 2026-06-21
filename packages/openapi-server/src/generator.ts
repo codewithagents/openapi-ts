@@ -6,6 +6,7 @@ import { loadConfigs, type ServerConfig } from './config.js'
 import { generateService, type ServiceOptions } from './plugins/service.js'
 import { generateFastifyTypes, generateFastifyTypedService } from './plugins/fastify-service.js'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from './plugins/router.js'
+import { emitFastifyErrorsFile } from './plugins/fastify-type-provider.js'
 
 async function formatTs(content: string, filePath: string): Promise<string> {
   const { format, resolveConfig } = await import('prettier')
@@ -23,6 +24,8 @@ interface BaseRouterOptions {
 /** Extended options for the Fastify zero-cast path. */
 interface FastifyRouterOptions extends BaseRouterOptions {
   zeroCast?: boolean
+  /** Forward emit_response_validation config opt-in to the Fastify emitter. */
+  emitResponseValidation?: boolean
 }
 
 /** Pick the framework-specific router generator for a first or second pass. */
@@ -54,8 +57,13 @@ async function generateOne(cwd: string, config: ServerConfig, label?: string): P
     generatedFiles.push(
       buildRouterFile(spec, framework, {
         contextType: config.context_type,
+        emitResponseValidation: config.emit_response_validation === true,
       })
     )
+    // For Fastify: emit errors.ts so the router.ts import is satisfied from the first pass.
+    if (framework === 'fastify') {
+      generatedFiles.push(emitFastifyErrorsFile())
+    }
   }
 
   console.log(`${prefix}Writing output to: ${outputDir}`)
@@ -108,6 +116,11 @@ async function generateSchemaEnhancedRouter(
   // For Fastify: emit schema-types.ts (z.infer aliases) and re-emit service.ts using those
   // aliases. This enables the zero-cast router path where req.body and service params align.
   if (framework === 'fastify') {
+    const errorsFile = emitFastifyErrorsFile()
+    const errorsPath = join(outputDir, errorsFile.filename)
+    await writeFile(errorsPath, await formatTs(errorsFile.content, errorsPath), 'utf-8')
+    console.log(`${prefix}  ✓ errors.ts (HttpError class)`)
+
     const schemaTypesFile = generateFastifyTypes(exportedSchemas, schemaImportPathJs)
     const schemaTypesPath = join(outputDir, schemaTypesFile.filename)
     await writeFile(schemaTypesPath, await formatTs(schemaTypesFile.content, schemaTypesPath), 'utf-8')
@@ -127,6 +140,7 @@ async function generateSchemaEnhancedRouter(
       schemaImportPath: schemaImportPathJs,
       zeroCast: true,
       contextType: config.context_type,
+      emitResponseValidation: config.emit_response_validation === true,
     })
     const routerPath = join(outputDir, routerFile.filename)
     await writeFile(routerPath, await formatTs(routerFile.content, routerPath), 'utf-8')

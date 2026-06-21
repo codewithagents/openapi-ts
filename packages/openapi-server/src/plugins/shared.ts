@@ -167,6 +167,12 @@ export function schemaToTsType(
   if (s.type === 'number' || s.type === 'integer') return 'number'
   if (s.type === 'boolean') return 'boolean'
   if (s.type === 'array') return 'string[]'
+  // Emit a TypeScript literal-union type for string enums so the service interface
+  // is more precise than plain `string`. Runtime behaviour is unchanged (Zod already
+  // enforces the constraint); this only tightens the TypeScript type.
+  if (Array.isArray(s.enum) && s.enum.length > 0) {
+    return (s.enum as unknown[]).map((v) => JSON.stringify(v)).join(' | ')
+  }
   return 'string'
 }
 

@@ -1,18 +1,12 @@
 import Fastify from 'fastify'
-import fastifyFormbody from '@fastify/formbody'
-import fastifyMultipart from '@fastify/multipart'
 import { createRouter } from '../../generated/router.js'
 import { petService } from './petService.js'
 
 const app = Fastify()
 
-// Register body parsers for non-JSON content types.
-// @fastify/formbody populates req.body for application/x-www-form-urlencoded requests.
-// @fastify/multipart with attachFieldsToBody: true populates req.body for multipart/form-data.
-// application/octet-stream is handled by addContentTypeParser inside the generated router.
-app.register(fastifyFormbody)
-app.register(fastifyMultipart, { attachFieldsToBody: true })
-
+// Body parsers (@fastify/formbody, @fastify/multipart) are auto-registered inside
+// the generated router plugin for the content types declared in the spec.
+// Pass registerParsers: false to createRouter if you need custom options (e.g. size limits).
 app.register(createRouter(petService), { prefix: '/api' })
 
 const PORT = Number(process.env.PORT ?? 3003)

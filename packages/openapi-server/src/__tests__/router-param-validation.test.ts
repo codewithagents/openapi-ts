@@ -189,7 +189,7 @@ describe('path param with format:uuid generates Zod validation', () => {
     // No manual 422 reply - validatorCompiler handles validation natively
     expect(content).not.toContain('status(422)')
     // setValidatorCompiler registered for native validation
-    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
   })
 
   it('plain string path param (no format) does NOT generate _pv', () => {
@@ -263,7 +263,7 @@ describe('required query param generates Zod validation', () => {
   it('Fastify: validation errors are native 400 FST_ERR_VALIDATION (no manual 422)', () => {
     const { content } = generateFastifyRouter(requiredQuerySpec)
     expect(content).not.toContain('status(422)')
-    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
   })
 })
 
@@ -424,7 +424,7 @@ describe('required header param generates Zod validation', () => {
   it('Fastify: header validation is native (no manual req.headers lookup or 422)', () => {
     const { content } = generateFastifyRouter(headerSpec)
     // ZodTypeProvider validates headers via schema.headers natively
-    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
     // No manual header extraction or 422 reply
     expect(content).not.toContain('status(422)')
     expect(content).not.toContain('_hv.error.issues')
@@ -457,7 +457,7 @@ describe('header param mixed-case name: value lookup is lowercased on Fastify/Ex
   it('Fastify: validation is native via schema.headers (no manual req.headers extraction)', () => {
     const { content } = generateFastifyRouter(mixedCaseHeaderSpec)
     expect(content).toContain('headers: z.object({ "x-lab-token": z.string() })')
-    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
   })
 
   it('Express: looks up header by lowercased key in req.headers', () => {
@@ -526,7 +526,7 @@ describe('422 shape is consistent with body validation shape', () => {
     const { content } = generateFastifyRouter(spec)
     // Native validation via schema.headers: no manual _hv or 422 reply
     expect(content).toContain('headers: z.object({ "x-api-key": z.string() })')
-    expect(content).toContain('app.setValidatorCompiler(validatorCompiler)')
+    expect(content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
     expect(content).not.toContain('_hv')
     expect(content).not.toContain('status(422)')
   })

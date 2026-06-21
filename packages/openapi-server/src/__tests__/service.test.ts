@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateService } from '../plugins/service.js'
+import { generateFastifyTypedService } from '../plugins/fastify-service.js'
 
 // ── Fixture helpers ────────────────────────────────────────────────────────────
 
@@ -1083,5 +1084,205 @@ describe('issue #312: warn on untyped service responses', () => {
     } finally {
       warnSpy.mockRestore()
     }
+  })
+})
+
+// ── Item 2a: enum literal-union tsType ────────────────────────────────────────
+
+describe('schemaToTsType: enum query param produces literal-union tsType', () => {
+  it('string enum produces literal-union type in generateService query params', () => {
+    const spec = makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            {
+              name: 'tier',
+              in: 'query',
+              required: true,
+              schema: { type: 'string', enum: ['bronze', 'silver', 'gold'] },
+            },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    // The service interface should use a literal-union type, not plain string.
+    // JSON.stringify produces double-quoted strings in the emitted TypeScript literal.
+    expect(content).toContain('tier: "bronze" | "silver" | "gold"')
+    expect(content).not.toContain('tier: string')
+  })
+
+  it('optional enum query param uses literal-union with ? in params object', () => {
+    const spec = makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            {
+              name: 'status',
+              in: 'query',
+              required: false,
+              schema: { type: 'string', enum: ['active', 'inactive'] },
+            },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('status?: "active" | "inactive"')
+  })
+
+  it('numeric type query param is unaffected (still number)', () => {
+    const spec = makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            {
+              name: 'count',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer' },
+            },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('count?: number')
+  })
+
+  it('string param without enum is still plain string', () => {
+    const spec = makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            {
+              name: 'search',
+              in: 'query',
+              required: false,
+              schema: { type: 'string' },
+            },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateService(spec)
+    expect(content).toContain('search?: string')
+  })
+})
+
+// ── Item 1: header + cookie forwarding in Fastify typed service ───────────────
+
+function makeFastifySpec(
+  paths: OpenAPIV3_1.PathsObject,
+  title = 'Test API'
+): OpenAPIV3_1.Document {
+  return { openapi: '3.1.0', info: { title, version: '1.0.0' }, paths }
+}
+
+describe('generateFastifyTypedService: header + cookie params in method signature (item 1)', () => {
+  // Shared base options — every test in this block uses the same schema import path.
+  const baseOpts = { schemaNames: new Set<string>(), schemaImportPath: '../schemas.js' }
+
+  it('required header param emits headers?: { "x-api-key": string }', () => {
+    const spec = makeFastifySpec({
+      '/secure': {
+        get: {
+          operationId: 'getSecure',
+          parameters: [
+            { name: 'X-Api-Key', in: 'header', required: true, schema: { type: 'string' } },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyTypedService(spec, baseOpts)
+    // Key is lowercased; outer arg is optional; inner type is string (required header).
+    expect(content).toContain('headers?: { "x-api-key": string }')
+    expect(content).not.toContain('"X-Api-Key"')
+  })
+
+  it('optional header param emits headers?: { "x-trace-id"?: string | undefined }', () => {
+    const spec = makeFastifySpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            { name: 'X-Trace-Id', in: 'header', required: false, schema: { type: 'string' } },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyTypedService(spec, baseOpts)
+    expect(content).toContain('headers?: { "x-trace-id"?: string | undefined }')
+  })
+
+  it('required cookie param emits cookies?: { "session": string }', () => {
+    const spec = makeFastifySpec({
+      '/me': {
+        get: {
+          operationId: 'getMe',
+          parameters: [
+            { name: 'session', in: 'cookie', required: true, schema: { type: 'string' } },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyTypedService(spec, baseOpts)
+    expect(content).toContain('cookies?: { "session": string }')
+  })
+
+  it('operation without header/cookie params has no headers? or cookies? arg', () => {
+    const spec = makeFastifySpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            { name: 'q', in: 'query', required: false, schema: { type: 'string' } },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyTypedService(spec, baseOpts)
+    expect(content).not.toContain('headers?:')
+    expect(content).not.toContain('cookies?:')
+  })
+
+  it('headers? comes after query params and before ctx when contextType is set', () => {
+    const spec = makeFastifySpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          parameters: [
+            { name: 'q', in: 'query', required: false, schema: { type: 'string' } },
+            { name: 'X-Api-Key', in: 'header', required: true, schema: { type: 'string' } },
+          ],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyTypedService(spec, {
+      ...baseOpts,
+      contextType: 'FastifyRequest',
+    })
+    // Check arg order: params (query), then headers?, then ctx.
+    const methodLine = content.split('\n').find((l) => l.includes('listItems('))
+    expect(methodLine).toBeDefined()
+    const paramsIdx = methodLine!.indexOf('params?')
+    const headersIdx = methodLine!.indexOf('headers?')
+    const ctxIdx = methodLine!.indexOf('ctx:')
+    expect(paramsIdx).toBeGreaterThanOrEqual(0)
+    expect(headersIdx).toBeGreaterThan(paramsIdx)
+    expect(ctxIdx).toBeGreaterThan(headersIdx)
   })
 })

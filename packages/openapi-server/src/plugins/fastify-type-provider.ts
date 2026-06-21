@@ -99,6 +99,13 @@ interface RouterOptions {
    */
   zeroCast?: boolean
   contextType?: string
+  /**
+   * When true, synthesize inline Zod response schema expressions for schema.response
+   * when the response schema is flat (no $ref, allOf, oneOf, anyOf, nested objects).
+   * Falls back to z.unknown() for complex shapes. Default: false.
+   * For best coverage, use input_schema to wire your own Zod schemas instead.
+   */
+  emitResponseValidation?: boolean
 }
 
 // ── Shared path conversion ────────────────────────────────────────────────────
@@ -157,6 +164,8 @@ function getCookieParams(operation: OperationObject, spec: OpenAPIV3_1.Document)
 
 // ── Response status helpers ───────────────────────────────────────────────────
 
+// Parallel response helpers to router.ts (same shapes, separate generation passes).
+// fallow-ignore-next-line code-duplication
 function response200IsVoid(resp: ResponseObject | ReferenceObject): boolean {
   if (isRef(resp)) return false
   const r = resp as ResponseObject
@@ -245,6 +254,8 @@ function getResponseStatus(
     : { status: 200, isVoid: false, responseContentType: 'application/json' }
 }
 
+// getResponseTypeName is a branchy codegen dispatcher (response-status priority + $ref/inline
+// fallback chain), parallel to router.ts; coupling the emitters would violate generation separation.
 // fallow-ignore-next-line complexity
 function getResponseTypeName(
   operation: OperationObject,
@@ -255,6 +266,9 @@ function getResponseTypeName(
     | undefined
   if (responses === undefined) return undefined
 
+  // Priority list mirrors the one in router.ts; both emitters scan the same response
+  // priority ordering but for different purposes (type names vs. schema expressions).
+  // fallow-ignore-next-line code-duplication
   const priority = [
     '200',
     '201',
@@ -275,34 +289,65 @@ function getResponseTypeName(
     if (jsonContent === undefined || jsonContent.schema === undefined) continue
     const schema = jsonContent.schema
     if (isRef(schema)) {
-      return { typeName: refToName((schema as ReferenceObject).$ref), isArray: false }
+      const typeName = refToName((schema as ReferenceObject).$ref)
+      // Warn when schemaNames is provided but the named $ref schema is absent.
+      // This typically means the schemas.ts is out of sync with the spec.
+      if (schemaNames !== undefined && !schemaNames.has(`${typeName}Schema`)) {
+        console.warn(
+          `${operation.operationId ?? 'unknown'} (${code}): response schema ${typeName}Schema is referenced in the spec but not found in schemas.ts. The service return type will be unknown.`
+        )
+      }
+      return { typeName, isArray: false }
     }
     const s = schema as OpenAPIV3_1.SchemaObject
     if (s.type === 'array' && s.items !== undefined && isRef(s.items)) {
-      return { typeName: refToName((s.items as ReferenceObject).$ref), isArray: true }
+      const typeName = refToName((s.items as ReferenceObject).$ref)
+      if (schemaNames !== undefined && !schemaNames.has(`${typeName}Schema`)) {
+        console.warn(
+          `${operation.operationId ?? 'unknown'} (${code}): response schema ${typeName}Schema is referenced in the spec but not found in schemas.ts. The service return type will be unknown.`
+        )
+      }
+      return { typeName, isArray: true }
     }
   }
 
-  // Synthesized response schema fallback: when the response is inline (no $ref) and
-  // a synthesized schema name exists in the user-owned schemas.ts, use it. This enables
-  // schema.response wiring and typed service return types for labInlineResponse etc.
+  // Synthesized response schema fallback: when the response is inline (no $ref), try
+  // several naming conventions in priority order before giving up. This enables schema.response
+  // wiring and typed service return types for operations with inline response schemas.
   //
-  // Naming: toTypeName(operationId) + 'Schema' = 'LabInlineResponseSchema' for
-  // operationId 'labInlineResponse'. The distinction from body schemas is that the
-  // operationId itself encodes the context (e.g. labInlineBody -> LabInlineBodySchema,
-  // labInlineResponse -> LabInlineResponseSchema).
+  // Fallback order (first match wins):
+  //   1. toTypeName(operationId) + 'Schema'         e.g. LabInlineResponseSchema
+  //   2. toTypeName(operationId) + 'ResponseSchema'  e.g. LabInlineBodyResponseSchema
+  //   3. toTypeName(operationId) + statusCode + 'Schema' e.g. LabInlineBody200Schema
   //
-  // Guard: skip if the synthesized name collides with the operation's body schema name.
-  // This prevents a form-body or inline-body schema (e.g. LabFormBodySchema) from being
-  // misidentified as a response schema for the same operation.
+  // Guard: skip any candidate whose name collides with the operation's body schema name.
+  // This prevents a form-body schema (e.g. LabFormBodySchema) from being misidentified
+  // as a response schema for the same operation.
   if (schemaNames !== undefined && operation.operationId !== undefined && operation.operationId.length > 0) {
     const synthesizedName = toTypeName(operation.operationId)
-    const synthesizedSchemaName = `${synthesizedName}Schema`
     const bodyInfo = getBodyInfo(operation)
     const bodySchemaName =
       bodyInfo?.typeName !== undefined ? `${bodyInfo.typeName}Schema` : undefined
-    if (schemaNames.has(synthesizedSchemaName) && synthesizedSchemaName !== bodySchemaName) {
+
+    // Candidate 1: operationId + Schema
+    const candidate1 = `${synthesizedName}Schema`
+    if (schemaNames.has(candidate1) && candidate1 !== bodySchemaName) {
       return { typeName: synthesizedName, isArray: false }
+    }
+
+    // Candidate 2: operationId + ResponseSchema
+    const candidate2 = `${synthesizedName}ResponseSchema`
+    if (schemaNames.has(candidate2) && candidate2 !== bodySchemaName) {
+      return { typeName: `${synthesizedName}Response`, isArray: false }
+    }
+
+    // Candidate 3: operationId + {3-digit statusCode} + Schema (try each 2xx code)
+    for (const code of priority) {
+      if (responses[code] === undefined) continue
+      const candidate3 = `${synthesizedName}${code}Schema`
+      if (schemaNames.has(candidate3) && candidate3 !== bodySchemaName) {
+        return { typeName: `${synthesizedName}${code}`, isArray: false }
+      }
     }
   }
 
@@ -449,6 +494,94 @@ function enumOrStringExpr(p: {
 /** Wrap a Zod expression in .optional() unless the param is required. */
 function withOptional(base: string, required: boolean): string {
   return required ? base : `${base}.optional()`
+}
+
+// ── Inline response schema synthesizer (emit_response_validation) ─────────────
+
+/**
+ * Synthesize a Zod expression string for an inline response schema property type.
+ * Handles only primitive types and simple string enums. Everything else is z.unknown().
+ * This is intentionally conservative: complex shapes (nested objects, $ref, allOf,
+ * oneOf, anyOf) are out of scope; use input_schema for those.
+ *
+ * CRAP note: cyclomatic 13 / cognitive 13 is intentional — this is a type-dispatch
+ * switch over every OpenAPI scalar kind plus array/ref/unknown fallbacks. Each branch
+ * is a one-liner. All branches are covered by the synthesizer unit tests in
+ * router.test.ts; the elevated CRAP score is a static-only artefact because CI runs
+ * fallow audit without coverage data.
+ */
+// fallow-ignore-next-line complexity
+function synthesizePropExpr(
+  schema: OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
+): string {
+  if (schema === undefined || isRef(schema)) return 'z.unknown()'
+  const s = schema as OpenAPIV3_1.SchemaObject
+  if (s.type === 'string') {
+    if (Array.isArray(s.enum) && s.enum.length > 0) {
+      return `z.enum([${(s.enum as unknown[]).map((v) => JSON.stringify(v)).join(', ')}])`
+    }
+    return `z.string()${stringConstraintSuffix(s as { minLength?: number; maxLength?: number; pattern?: string })}`
+  }
+  if (s.type === 'number' || s.type === 'integer') return `z.number()${numberConstraintSuffix(s as { minimum?: number; maximum?: number; exclusiveMinimum?: number; exclusiveMaximum?: number })}`
+  if (s.type === 'boolean') return 'z.boolean()'
+  // Array with simple items.
+  if (s.type === 'array' && s.items !== undefined && !isRef(s.items)) {
+    const itemExpr = synthesizePropExpr(s.items as OpenAPIV3_1.SchemaObject)
+    if (!itemExpr.startsWith('z.unknown')) return `z.array(${itemExpr})`
+  }
+  return 'z.unknown()'
+}
+
+/**
+ * Synthesize a Zod schema expression for an inline (non-$ref) response schema.
+ * Only handles flat z.object({...}) shapes with primitive properties. Returns
+ * z.unknown() for: $ref, allOf, oneOf, anyOf, nested objects, or missing types.
+ * Always returns a string — callers can use the result directly in schema.response.
+ *
+ * CRAP note: cyclomatic 12 / cognitive 13 is intentional — this dispatches over
+ * composition keywords, array variants, object shapes, and scalar primitives; each
+ * arm is a necessary distinct case. All branches are covered by the synthesizer unit
+ * tests in router.test.ts; the elevated CRAP score is a static-only artefact because
+ * CI runs fallow audit without coverage data.
+ */
+// fallow-ignore-next-line complexity
+function synthesizeResponseSchemaExpr(
+  schema: OpenAPIV3_1.SchemaObject | ReferenceObject | undefined
+): string {
+  if (schema === undefined || isRef(schema)) return 'z.unknown()'
+  const s = schema as OpenAPIV3_1.SchemaObject & {
+    allOf?: unknown
+    oneOf?: unknown
+    anyOf?: unknown
+  }
+  // Bail out for composition keywords: these require the user to supply their own Zod schema.
+  if (s.allOf !== undefined || s.oneOf !== undefined || s.anyOf !== undefined) return 'z.unknown()'
+  // Array type with inline items.
+  if (s.type === 'array') {
+    if (s.items === undefined) return 'z.array(z.unknown())'
+    if (isRef(s.items)) return 'z.unknown()'
+    const itemExpr = synthesizePropExpr(s.items as OpenAPIV3_1.SchemaObject)
+    return `z.array(${itemExpr})`
+  }
+  // Object type with properties.
+  if (s.type === 'object' && s.properties !== undefined) {
+    const required = Array.isArray(s.required) ? new Set(s.required as string[]) : new Set<string>()
+    const fields = Object.entries(s.properties as Record<string, OpenAPIV3_1.SchemaObject | ReferenceObject>)
+      .map(([key, propSchema]) => {
+        // Nested objects fall back to z.unknown().
+        if (!isRef(propSchema) && (propSchema as OpenAPIV3_1.SchemaObject).type === 'object') {
+          const safeKey = /[^a-zA-Z0-9_$]/.test(key) ? JSON.stringify(key) : key
+          return `${safeKey}: ${required.has(key) ? 'z.unknown()' : 'z.unknown().optional()'}`
+        }
+        const expr = synthesizePropExpr(propSchema)
+        const safeKey = /[^a-zA-Z0-9_$]/.test(key) ? JSON.stringify(key) : key
+        return `${safeKey}: ${required.has(key) ? expr : `${expr}.optional()`}`
+      })
+      .join(', ')
+    return `z.object({ ${fields} })`
+  }
+  // Primitive type at the top level.
+  return synthesizePropExpr(s)
 }
 
 function queryParamBaseExpr(param: QueryParam): string {
@@ -609,7 +742,8 @@ function buildFastifyTypeProviderHandler(
   spec: OpenAPIV3_1.Document,
   schemaNames?: Set<string>,
   contextType?: string,
-  zeroCast?: boolean
+  zeroCast?: boolean,
+  emitResponseValidation?: boolean
 ): string {
   const lines: string[] = []
   const inner = `${indent}  `
@@ -672,6 +806,47 @@ function buildFastifyTypeProviderHandler(
     const schemaName = `${op.responseTypeName}Schema`
     if (schemaNames.has(schemaName)) {
       responseSchemaExpr = op.responseIsArray === true ? `z.array(${schemaName})` : schemaName
+    }
+  }
+
+  // ── Synthesized response schema (emit_response_validation opt-in) ─────────
+  // When emitResponseValidation is true and no named schema was found, synthesize
+  // an inline Zod expression from the first 2xx JSON response schema. Only flat
+  // schemas produce useful output: $ref, allOf, oneOf, anyOf, and nested objects
+  // fall back to z.unknown(). Use input_schema for those.
+  if (
+    emitResponseValidation === true &&
+    responseSchemaExpr === undefined &&
+    op.responseStatus.isMultiStatus !== true &&
+    !op.responseStatus.isVoid
+  ) {
+    const responses = op.rawOperation.responses as
+      | Record<string, ResponseObject | ReferenceObject>
+      | undefined
+    if (responses !== undefined) {
+      // The priority-ordered 2xx response scan mirrors the one in fastify-service.ts
+      // getReturnInfo. Both emitters must independently walk the same responses object:
+      // fastify-service.ts resolves type names, this emitter synthesizes Zod expressions.
+      // They cannot share a helper without coupling two separate generation passes.
+      // fallow-ignore-next-line code-duplication
+      const priority = ['200', '201', ...Object.keys(responses).filter(
+        (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
+      )]
+      for (const code of priority) {
+        const response = responses[code]
+        if (response === undefined || isRef(response)) continue
+        const content = (response as ResponseObject).content as
+          | Record<string, { schema?: OpenAPIV3_1.SchemaObject | ReferenceObject }>
+          | undefined
+        if (content === undefined) continue
+        const jsonContent = content['application/json']
+        if (jsonContent?.schema === undefined) continue
+        // Only synthesize for inline schemas: $ref responses are handled via named schema lookup.
+        if (!isRef(jsonContent.schema)) {
+          responseSchemaExpr = synthesizeResponseSchemaExpr(jsonContent.schema)
+        }
+        break
+      }
     }
   }
 
@@ -772,6 +947,26 @@ function buildFastifyTypeProviderHandler(
   // for deepObject/delimiter routes, and the validatorCompiler validated the shape.
   if (op.queryParams.length > 0) {
     serviceArgs.push('req.query')
+  }
+
+  // Headers: construct a fresh object from the declared header fields.
+  // ZodTypeProvider narrows req.headers['x'] to string (required) or string | undefined (optional)
+  // for each field in schema.headers. We build a fresh object to match the precise service type.
+  // No `as` cast: each property access is correctly typed by ZodTypeProvider.
+  if (op.headerParams.length > 0) {
+    const fields = op.headerParams
+      .map((h) => {
+        const key = JSON.stringify(h.rawName.toLowerCase())
+        return `${key}: req.headers[${key}]`
+      })
+      .join(', ')
+    serviceArgs.push(`{ ${fields} }`)
+  }
+
+  // Cookies: _ckv.data is the validated cookie object, available here because the
+  // _ckv.success guard above returns early on failure. Pass it directly.
+  if (op.cookieParams.length > 0) {
+    serviceArgs.push('_ckv.data')
   }
 
   // Context: pass Fastify Request object when contextType is set.
@@ -883,6 +1078,13 @@ export function generateFastifyRouter(
   const hasOctetStreamRequestBody = operations.some(
     (op) => op.bodyInfo?.contentType === 'application/octet-stream'
   )
+  const hasFormUrlencodedBody = operations.some(
+    (op) => op.bodyInfo?.contentType === 'application/x-www-form-urlencoded'
+  )
+  const hasMultipartBody = operations.some(
+    (op) => op.bodyInfo?.contentType === 'multipart/form-data'
+  )
+  const hasAnyParserNeeded = hasOctetStreamRequestBody || hasFormUrlencodedBody || hasMultipartBody
 
   const ctx = options?.contextType
   const serviceRef = ctx !== undefined ? `${serviceName}<${ctx}>` : serviceName
@@ -890,10 +1092,10 @@ export function generateFastifyRouter(
   const lines: string[] = []
   lines.push('// This file is auto-generated. Do not edit manually.')
   lines.push(
-    '// Fastify: register @fastify/formbody before this router for application/x-www-form-urlencoded bodies.'
+    '// @fastify/formbody and @fastify/multipart are auto-registered inside the plugin for the content types your spec uses.'
   )
   lines.push(
-    '// For multipart/form-data bodies, register @fastify/multipart with { attachFieldsToBody: true } before this router.'
+    '// Pass registerParsers: false in CreateRouterOptions to opt out (e.g. to set custom size limits).'
   )
   lines.push('')
   lines.push(
@@ -902,6 +1104,7 @@ export function generateFastifyRouter(
   lines.push(
     "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
   )
+  lines.push("import type { FastifyRequest, FastifyReply } from 'fastify'")
   if (sortedBodyTypes.length > 0) {
     lines.push(`import type { ${sortedBodyTypes.join(', ')} } from './models.js'`)
   }
@@ -920,32 +1123,90 @@ export function generateFastifyRouter(
   lines.push('  }')
   lines.push('}')
   lines.push('')
-  for (const l of httpErrorClassLines()) lines.push(l)
+  lines.push("import { HttpError } from './errors.js'")
   lines.push('')
-  lines.push(`export function createRouter(service: ${serviceRef}): FastifyPluginAsyncZod {`)
+  // Emit the CreateRouterOptions escape hatch so callers can override compilers/errorHandler
+  // and control parser registration without having to re-implement the whole plugin.
+  lines.push('export interface CreateRouterOptions {')
+  lines.push('  errorHandler?: (err: Error, req: FastifyRequest, reply: FastifyReply) => void')
+  // fastify-type-provider-zod exports the compilers as values, not as named types; deriving the
+  // option types via `typeof` keeps the generated file self-contained and always type-correct.
+  lines.push('  validatorCompiler?: typeof validatorCompiler')
+  lines.push('  serializerCompiler?: typeof serializerCompiler')
+  lines.push('  /** Set to false to skip automatic parser registration (default: true). */')
+  lines.push('  registerParsers?: boolean')
+  lines.push('}')
+  lines.push('')
+  lines.push(`export function createRouter(service: ${serviceRef}, options?: CreateRouterOptions): FastifyPluginAsyncZod {`)
   lines.push('  return async (app) => {')
 
   // FastifyPluginAsyncZod carries ZodTypeProvider: no withTypeProvider() call needed.
   // Compilers and error handler are scoped to the plugin instance, not the root app.
-  lines.push('    app.setValidatorCompiler(validatorCompiler)')
-  lines.push('    app.setSerializerCompiler(serializerCompiler)')
-  lines.push('    app.setErrorHandler((err, _req, reply) => {')
-  lines.push('      if (err instanceof HttpError) {')
-  lines.push('        return reply.status(err.status).send({ error: err.message })')
+  lines.push('    app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
+  lines.push('    app.setSerializerCompiler(options?.serializerCompiler ?? serializerCompiler)')
+  // Error handler: use caller-supplied handler when provided; otherwise use the built-in
+  // FST_ERR_VALIDATION-aligned envelope for HttpError responses.
+  lines.push('    if (options?.errorHandler !== undefined) {')
+  lines.push('      app.setErrorHandler(options.errorHandler)')
+  lines.push('    } else {')
+  // Emit a small status-code-to-code lookup for the error envelope. This mirrors the
+  // FST_ERR_VALIDATION shape (statusCode, code, error, message) so HttpError responses
+  // are structurally consistent with Fastify's built-in validation errors.
+  lines.push('      const _HTTP_CODES: Record<number, string> = {')
+  lines.push("        400: 'BAD_REQUEST',")
+  lines.push("        401: 'UNAUTHORIZED',")
+  lines.push("        403: 'FORBIDDEN',")
+  lines.push("        404: 'NOT_FOUND',")
+  lines.push("        409: 'CONFLICT',")
+  lines.push("        410: 'GONE',")
+  lines.push("        422: 'UNPROCESSABLE_ENTITY',")
+  lines.push("        429: 'TOO_MANY_REQUESTS',")
+  lines.push("        500: 'INTERNAL_ERROR',")
   lines.push('      }')
-  lines.push('      throw err')
-  lines.push('    })')
+  lines.push('      app.setErrorHandler((err, _req, reply) => {')
+  lines.push('        if (err instanceof HttpError) {')
+  lines.push("          const _errCode = _HTTP_CODES[err.status] ?? 'APP_ERROR'")
+  lines.push('          const _errReply = reply.status(err.status)')
+  lines.push('          return _errReply.send({ statusCode: err.status, code: _errCode, error: err.message, message: err.message })')
+  lines.push('        }')
+  lines.push('        throw err')
+  lines.push('      })')
+  lines.push('    }')
 
-  // Register a content-type parser for application/octet-stream when needed.
-  if (hasOctetStreamRequestBody) {
-    lines.push(
-      "    app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
-    )
+  // Auto-register body parsers for content types the spec uses, gated on registerParsers !== false.
+  // Callers who need custom options (e.g. upload size limits) should pass registerParsers: false
+  // and register the plugins themselves before mounting this router.
+  if (hasAnyParserNeeded) {
+    // Registrations are guarded by hasContentTypeParser so they are idempotent and order-safe:
+    // if the caller already registered the parser on a parent scope (the child inherits it), we skip.
+    // app.register is intentionally not awaited — awaiting a register inside an async plugin can
+    // stall boot; avvio loads queued registrations before the plugin is considered ready.
+    lines.push('    if (options?.registerParsers !== false) {')
+    if (hasFormUrlencodedBody) {
+      lines.push("      if (!app.hasContentTypeParser('application/x-www-form-urlencoded')) {")
+      lines.push("        const _formbody = await import('@fastify/formbody')")
+      lines.push('        app.register(_formbody.default ?? _formbody)')
+      lines.push('      }')
+    }
+    if (hasMultipartBody) {
+      lines.push("      if (!app.hasContentTypeParser('multipart/form-data')) {")
+      lines.push("        const _multipart = await import('@fastify/multipart')")
+      lines.push('        app.register(_multipart.default ?? _multipart, { attachFieldsToBody: true })')
+      lines.push('      }')
+    }
+    if (hasOctetStreamRequestBody) {
+      lines.push("      if (!app.hasContentTypeParser('application/octet-stream')) {")
+      lines.push(
+        "        app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => done(null, body))"
+      )
+      lines.push('      }')
+    }
+    lines.push('    }')
   }
 
   for (const op of operations) {
     lines.push('')
-    lines.push(buildFastifyTypeProviderHandler(op, '    ', spec, options?.schemaNames, ctx, zeroCast))
+    lines.push(buildFastifyTypeProviderHandler(op, '    ', spec, options?.schemaNames, ctx, zeroCast, options?.emitResponseValidation))
   }
 
   lines.push('  }')
@@ -954,6 +1215,31 @@ export function generateFastifyRouter(
 
   return {
     filename: 'router.ts',
+    content: lines.join('\n'),
+  }
+}
+
+// ── errors.ts emitter ─────────────────────────────────────────────────────────
+
+/**
+ * Emit errors.ts: the generated module containing the HttpError class.
+ * The generated router.ts imports HttpError from this file instead of defining it inline.
+ * Emitted for all Fastify targets (both passes) so the import path is consistent
+ * regardless of whether input_schema is configured.
+ */
+export function emitFastifyErrorsFile(): GeneratedFile {
+  const lines: string[] = []
+  lines.push('// This file is auto-generated. Do not edit manually.')
+  lines.push('')
+  lines.push('export class HttpError extends Error {')
+  lines.push('  constructor(public readonly status: number, message: string) {')
+  lines.push('    super(message)')
+  lines.push("    this.name = 'HttpError'")
+  lines.push('  }')
+  lines.push('}')
+  lines.push('')
+  return {
+    filename: 'errors.ts',
     content: lines.join('\n'),
   }
 }

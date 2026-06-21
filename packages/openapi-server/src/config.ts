@@ -26,6 +26,15 @@ export interface ServerConfig {
    * Example: `"context_type": "RequestContext"`
    */
   context_type?: string
+  /**
+   * Fastify only. When true, the generated router emits inline Zod response schema
+   * expressions in schema.response for operations with flat inline response schemas.
+   * Operations with $ref, allOf, oneOf, anyOf, or nested schemas fall back to z.unknown().
+   *
+   * Default: false. For best coverage, wire input_schema with your Zod schema file and let
+   * the generator use the exact schemas you own.
+   */
+  emit_response_validation?: boolean
 }
 
 function parseServerConfig(
@@ -54,11 +63,18 @@ function parseServerConfig(
   ) {
     throw new Error('"context_type" must be a non-empty string TypeScript type name')
   }
+  if (
+    raw['emit_response_validation'] !== undefined &&
+    typeof raw['emit_response_validation'] !== 'boolean'
+  ) {
+    throw new Error('"emit_response_validation" must be a boolean (true or false)')
+  }
   return {
     ...base,
     framework: framework as 'hono' | 'express' | 'fastify' | 'none' | undefined,
     input_schema: raw['input_schema'] as string | undefined,
     context_type: raw['context_type'] as string | undefined,
+    emit_response_validation: raw['emit_response_validation'] as boolean | undefined,
   }
 }
 
