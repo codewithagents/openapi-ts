@@ -10,23 +10,23 @@
     "typecheck": "pnpm run generate:deps && tsc --noEmit -p tsconfig.typecheck.json"
   },
   "dependencies": {
-    "petstore-fastify": "workspace:*",
     "@codewithagents/petstore-hono": "workspace:*",
-    "petstore-express": "workspace:*",
-    "fastify": "^5.0.0",
-    "@fastify/formbody": "^8.0.0",
-    "@fastify/multipart": "^9.0.0",
+    "@fastify/formbody": "^8.0.2",
+    "@fastify/multipart": "^9.4.0",
+    "@hono/node-server": "^2.0.5",
+    "express": "^5.2.1",
+    "fastify": "^5.8.5",
     "fastify-type-provider-zod": "^6.1.0",
-    "express": "^5.0.0",
-    "hono": "^4.0.0",
-    "@hono/node-server": "^2.0.0",
+    "hono": "^4.12.26",
+    "petstore-express": "workspace:*",
+    "petstore-fastify": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
+    "@types/express": "^5.0.6",
     "@types/node": "catalog:",
-    "vitest": "catalog:",
     "@vitest/coverage-v8": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

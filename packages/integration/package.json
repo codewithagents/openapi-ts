@@ -12,18 +12,18 @@
   },
   "dependencies": {
     "@codewithagents/api-errors": "workspace:*",
-    "openapi-zod-ts": "workspace:*",
+    "@codewithagents/openapi-msw": "workspace:*",
     "@codewithagents/openapi-react-query": "workspace:*",
-    "@codewithagents/openapi-msw": "workspace:*"
+    "openapi-zod-ts": "workspace:*"
   },
   "devDependencies": {
-    "@faker-js/faker": "^9.8.0",
+    "@faker-js/faker": "^9.9.0",
     "@tanstack/react-query": "catalog:",
-    "@testing-library/react": "^16.0.0",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "jsdom": "^29.0.0",
+    "jsdom": "^29.1.1",
     "msw": "^2.14.6",
     "react": "catalog:",
     "react-dom": "catalog:",
