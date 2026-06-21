@@ -4,26 +4,39 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "node node_modules/openapi-zod-ts/dist/cli.cjs && node node_modules/openapi-zod-ts/dist/cli.cjs --config openapi-zod-ts.auth.config.json && node node_modules/@codewithagents/openapi-server/dist/cli.cjs && node node_modules/@codewithagents/openapi-server/dist/cli.cjs --config openapi-server.auth.config.json",
+    "generate": "node node_modules/openapi-zod-ts/dist/cli.cjs && node node_modules/openapi-zod-ts/dist/cli.cjs --config openapi-zod-ts.auth.config.json && node node_modules/@codewithagents/openapi-server/dist/cli.cjs && node node_modules/@codewithagents/openapi-server/dist/cli.cjs --config openapi-server.auth.config.json && node node_modules/@codewithagents/openapi-react-query/dist/cli.js --config openapi-react-query.auth.config.json",
+    "build": "pnpm generate && vite build",
+    "dev": "pnpm generate && concurrently \"vite\" \"tsx watch src/server/fullstackServer.ts\"",
     "start": "pnpm generate && tsx src/server/index.ts",
     "test": "pnpm generate && vitest run",
     "test:e2e": "pnpm generate && playwright test",
+    "test:e2e:auth": "pnpm build && playwright test --config playwright.auth.config.ts",
     "typecheck": "pnpm generate && tsc --noEmit -p tsconfig.typecheck.json"
   },
   "dependencies": {
+    "@codewithagents/openapi-react-query": "workspace:*",
     "@codewithagents/openapi-server": "workspace:*",
     "@fastify/formbody": "^8.0.0",
     "@fastify/multipart": "^9.0.0",
+    "@fastify/static": "^8.0.0",
+    "@tanstack/react-query": "catalog:",
     "fastify": "^5.0.0",
     "fastify-type-provider-zod": "^6.1.0",
     "openapi-zod-ts": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "^6.0.0",
+    "concurrently": "^10.0.0",
     "tsx": "^4.0.0",
     "typescript": "catalog:",
+    "vite": "^8.0.0",
     "vitest": "catalog:"
   }
 }
