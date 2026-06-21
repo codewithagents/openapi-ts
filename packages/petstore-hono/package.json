@@ -12,25 +12,25 @@
     "test:e2e": "pnpm generate && vite build && playwright test"
   },
   "dependencies": {
-    "openapi-zod-ts": "workspace:*",
     "@codewithagents/openapi-react-query": "workspace:*",
     "@codewithagents/openapi-server": "workspace:*",
-    "@hono/node-server": "^2.0.0",
+    "@hono/node-server": "^2.0.5",
     "@tanstack/react-query": "catalog:",
-    "hono": "^4.0.0",
+    "hono": "^4.12.26",
+    "openapi-zod-ts": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.50.0",
+    "@playwright/test": "^1.61.0",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@vitejs/plugin-react": "^6.0.0",
-    "concurrently": "^10.0.0",
-    "tsx": "^4.0.0",
+    "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^10.0.3",
+    "tsx": "^4.22.4",
     "typescript": "catalog:",
-    "vite": "^8.0.0"
+    "vite": "^8.0.16"
   }
 }

@@ -9,8 +9,8 @@
     "preview": "astro preview"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.39.2",
-    "astro": "^6.4.2",
+    "@astrojs/starlight": "^0.40.0",
+    "astro": "^6.4.8",
     "remark-gfm": "^4.0.1",
     "starlight-package-managers": "^0.12.0"
   }
