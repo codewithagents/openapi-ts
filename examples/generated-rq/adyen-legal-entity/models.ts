@@ -128,7 +128,7 @@ export interface BusinessLineWritable {
   salesChannels?: string[]
   service: 'paymentProcessing' | 'banking'
   sourceOfFunds?: SourceOfFunds
-  webData?: WebData[]
+  webData?: WebDataWritable[]
   webDataExemption?: WebDataExemption
 }
 
@@ -151,7 +151,7 @@ export interface BusinessLineInfoWritable {
   salesChannels?: string[]
   service: 'paymentProcessing' | 'banking'
   sourceOfFunds?: SourceOfFunds
-  webData?: WebData[]
+  webData?: WebDataWritable[]
   webDataExemption?: WebDataExemption
 }
 
@@ -168,12 +168,16 @@ export interface BusinessLineInfoUpdateWritable {
   industryCode?: string
   salesChannels?: string[]
   sourceOfFunds?: SourceOfFunds
-  webData?: WebData[]
+  webData?: WebDataWritable[]
   webDataExemption?: WebDataExemption
 }
 
 export interface BusinessLines {
   businessLines: BusinessLine[]
+}
+
+export interface BusinessLinesWritable {
+  businessLines: BusinessLineWritable[]
 }
 
 export interface CALocalAccountIdentification {
@@ -455,6 +459,18 @@ export interface Individual {
   webData?: WebData
 }
 
+export interface IndividualWritable {
+  birthData?: BirthData
+  email?: string
+  identificationData?: IdentificationData
+  name: Name
+  nationality?: string
+  phone?: PhoneNumberWritable
+  residentialAddress: Address
+  taxInformation?: TaxInformation[]
+  webData?: WebDataWritable
+}
+
 export interface LegalEntity {
   capabilities?: Record<string, LegalEntityCapability>
   documentDetails?: DocumentReference[]
@@ -483,20 +499,20 @@ export interface LegalEntityWritable {
   capabilities?: Record<string, LegalEntityCapability>
   documentDetails?: DocumentReference[]
   documents?: EntityReference[]
-  entityAssociations?: LegalEntityAssociation[]
-  individual?: Individual
-  organization?: Organization
+  entityAssociations?: LegalEntityAssociationWritable[]
+  individual?: IndividualWritable
+  organization?: OrganizationWritable
   problems?: CapabilityProblem[]
   reference?: string
   soleProprietorship?: SoleProprietorship
-  trust?: Trust
+  trust?: TrustWritable
   type?:
     | 'individual'
     | 'organization'
     | 'soleProprietorship'
     | 'trust'
     | 'unincorporatedPartnership'
-  unincorporatedPartnership?: UnincorporatedPartnership
+  unincorporatedPartnership?: UnincorporatedPartnershipWritable
   verificationPlan?: string
 }
 
@@ -591,6 +607,24 @@ export interface LegalEntityInfo {
   verificationPlan?: string
 }
 
+export interface LegalEntityInfoWritable {
+  capabilities?: Record<string, LegalEntityCapability>
+  entityAssociations?: LegalEntityAssociationWritable[]
+  individual?: IndividualWritable
+  organization?: OrganizationWritable
+  reference?: string
+  soleProprietorship?: SoleProprietorship
+  trust?: TrustWritable
+  type?:
+    | 'individual'
+    | 'organization'
+    | 'soleProprietorship'
+    | 'trust'
+    | 'unincorporatedPartnership'
+  unincorporatedPartnership?: UnincorporatedPartnershipWritable
+  verificationPlan?: string
+}
+
 export interface LegalEntityInfoRequiredType {
   capabilities?: Record<string, LegalEntityCapability>
   entityAssociations?: LegalEntityAssociation[]
@@ -601,6 +635,19 @@ export interface LegalEntityInfoRequiredType {
   trust?: Trust
   type: 'individual' | 'organization' | 'soleProprietorship' | 'trust' | 'unincorporatedPartnership'
   unincorporatedPartnership?: UnincorporatedPartnership
+  verificationPlan?: string
+}
+
+export interface LegalEntityInfoRequiredTypeWritable {
+  capabilities?: Record<string, LegalEntityCapability>
+  entityAssociations?: LegalEntityAssociationWritable[]
+  individual?: IndividualWritable
+  organization?: OrganizationWritable
+  reference?: string
+  soleProprietorship?: SoleProprietorship
+  trust?: TrustWritable
+  type: 'individual' | 'organization' | 'soleProprietorship' | 'trust' | 'unincorporatedPartnership'
+  unincorporatedPartnership?: UnincorporatedPartnershipWritable
   verificationPlan?: string
 }
 
@@ -725,6 +772,61 @@ export interface Organization {
   vatAbsenceReason?: 'industryExemption' | 'belowTaxThreshold'
   vatNumber?: string
   webData?: WebData
+}
+
+export interface OrganizationWritable {
+  countryOfGoverningLaw?: string
+  dateOfIncorporation?: string
+  dateOfInitiationOfLegalProceeding?: string
+  description?: string
+  doingBusinessAs?: string
+  economicSector?: string
+  email?: string
+  financialReports?: FinancialReport[]
+  globalLegalEntityIdentifier?: string
+  headOfficeIndicator?: boolean
+  institutionalSector?:
+    | 'nonFinancialCorporation'
+    | 'centralBank'
+    | 'creditInstitutions'
+    | 'depositTakingCorporations'
+    | 'moneyMarketFunds'
+    | 'nonMMFInvestmentFunds'
+    | 'financialVehicleCorporation'
+    | 'otherFinancialIntermediaries'
+    | 'financialAuxiliaries'
+    | 'captiveFinancialInstitutionsAndMoneyLenders'
+    | 'insuranceCorporations'
+    | 'pensionFunds'
+    | 'centralGovernment'
+    | 'stateGovernment'
+    | 'localGovernment'
+    | 'socialSecurityFunds'
+    | 'nonProfitInstitutionsServingHouseholds'
+  legalForm?: string
+  legalName: string
+  phone?: PhoneNumberWritable
+  principalPlaceOfBusiness?: Address
+  registeredAddress: Address
+  registrationNumber?: string
+  statusOfLegalProceeding?:
+    | 'noLegalActionsTaken'
+    | 'underJudicialAdministration'
+    | 'bankruptcyInsolvency'
+    | 'otherLegalMeasures'
+  stockData?: StockData
+  taxInformation?: TaxInformation[]
+  taxReportingClassification?: TaxReportingClassification
+  type?:
+    | 'associationIncorporated'
+    | 'governmentalOrganization'
+    | 'listedPublicCompany'
+    | 'nonProfit'
+    | 'partnershipIncorporated'
+    | 'privateCompany'
+  vatAbsenceReason?: 'industryExemption' | 'belowTaxThreshold'
+  vatNumber?: string
+  webData?: WebDataWritable
 }
 
 export interface OwnerEntity {
@@ -888,7 +990,7 @@ export interface TransferInstrument {
 }
 
 export interface TransferInstrumentWritable {
-  bankAccount: BankAccountInfo
+  bankAccount: BankAccountInfoWritable
   capabilities?: Record<string, SupportingEntityCapability>
   documentDetails?: DocumentReference[]
   legalEntityId: string
@@ -898,6 +1000,12 @@ export interface TransferInstrumentWritable {
 
 export interface TransferInstrumentInfo {
   bankAccount: BankAccountInfo
+  legalEntityId: string
+  type: 'bankAccount' | 'recurringDetail'
+}
+
+export interface TransferInstrumentInfoWritable {
+  bankAccount: BankAccountInfoWritable
   legalEntityId: string
   type: 'bankAccount' | 'recurringDetail'
 }
@@ -946,6 +1054,41 @@ export interface Trust {
     | 'publicTradingTrust'
     | 'unlistedPublicUnitTrust'
   undefinedBeneficiaryInfo?: UndefinedBeneficiary[]
+  vatAbsenceReason?: 'industryExemption' | 'belowTaxThreshold'
+  vatNumber?: string
+}
+
+export interface TrustWritable {
+  countryOfGoverningLaw: string
+  dateOfIncorporation?: string
+  description?: string
+  doingBusinessAs?: string
+  name: string
+  principalPlaceOfBusiness?: Address
+  registeredAddress: Address
+  registrationNumber?: string
+  taxInformation?: TaxInformation[]
+  type:
+    | 'businessTrust'
+    | 'cashManagementTrust'
+    | 'charitableTrust'
+    | 'corporateUnitTrust'
+    | 'deceasedEstate'
+    | 'discretionaryTrust'
+    | 'discretionaryInvestmentTrust'
+    | 'discretionaryServicesManagementTrust'
+    | 'discretionaryTradingTrust'
+    | 'familyTrust'
+    | 'firstHomeSaverAccountsTrust'
+    | 'fixedTrust'
+    | 'fixedUnitTrust'
+    | 'hybridTrust'
+    | 'listedPublicUnitTrust'
+    | 'otherTrust'
+    | 'pooledSuperannuationTrust'
+    | 'publicTradingTrust'
+    | 'unlistedPublicUnitTrust'
+  undefinedBeneficiaryInfo?: UndefinedBeneficiaryWritable[]
   vatAbsenceReason?: 'industryExemption' | 'belowTaxThreshold'
   vatNumber?: string
 }

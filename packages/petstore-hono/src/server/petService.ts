@@ -120,17 +120,14 @@ export const petService: PetstoreService = {
   },
 
   async labNestedVariant(body) {
-    // Handler discipline: set readOnly serverId server-side, never echo writeOnly secret.
-    // The body items are typed as LabVariantItem (read type from the interface), but the
-    // router's Zod schema (LabNestedVariantSchema) validated the writable form (name + secret).
-    // The raw JSON values are passed; we map each item to the read shape: keep name,
-    // assign a new serverId, and drop the writeOnly secret field entirely.
-    const items = (body.items as Array<{ name: string; secret?: string; serverId?: string }>).map(
-      (item) => ({
-        name: item.name,
-        serverId: randomUUID(),
-      }),
-    )
+    // body is the write shape (LabNestedVariantWritable: items carry the writeOnly secret).
+    // Map to the read response shape (LabNestedVariant): keep name, assign a server-side
+    // readOnly serverId, and drop the writeOnly secret entirely. No cast needed now that the
+    // generated interface types the request body as the write variant and the response as read.
+    const items = body.items.map((item) => ({
+      name: item.name,
+      serverId: randomUUID(),
+    }))
     return { title: body.title, items }
   },
 

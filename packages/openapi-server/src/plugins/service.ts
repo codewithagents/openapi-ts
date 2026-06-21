@@ -1,5 +1,6 @@
 import type { OpenAPIV3_1 } from 'openapi-types'
 import type { GeneratedFile } from 'openapi-zod-ts'
+import { buildWritableVariantMap } from 'openapi-zod-ts'
 import {
   SUPPORTED_METHODS,
   type SupportedMethod,
@@ -51,6 +52,7 @@ function collectContentfulTwoxxCodes(
     .sort()
 }
 
+// fallow-ignore-next-line complexity
 function getReturnInfo(operation: OperationObject): ReturnInfo {
   const responses = operation.responses as
     | Record<string, ResponseObject | ReferenceObject>
@@ -125,6 +127,7 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
   return { typeName: undefined, isArray: false, isVoid: true }
 }
 
+// fallow-ignore-next-line complexity
 function buildReturnType(info: ReturnInfo): string {
   if (info.isVoid) return 'Promise<void>'
   if (info.primitiveType !== undefined) return `Promise<${info.primitiveType}>`
@@ -154,7 +157,10 @@ interface OperationInfo {
   returnInfo: ReturnInfo
 }
 
-function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
+function collectOperations(
+  spec: OpenAPIV3_1.Document,
+  writableVariantMap?: Map<string, string>
+): OperationInfo[] {
   const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
   if (paths === undefined) return []
 
@@ -168,7 +174,7 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
       const methodName = deriveMethodName(operation.operationId, method, path)
       const pathParams = extractPathParamsFromPath(path)
       const queryParams = getQueryParams(operation, spec)
-      const bodyInfo = getBodyInfo(operation)
+      const bodyInfo = getBodyInfo(operation, writableVariantMap)
       const returnInfo = getReturnInfo(operation)
 
       // Warn when the return type falls back to unknown due to a missing or
@@ -218,6 +224,7 @@ export interface ServiceOptions {
   contextType?: string
 }
 
+// fallow-ignore-next-line complexity
 function buildMethodSignature(op: OperationInfo, options?: ServiceOptions): string {
   const args: string[] = []
 
@@ -230,11 +237,15 @@ function buildMethodSignature(op: OperationInfo, options?: ServiceOptions): stri
   // Body arg: synthesized names (inline schemas, not $ref) live only in schemas.ts
   // for Zod safeParse — they have no corresponding model type in models.ts.
   // Use 'unknown' for synthesized bodies so service.ts does not emit a dangling import.
+  // When the body $ref has a writable variant (readOnly/writeOnly, direct or transitive),
+  // use the XWritable name so the service interface accepts the write shape for requests.
   if (op.bodyInfo !== undefined) {
-    const typeName =
-      op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized
-        ? op.bodyInfo.typeName
-        : 'unknown'
+    let typeName: string
+    if (op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized) {
+      typeName = op.bodyInfo.writableTypeName ?? op.bodyInfo.typeName
+    } else {
+      typeName = 'unknown'
+    }
     args.push(`body: ${typeName}`)
   }
 
@@ -263,15 +274,18 @@ export function generateService(
   options?: ServiceOptions
 ): GeneratedFile {
   const serviceName = deriveServiceName(spec)
-  const operations = collectOperations(spec)
+  const writableVariantMap = buildWritableVariantMap(spec)
+  const operations = collectOperations(spec, writableVariantMap)
 
   // Collect import types: body types and return types that are named identifiers.
   // Synthesized body names (inline schemas, isSynthesized:true) are excluded: they have
   // no entry in models.ts and emitting them as imports would cause a dangling TS error.
+  // Request bodies import the XWritable variant when one exists (matches buildMethodSignature),
+  // responses keep the base read type.
   const importTypes = new Set<string>()
   for (const op of operations) {
     if (op.bodyInfo?.typeName !== undefined && !op.bodyInfo.isSynthesized) {
-      importTypes.add(op.bodyInfo.typeName)
+      importTypes.add(op.bodyInfo.writableTypeName ?? op.bodyInfo.typeName)
     }
     if (op.returnInfo.typeName !== undefined) {
       importTypes.add(op.returnInfo.typeName)

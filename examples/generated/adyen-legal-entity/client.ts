@@ -23,8 +23,8 @@ import type {
   GetTermsOfServiceDocumentRequest,
   GetTermsOfServiceDocumentResponse,
   LegalEntity,
-  LegalEntityInfo,
-  LegalEntityInfoRequiredType,
+  LegalEntityInfoRequiredTypeWritable,
+  LegalEntityInfoWritable,
   OnboardingLink,
   OnboardingLinkInfo,
   OnboardingTheme,
@@ -33,7 +33,7 @@ import type {
   PciSigningResponse,
   SetTaxElectronicDeliveryConsentRequest,
   TransferInstrument,
-  TransferInstrumentInfo,
+  TransferInstrumentInfoWritable,
   VerificationErrors,
 } from './models.js'
 import { getConfig, type ClientConfig } from './client-config.js'
@@ -324,7 +324,7 @@ export async function deleteDocumentsId(id: string, config?: Partial<ClientConfi
  * @throws {ApiError<500, ServiceError>}
  */
 export async function postLegalEntities(
-  body: LegalEntityInfoRequiredType,
+  body: LegalEntityInfoRequiredTypeWritable,
   params?: {
     xRequestedVerificationCode?: string
   },
@@ -364,7 +364,7 @@ export async function getLegalEntitiesId(
  */
 export async function patchLegalEntitiesId(
   id: string,
-  body: LegalEntityInfo,
+  body: LegalEntityInfoWritable,
   params?: {
     xRequestedVerificationCode?: string
   },
@@ -762,7 +762,7 @@ export async function getThemesId(
  * @throws {ApiError<500, ServiceError>}
  */
 export async function postTransferInstruments(
-  body: TransferInstrumentInfo,
+  body: TransferInstrumentInfoWritable,
   params?: {
     xRequestedVerificationCode?: string
   },
@@ -802,7 +802,7 @@ export async function getTransferInstrumentsId(
  */
 export async function patchTransferInstrumentsId(
   id: string,
-  body: TransferInstrumentInfo,
+  body: TransferInstrumentInfoWritable,
   params?: {
     xRequestedVerificationCode?: string
   },

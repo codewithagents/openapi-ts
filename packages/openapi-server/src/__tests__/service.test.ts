@@ -1285,3 +1285,127 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
     expect(content).not.toContain('query?:')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Writable variant threading in generateService (#nested-response-variant)
+// ---------------------------------------------------------------------------
+
+describe('generateService: readOnly/writeOnly transitive container body variant', () => {
+  function makeContainerSpec(): OpenAPIV3_1.Document {
+    return {
+      openapi: '3.1.0',
+      info: { title: 'Container API', version: '1' },
+      paths: {
+        '/containers': {
+          post: {
+            operationId: 'createContainer',
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Container' },
+                },
+              },
+            },
+            responses: {
+              '201': {
+                description: 'created',
+                content: {
+                  'application/json': {
+                    schema: { $ref: '#/components/schemas/Container' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      components: {
+        schemas: {
+          Item: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              serverId: { type: 'string', readOnly: true } as OpenAPIV3_1.SchemaObject,
+              secret: { type: 'string', writeOnly: true } as OpenAPIV3_1.SchemaObject,
+            },
+          },
+          Container: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              items: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/Item' },
+              } as OpenAPIV3_1.SchemaObject,
+            },
+          } as OpenAPIV3_1.SchemaObject,
+        },
+      },
+    }
+  }
+
+  it('body parameter uses XWritable name for transitive container split', () => {
+    const { content } = generateService(makeContainerSpec())
+    // Request body should be ContainerWritable (write shape), not Container.
+    expect(content).toContain('body: ContainerWritable')
+  })
+
+  it('return type uses read shape (Container), not ContainerWritable', () => {
+    const { content } = generateService(makeContainerSpec())
+    // Response is the read shape.
+    expect(content).toContain('Promise<Container>')
+    expect(content).not.toContain('Promise<ContainerWritable>')
+  })
+
+  it('imports ContainerWritable (not Container) for the body param', () => {
+    const { content } = generateService(makeContainerSpec())
+    // Both Container (return type) and ContainerWritable (body) are imported.
+    expect(content).toMatch(/import type \{[^}]*Container[^}]*\} from '\.\/models\.js'/)
+    expect(content).toContain('ContainerWritable')
+    expect(content).toContain('Container,')
+  })
+
+  it('plain (non-variant) body is unchanged when schema has no readOnly/writeOnly', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Plain API', version: '1' },
+      paths: {
+        '/items': {
+          post: {
+            operationId: 'createItem',
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/Item' } },
+              },
+            },
+            responses: {
+              '201': {
+                description: 'created',
+                content: {
+                  'application/json': { schema: { $ref: '#/components/schemas/Item' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      components: {
+        schemas: {
+          Item: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              value: { type: 'number' },
+            },
+          },
+        },
+      },
+    }
+    const { content } = generateService(spec)
+    // No writable variant: body and response both use Item.
+    expect(content).toContain('body: Item')
+    expect(content).not.toContain('ItemWritable')
+  })
+})

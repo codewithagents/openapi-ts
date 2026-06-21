@@ -6,7 +6,8 @@
   "scripts": {
     "generate:deps": "pnpm --filter petstore-fastify --filter @codewithagents/petstore-hono --filter petstore-express run generate",
     "test": "pnpm run generate:deps && vitest run",
-    "test:coverage": "pnpm run generate:deps && vitest run --coverage"
+    "test:coverage": "pnpm run generate:deps && vitest run --coverage",
+    "typecheck": "pnpm run generate:deps && tsc --noEmit -p tsconfig.typecheck.json"
   },
   "dependencies": {
     "petstore-fastify": "workspace:*",
