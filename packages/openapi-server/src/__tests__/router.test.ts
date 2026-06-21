@@ -1966,6 +1966,9 @@ describe('bug #11 fix: text/plain and application/octet-stream responses', () =>
     const { content } = generateRouter(binarySpec)
     expect(content).toContain('application/octet-stream')
     expect(content).not.toContain('c.json(await service.labDownload')
+    // The Uint8Array result is cast to BodyInit: under TS 5.7+ a Uint8Array<ArrayBufferLike>
+    // is no longer structurally assignable to BodyInit, so the generated code must cast.
+    expect(content).toContain('new Response(_result as BodyInit')
   })
 
   it('Express: octet-stream response emits setHeader + Buffer.from().send()', () => {

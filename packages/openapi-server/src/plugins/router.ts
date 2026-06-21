@@ -869,12 +869,12 @@ function buildRouteHandler(
     if (op.responseStatus.status === 200) {
       lines.push(`${indent}    const _result = await ${serviceCall}`)
       lines.push(
-        `${indent}    return new Response(_result, { headers: { 'content-type': 'application/octet-stream' } })`
+        `${indent}    return new Response(_result as BodyInit, { headers: { 'content-type': 'application/octet-stream' } })`
       )
     } else {
       lines.push(`${indent}    const _result = await ${serviceCall}`)
       lines.push(
-        `${indent}    return new Response(_result, { status: ${op.responseStatus.status}, headers: { 'content-type': 'application/octet-stream' } })`
+        `${indent}    return new Response(_result as BodyInit, { status: ${op.responseStatus.status}, headers: { 'content-type': 'application/octet-stream' } })`
       )
     }
   } else if (op.responseStatus.status === 200) {
