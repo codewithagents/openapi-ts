@@ -20,6 +20,13 @@ export type CliAction =
        * Incompatible with --watch.
        */
       check: boolean
+      /**
+       * When true, overwrite the input_schema file with a fresh bootstrap from the
+       * spec (the re-bootstrap remedy that drift messages point to). Destructive:
+       * any customizations in the schema file are replaced. Incompatible with --check
+       * (read-only) and --watch (one-shot).
+       */
+      resetSchema: boolean
     }
   | { action: 'error'; message: string }
 
@@ -45,6 +52,7 @@ export function parseCliArgs(argv: string[], cwd: string): CliAction {
 
   const watch = args.includes('--watch')
   const check = args.includes('--check')
+  const resetSchema = args.includes('--reset-schema')
 
   if (check && watch) {
     return {
@@ -52,6 +60,24 @@ export function parseCliArgs(argv: string[], cwd: string): CliAction {
       message:
         'Error: --check and --watch cannot be used together. ' +
         '--check is a read-only one-shot verification; it cannot watch for changes.',
+    }
+  }
+
+  if (resetSchema && check) {
+    return {
+      action: 'error',
+      message:
+        'Error: --reset-schema and --check cannot be used together. ' +
+        '--check is read-only; --reset-schema rewrites the input_schema file.',
+    }
+  }
+
+  if (resetSchema && watch) {
+    return {
+      action: 'error',
+      message:
+        'Error: --reset-schema and --watch cannot be used together. ' +
+        '--reset-schema is a one-shot re-bootstrap, not a continuous mode.',
     }
   }
 
@@ -95,5 +121,6 @@ export function parseCliArgs(argv: string[], cwd: string): CliAction {
     ...(outputOverride !== undefined && { outputOverride }),
     watch,
     check,
+    resetSchema,
   }
 }

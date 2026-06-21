@@ -36,6 +36,7 @@ describe('parseCliArgs', () => {
         cwd: dirname(resolve(fakeCwd, 'config.json')),
         watch: false,
         check: false,
+        resetSchema: false,
       })
     })
 
@@ -47,6 +48,7 @@ describe('parseCliArgs', () => {
         cwd: '/abs/path',
         watch: false,
         check: false,
+        resetSchema: false,
       })
     })
 
@@ -72,7 +74,13 @@ describe('parseCliArgs', () => {
   describe('bare invocation (no flags)', () => {
     it('returns run action with cwd and no configFile when no args given', () => {
       const result = parseCliArgs([...baseArgv], fakeCwd)
-      expect(result).toEqual({ action: 'run', cwd: fakeCwd, watch: false, check: false })
+      expect(result).toEqual({
+        action: 'run',
+        cwd: fakeCwd,
+        watch: false,
+        check: false,
+        resetSchema: false,
+      })
     })
 
     it('configFile is undefined when no --config flag', () => {
@@ -273,6 +281,42 @@ describe('parseCliArgs', () => {
         expect(result.check).toBe(true)
         expect(result.inputOverride).toBe(resolve(fakeCwd, 'spec.json'))
         expect(result.outputOverride).toBe(resolve(fakeCwd, 'out/'))
+      }
+    })
+  })
+
+  describe('--reset-schema', () => {
+    it('sets resetSchema to true when --reset-schema is given', () => {
+      const result = parseCliArgs([...baseArgv, '--reset-schema'], fakeCwd)
+      expect(result.action).toBe('run')
+      if (result.action === 'run') {
+        expect(result.resetSchema).toBe(true)
+      }
+    })
+
+    it('sets resetSchema to false when not given', () => {
+      const result = parseCliArgs([...baseArgv], fakeCwd)
+      expect(result.action).toBe('run')
+      if (result.action === 'run') {
+        expect(result.resetSchema).toBe(false)
+      }
+    })
+
+    it('returns error action when --reset-schema and --check are combined', () => {
+      const result = parseCliArgs([...baseArgv, '--reset-schema', '--check'], fakeCwd)
+      expect(result.action).toBe('error')
+      if (result.action === 'error') {
+        expect(result.message).toContain('--reset-schema')
+        expect(result.message).toContain('--check')
+      }
+    })
+
+    it('returns error action when --reset-schema and --watch are combined', () => {
+      const result = parseCliArgs([...baseArgv, '--reset-schema', '--watch'], fakeCwd)
+      expect(result.action).toBe('error')
+      if (result.action === 'error') {
+        expect(result.message).toContain('--reset-schema')
+        expect(result.message).toContain('--watch')
       }
     })
   })
