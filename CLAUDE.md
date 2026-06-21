@@ -22,6 +22,8 @@ Run `pnpm fallow:audit` — catches dead code, duplication, and unresolved impor
 - **Never commit real/internal API specs** — all fixtures must be fictional
 - Build order matters: `openapi-zod-ts` must be built before `openapi-react-query`
 - `pnpm -r run build` / `pnpm -r run test` / `pnpm -r run lint` at root
+- **Coverage thresholds are mandatory**: any package with a `test:coverage` script must declare `thresholds` in its `vitest.config.ts`. Seed below current with margin, then ratchet up. Without a floor, coverage silently rots.
+- **The 128-spec compat matrix is carved out**: `compat-matrix.test.ts` is excluded from `test` / `test:coverage` and runs via `test:matrix` in the path-filtered Showcase workflow, not on the required merge gate.
 
 ## Release pipeline
 - **Release Please** — automatic versioning from conventional commits; config in `release-please-config.json`

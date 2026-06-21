@@ -12,11 +12,13 @@ export default defineConfig({
         'src/generator.ts',
         'src/__fixtures__/**',
       ],
+      // Raised off the anomalous 60% branch floor. Current is 92.26/86.5/96.87/94.82,
+      // so these floors gate regression with headroom. Ratchet up over time.
       thresholds: {
-        branches: 60,
-        functions: 85,
-        lines: 75,
-        statements: 75,
+        branches: 75,
+        functions: 88,
+        lines: 85,
+        statements: 85,
       },
       reporter: ['text', ['lcov', { projectRoot: '../../' }]],
     },
