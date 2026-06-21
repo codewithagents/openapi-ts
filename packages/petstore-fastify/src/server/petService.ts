@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { PetstoreService } from '../../generated/service.js'
 import type { Pet } from '../../generated/schema-types.js'
-import { HttpError } from '../../generated/errors.js'
+import { HttpError } from '../../generated/router.js'
 
 const pets = new Map<string, Pet>()
 
