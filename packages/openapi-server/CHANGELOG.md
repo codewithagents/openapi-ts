@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.1.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v2.0.0...openapi-server-v2.1.0) (2026-06-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **openapi-zod-ts:** generated service interfaces and fetch clients now type request bodies as the XWritable variant for schemas with readOnly/writeOnly properties (directly or transitively). Service implementations and callers typed against the old base name must switch to the XWritable name.
+
+### Features
+
+* **openapi-server:** single typed input object for Fastify service methods, ctx kept separate ([#350](https://github.com/codewithagents/openapi-zod-ts/issues/350)) ([2e37337](https://github.com/codewithagents/openapi-zod-ts/commit/2e373378dc2b9b7eafd7a90f520a5eec4092f14d))
+
+
+### Bug Fixes
+
+* **openapi-server:** array-query z.array and multipart $ref body detection in the Fastify emitter ([#348](https://github.com/codewithagents/openapi-zod-ts/issues/348), [#349](https://github.com/codewithagents/openapi-zod-ts/issues/349)) ([d4a9d72](https://github.com/codewithagents/openapi-zod-ts/commit/d4a9d7228d6fd8c06793a4cc72c76af8ba3f67b2))
+* **openapi-server:** cast octet-stream result to BodyInit in the Hono router ([#356](https://github.com/codewithagents/openapi-zod-ts/issues/356)) ([8481e5c](https://github.com/codewithagents/openapi-zod-ts/commit/8481e5c4d7165a0430a1ff5278b9bcf3679bb1f0))
+* **openapi-server:** lock required-querystring narrowing in the Fastify type-provider emitter ([#344](https://github.com/codewithagents/openapi-zod-ts/issues/344)) ([#345](https://github.com/codewithagents/openapi-zod-ts/issues/345)) ([3267549](https://github.com/codewithagents/openapi-zod-ts/commit/32675494c0a7b07f789fc0215173b156413de8dc))
+* **openapi-zod-ts:** derive read/write variants transitively so response types are the read shape ([#365](https://github.com/codewithagents/openapi-zod-ts/issues/365)) ([6337af1](https://github.com/codewithagents/openapi-zod-ts/commit/6337af17d47964e8e90393e594f1a5157d92fe26))
+
+
+### Performance Improvements
+
+* **ci:** carve the 128-spec compat matrix off the required gate, parallelize coverage ([#352](https://github.com/codewithagents/openapi-zod-ts/issues/352)) ([939ea00](https://github.com/codewithagents/openapi-zod-ts/commit/939ea0025e190c42e45c05f3c298d68adc014a60))
+
 ## [2.0.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.10.0...openapi-server-v2.0.0) (2026-06-21)
 
 
