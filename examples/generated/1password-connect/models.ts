@@ -91,6 +91,15 @@ export type FullItem = Item & {
   files?: File[]
 }
 
+export interface FullItemWritable {
+  sections?: {
+    id?: string
+    label?: string
+  }[]
+  fields?: FieldWritable[]
+  files?: FileWritable[]
+}
+
 export type Field = z.infer<typeof FieldSchema>
 
 export interface FieldWritable {

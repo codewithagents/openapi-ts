@@ -1,0 +1,20 @@
+// Scoped typecheck for the openapi-server generated output plus the hand-written React app.
+// DOM is in lib so the generated fetch client + the React frontend compile under strict tsc.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "noEmit": true
+  },
+  "include": [
+    "src",
+    "generated/service.ts",
+    "generated/router.ts",
+    "generated/models.ts",
+    "generated/client.ts",
+    "generated/client-config.ts",
+    "generated/hooks.ts",
+    "generated/index.ts"
+  ]
+}

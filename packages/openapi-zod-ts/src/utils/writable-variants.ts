@@ -43,9 +43,11 @@ function hasSplitFlag(props: PropMap | undefined): boolean {
  * Returns true when a component schema X has at least one readOnly or writeOnly property
  * (in its direct properties or an inline-object allOf member). When true, two variants
  * should be emitted: X (read shape) and XWritable (write shape).
- * Does not recurse into $ref targets: cross-schema flag inheritance is a future concern.
+ * Does not recurse into $ref targets: only direct flags are inspected here.
+ * The transitive case (container whose nested $refs reach a split schema) is handled
+ * separately in buildWritableVariantMap via a fixpoint pass.
  */
-function schemaHasSplitProperties(schema: SchemaObject | ReferenceObject): boolean {
+export function schemaHasSplitProperties(schema: SchemaObject | ReferenceObject): boolean {
   if (isRef(schema)) return false
   const s = schema as SchemaObject
   if (hasSplitFlag(s.properties as PropMap | undefined)) return true
@@ -86,9 +88,83 @@ export function resolveBodyRefToWritableName(
 }
 
 /**
+ * Collect all component schema $ref names referenced directly by a schema (non-recursively).
+ * Walks properties, array items, additionalProperties, and allOf/oneOf/anyOf members.
+ * Does NOT recurse into the targets of those refs; only the immediate ref strings are
+ * returned so callers can check whether any target is already in the split set.
+ * Returns raw component schema names (e.g. 'LabVariantItem'), not full $ref strings.
+ */
+/**
+ * If `schema` is a component $ref, return its raw name. If it is an inline array whose
+ * items is a component $ref, return that item's raw name. Otherwise undefined. This covers
+ * the two ref-bearing shapes a single property (or top-level schema) can take.
+ */
+function refNameOfSchemaOrArrayItem(
+  schema: SchemaObject | ReferenceObject | undefined
+): string | undefined {
+  if (schema === undefined) return undefined
+  if (isRef(schema)) return rawSchemaNameFromRef(schema.$ref)
+  const obj = schema as SchemaObject
+  const items = obj.type === 'array' ? (obj.items as SchemaObject | ReferenceObject | undefined) : undefined
+  if (items !== undefined && isRef(items)) return rawSchemaNameFromRef(items.$ref)
+  return undefined
+}
+
+/** Flatten a schema's allOf/oneOf/anyOf members into a single list. */
+function compositeMembers(obj: SchemaObject): Array<SchemaObject | ReferenceObject> {
+  const members: Array<SchemaObject | ReferenceObject> = []
+  for (const key of ['allOf', 'oneOf', 'anyOf'] as const) {
+    const group = (obj as Record<string, unknown>)[key] as
+      | (SchemaObject | ReferenceObject)[]
+      | undefined
+    if (group !== undefined) members.push(...group)
+  }
+  return members
+}
+
+function collectComponentRefNames(schema: SchemaObject | ReferenceObject): Set<string> {
+  const refs = new Set<string>()
+  const add = (name: string | undefined): void => {
+    if (name !== undefined) refs.add(name)
+  }
+
+  const visit = (s: SchemaObject | ReferenceObject): void => {
+    if (isRef(s)) {
+      add(rawSchemaNameFromRef(s.$ref))
+      return
+    }
+    const obj = s as SchemaObject
+    // The schema itself as a top-level array of $ref.
+    add(refNameOfSchemaOrArrayItem(obj))
+    // Each property: a direct $ref or an inline array of $ref.
+    for (const prop of Object.values((obj.properties ?? {}) as PropMap)) {
+      add(refNameOfSchemaOrArrayItem(prop))
+    }
+    // additionalProperties as a $ref (schema form only, not the boolean shorthand).
+    if (typeof obj.additionalProperties === 'object' && obj.additionalProperties !== null) {
+      add(refNameOfSchemaOrArrayItem(obj.additionalProperties as SchemaObject | ReferenceObject))
+    }
+    // Composite members: $ref members directly, inline members recursed one level.
+    for (const member of compositeMembers(obj)) {
+      if (isRef(member)) add(rawSchemaNameFromRef(member.$ref))
+      else visit(member)
+    }
+  }
+
+  visit(schema)
+  return refs
+}
+
+/**
  * Build a map from raw schema name to the resolved unique XWritable variant name.
- * Only includes schemas that actually need a split (have readOnly or writeOnly props).
- * XWritable names are uniquified against all top-level schema safe names so they never collide.
+ * Includes schemas that have readOnly or writeOnly properties directly (the "leaf" case)
+ * AND container schemas whose nested component $refs transitively reach a split schema
+ * (the "transitive container" case). XWritable names are uniquified against all top-level
+ * schema safe names so they never collide.
+ *
+ * The transitive detection runs a fixpoint: starting from the direct-split seed, it
+ * repeatedly adds any schema whose nested component ref names intersect the current split
+ * set, until no new additions occur. A visited guard prevents infinite loops on cyclic refs.
  */
 export function buildWritableVariantMap(spec: OpenAPIV3_1.Document): Map<string, string> {
   const schemas = spec.components?.schemas as
@@ -99,13 +175,41 @@ export function buildWritableVariantMap(spec: OpenAPIV3_1.Document): Map<string,
 
   const used = new Set<string>()
   for (const name of Object.keys(schemas)) used.add(toTypeName(name))
+  const writableNameFor = (name: string): string => uniquifyName(`${toTypeName(name)}Writable`, used)
 
+  // Seed: direct-split schemas (have readOnly or writeOnly properties directly).
   for (const [name, schema] of Object.entries(schemas)) {
-    if (!schemaHasSplitProperties(schema)) continue
-    const resolvedName = uniquifyName(`${toTypeName(name)}Writable`, used)
-    map.set(name, resolvedName)
+    if (schemaHasSplitProperties(schema)) map.set(name, writableNameFor(name))
   }
+  addTransitiveContainers(schemas, map, writableNameFor)
   return map
+}
+
+/**
+ * Grow `map` with container schemas whose nested component $refs transitively reach a
+ * schema already in the split set. Runs a fixpoint until no new container is added; a
+ * "checked" set keeps non-containers from being re-walked and makes cyclic refs terminate.
+ */
+function addTransitiveContainers(
+  schemas: Record<string, SchemaObject | ReferenceObject>,
+  map: Map<string, string>,
+  writableNameFor: (name: string) => string
+): void {
+  const checked = new Set<string>()
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const [name, schema] of Object.entries(schemas)) {
+      if (map.has(name) || checked.has(name) || isRef(schema)) continue
+      const nestedRefs = collectComponentRefNames(schema as SchemaObject)
+      if (Array.from(nestedRefs).some((refName) => map.has(refName))) {
+        map.set(name, writableNameFor(name))
+        changed = true
+      } else {
+        checked.add(name)
+      }
+    }
+  }
 }
 
 /**

@@ -1,0 +1,11 @@
+// Scoped typecheck for the contract harness. It imports each petstore's generated router +
+// service over package subpaths, so this is the gate that locks the request=write / response=read
+// split across fastify/hono/express under tsc. DOM is in lib for the generated fetch client.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noEmit": true
+  },
+  "include": ["src"]
+}

@@ -4119,3 +4119,164 @@ describe('generateFastifyRouter: global hook fields in CreateRouterOptions (issu
     expect(firstAddHookPos).toBeLessThan(firstRoutePos)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Writable variant threading in Hono + Express routers (#nested-response-variant)
+// ---------------------------------------------------------------------------
+
+function makeContainerSpec(): OpenAPIV3_1.Document {
+  return {
+    openapi: '3.1.0',
+    info: { title: 'Container API', version: '1' },
+    paths: {
+      '/containers': {
+        post: {
+          operationId: 'createContainer',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Container' },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'created',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Container' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        Item: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            serverId: { type: 'string', readOnly: true } as OpenAPIV3_1.SchemaObject,
+            secret: { type: 'string', writeOnly: true } as OpenAPIV3_1.SchemaObject,
+          },
+        },
+        Container: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            items: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/Item' },
+            } as OpenAPIV3_1.SchemaObject,
+          },
+        } as OpenAPIV3_1.SchemaObject,
+      },
+    },
+  }
+}
+
+describe('generateRouter (Hono): readOnly/writeOnly transitive container body variant', () => {
+  it('body type declaration uses ContainerWritable for a transitive container split', () => {
+    const { content } = generateRouter(makeContainerSpec())
+    // The `let body: ...` declaration in the handler should use ContainerWritable.
+    expect(content).toContain('let body: ContainerWritable')
+    expect(content).not.toContain('let body: Container\n')
+  })
+
+  it('body cast uses ContainerWritable', () => {
+    const { content } = generateRouter(makeContainerSpec())
+    // The JSON.parse cast should use ContainerWritable.
+    expect(content).toContain('as ContainerWritable')
+  })
+
+  it('body validation schema name stays ContainerSchema (base name, not writable)', () => {
+    const spec = makeContainerSpec()
+    const schemaNames = new Set(['ContainerSchema', 'ItemSchema'])
+    const { content } = generateRouter(spec, { schemaNames, schemaImportPath: './schemas.js' })
+    // Validation uses the base schema name; the Zod schema matches the write shape.
+    expect(content).toContain('ContainerSchema.safeParse')
+    expect(content).not.toContain('ContainerWritableSchema')
+  })
+
+  it('imports ContainerWritable from models.js', () => {
+    const { content } = generateRouter(makeContainerSpec())
+    // ContainerWritable must be imported alongside Container.
+    expect(content).toMatch(/import type \{[^}]*ContainerWritable[^}]*\} from '\.\/models\.js'/)
+  })
+
+  it('response handling uses Container (read shape), not ContainerWritable', () => {
+    const { content } = generateRouter(makeContainerSpec())
+    // The service call return is not cast to ContainerWritable.
+    expect(content).toContain('service.createContainer(')
+    // Response line (c.json) should NOT mention ContainerWritable.
+    const responseSection = content.slice(content.indexOf('service.createContainer('))
+    const firstReturn = responseSection.indexOf('return c.json')
+    expect(responseSection.slice(0, firstReturn)).not.toContain('ContainerWritable')
+  })
+
+  it('non-variant body is unchanged when schema has no readOnly/writeOnly', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Plain API', version: '1' },
+      paths: {
+        '/items': {
+          post: {
+            operationId: 'createItem',
+            requestBody: {
+              required: true,
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/Item' } },
+              },
+            },
+            responses: { '201': { description: 'created' } },
+          },
+        },
+      },
+      components: {
+        schemas: {
+          Item: {
+            type: 'object',
+            properties: { name: { type: 'string' } },
+          },
+        },
+      },
+    }
+    const { content } = generateRouter(spec)
+    expect(content).toContain('let body: Item')
+    expect(content).not.toContain('ItemWritable')
+  })
+})
+
+describe('generateExpressRouter: readOnly/writeOnly transitive container body variant', () => {
+  it('validated body cast uses ContainerWritable for a transitive container split', () => {
+    const spec = makeContainerSpec()
+    // Use schema-enhanced mode so the Zod validation + cast path is exercised.
+    const schemaNames = new Set(['ContainerSchema', 'ItemSchema'])
+    const { content } = generateExpressRouter(spec, { schemaNames, schemaImportPath: './schemas.js' })
+    // After safeParse, the validatedBody is cast to ContainerWritable.
+    expect(content).toContain('as ContainerWritable')
+  })
+
+  it('no-Zod path: plain body assignment casts to ContainerWritable', () => {
+    // Without schemaNames, the Express router uses `const body = req.body as Type`.
+    const { content } = generateExpressRouter(makeContainerSpec())
+    expect(content).toContain('as ContainerWritable')
+    expect(content).not.toContain('as Container\n')
+  })
+
+  it('body validation schema name stays ContainerSchema (base name)', () => {
+    const spec = makeContainerSpec()
+    const schemaNames = new Set(['ContainerSchema', 'ItemSchema'])
+    const { content } = generateExpressRouter(spec, { schemaNames, schemaImportPath: './schemas.js' })
+    expect(content).toContain('ContainerSchema.safeParse')
+    expect(content).not.toContain('ContainerWritableSchema')
+  })
+
+  it('imports ContainerWritable from models.js', () => {
+    const { content } = generateExpressRouter(makeContainerSpec())
+    expect(content).toMatch(/import type \{[^}]*ContainerWritable[^}]*\} from '\.\/models\.js'/)
+  })
+})

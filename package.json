@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "smoke": "pnpm --filter @codewithagents/examples run smoke",
-    "typecheck:generated": "pnpm --filter petstore-fastify run typecheck && pnpm --filter petstore-express run typecheck && pnpm --filter @codewithagents/integration run lint && pnpm --filter @codewithagents/examples run typecheck",
+    "typecheck:generated": "pnpm --filter petstore-fastify run typecheck && pnpm --filter petstore-express run typecheck && pnpm --filter @codewithagents/petstore-hono run typecheck && pnpm --filter @codewithagents/petstore-contract run typecheck && pnpm --filter @codewithagents/integration run lint && pnpm --filter @codewithagents/examples run typecheck",
     "fallow": "fallow",
     "fallow:audit": "fallow audit",
     "fallow:watch": "fallow watch"

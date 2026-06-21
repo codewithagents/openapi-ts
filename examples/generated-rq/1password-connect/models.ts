@@ -145,6 +145,15 @@ export type FullItem = Item & {
   files?: File[]
 }
 
+export interface FullItemWritable {
+  sections?: {
+    id?: string
+    label?: string
+  }[]
+  fields?: FieldWritable[]
+  files?: FileWritable[]
+}
+
 export interface Field {
   id: string
   section?: {

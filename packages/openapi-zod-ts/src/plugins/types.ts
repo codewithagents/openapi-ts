@@ -6,6 +6,8 @@ import {
   readShapeProperties,
   filterAllOfMembersForRead,
   effectiveWriteProperties,
+  rawSchemaNameFromRef,
+  schemaHasSplitProperties,
 } from '../utils/writable-variants.js'
 
 export interface GeneratedFile {
@@ -200,6 +202,49 @@ function schemaToTypeString(
 }
 
 /**
+ * Writable-aware variant of schemaToTypeString. When a component $ref resolves to a schema
+ * that is in the writableVariantMap, the XWritable name is emitted instead of the base name.
+ * Used exclusively inside buildWritableInterface to render the deep write shape of a container
+ * (e.g. items: LabVariantItemWritable[] instead of items: LabVariantItem[]).
+ * All other paths (read types, plain types) use the original schemaToTypeString unchanged.
+ */
+function schemaToWritableTypeString(
+  schema: SchemaObject | ReferenceObject,
+  writableVariantMap: Map<string, string>,
+  renameMap?: Map<string, string>,
+  spec?: OpenAPIV3_1.Document,
+  visited?: Set<string>
+): string {
+  if (isRef(schema)) {
+    const ref = schema.$ref
+    // Check if this component ref has a writable variant; if so, emit XWritable.
+    const rawName = rawSchemaNameFromRef(ref)
+    if (rawName !== undefined) {
+      const writableName = writableVariantMap.get(rawName)
+      if (writableName !== undefined) {
+        return writableName
+      }
+    }
+    // Fall back to the standard ref rendering (handles deep refs, renames, etc.).
+    return schemaToTypeString(schema, renameMap, spec, visited)
+  }
+
+  // array: recurse into items with the writable-aware renderer
+  if ((schema as SchemaObject).type === 'array') {
+    const arraySchema = schema as OpenAPIV3_1.ArraySchemaObject
+    const items = arraySchema.items as SchemaObject | ReferenceObject | undefined
+    if (items !== undefined) {
+      return `${schemaToWritableTypeString(items, writableVariantMap, renameMap, spec, visited)}[]`
+    }
+    return 'unknown[]'
+  }
+
+  // For all other schema forms (objects, composites, primitives) delegate to the
+  // standard renderer: the writable rewrite is only needed for component $refs.
+  return schemaToTypeString(schema, renameMap, spec, visited)
+}
+
+/**
  * Map an OpenAPI primitive type to a TypeScript type.
  * For integer with format int64, returns number with an inline comment noting precision
  * is limited to 2^53-1 (JS Number.MAX_SAFE_INTEGER). BigInt is avoided because
@@ -303,19 +348,29 @@ interface TypesOptions {
  * Uses effectiveWriteProperties so direct properties and inline allOf members are both
  * covered, with readOnly properties excluded. Emitted for any schema that has a writable
  * variant, regardless of which read-shape branch the schema took (interface, z.infer, allOf).
+ *
+ * When writableVariantMap is provided, nested component $refs whose target is in the map
+ * are rewritten to their XWritable name (e.g. items: LabVariantItemWritable[]) so the
+ * write shape is deep, not just the top-level field selection.
  */
 function buildWritableInterface(
   writableName: string,
   schema: SchemaObject,
   renameMap: Map<string, string> | undefined,
-  spec: OpenAPIV3_1.Document | undefined
+  spec: OpenAPIV3_1.Document | undefined,
+  writableVariantMap?: Map<string, string>
 ): string {
   const { props, required } = effectiveWriteProperties(schema)
   const lines: string[] = []
   for (const [key, propSchema] of Object.entries(props)) {
     const optional = !required.has(key)
     const propKey = toPropertyKey(key)
-    const typStr = schemaToTypeString(propSchema, renameMap, spec)
+    // Use the writable-aware renderer when a map is provided so nested split refs
+    // are rewritten to their XWritable names (deep write shape).
+    const typStr =
+      writableVariantMap !== undefined
+        ? schemaToWritableTypeString(propSchema, writableVariantMap, renameMap, spec)
+        : schemaToTypeString(propSchema, renameMap, spec)
     const comment = isRef(propSchema) ? '' : formatComment(propSchema as SchemaObject)
     lines.push(`  ${propKey}${optional ? '?' : ''}: ${typStr}${comment}`)
   }
@@ -359,21 +414,37 @@ function generateSchemaDeclaration(
     return `export type ${safeName} = unknown`
   }
 
-  // Schema-enhanced mode: for object schemas with a matching Zod schema, use z.infer
+  // Schema-enhanced mode: for object schemas with a matching Zod schema, use z.infer.
+  // Exception: when the schema is a transitive container (in the writable map but has no
+  // direct readOnly/writeOnly flags of its own), z.infer is unreliable because the user's
+  // Zod schema may embed the write-shaped nested schema (e.g. LabNestedVariantSchema embeds
+  // LabVariantItemWriteSchema). In that case, fall through to the spec-derived interface
+  // branch below so the read type comes from spec flags (items: LabVariantItem[]) and the
+  // XWritable is deep-rendered (items: LabVariantItemWritable[]).
   if (
     options?.schemaNames !== undefined &&
     options.schemaNames.has(`${safeName}Schema`) &&
     isObjectSchema(schema)
   ) {
-    const readDecl = `export type ${safeName} = z.infer<typeof ${safeName}Schema>`
-    // A schema with readOnly/writeOnly props still needs its XWritable variant emitted,
-    // because client.ts references it for request bodies. The read shape stays z.infer
-    // (derived from the user-owned Zod schema); the writable variant is a plain interface.
     const writableName = writableVariantMap?.get(name)
-    if (writableName !== undefined) {
-      return `${readDecl}\n\n${buildWritableInterface(writableName, schema as SchemaObject, renameMap, spec)}`
+    // A schema is "only transitively" in the map when it has no direct split flags.
+    // For such containers in schema-enhanced mode, derive the read type from spec (not z.infer)
+    // so the response type is correct regardless of what the user's Zod schema embeds.
+    const isTransitiveContainer =
+      writableName !== undefined && !schemaHasSplitProperties(schema)
+    if (!isTransitiveContainer) {
+      // Leaf or direct-split: keep z.infer as the read type (unchanged behaviour).
+      const readDecl = `export type ${safeName} = z.infer<typeof ${safeName}Schema>`
+      // A schema with readOnly/writeOnly props still needs its XWritable variant emitted,
+      // because client.ts references it for request bodies. The read shape stays z.infer
+      // (derived from the user-owned Zod schema); the writable variant is a plain interface.
+      if (writableName !== undefined) {
+        return `${readDecl}\n\n${buildWritableInterface(writableName, schema as SchemaObject, renameMap, spec, writableVariantMap)}`
+      }
+      return readDecl
     }
-    return readDecl
+    // Transitive container: fall through to the spec-derived object branch below.
+    // The z.infer read type is NOT emitted; the spec-derived interface is used instead.
   }
 
   if (isEnumSchema(schema)) {
@@ -409,7 +480,7 @@ function generateSchemaDeclaration(
       const filteredMembers = filterAllOfMembersForRead(schema)
       const readSchema: SchemaObject = { ...schema, allOf: filteredMembers }
       const readDecl = `export type ${safeName} = ${schemaToTypeString(readSchema, renameMap, spec)}`
-      return `${readDecl}\n\n${buildWritableInterface(writableName, schema, renameMap, spec)}`
+      return `${readDecl}\n\n${buildWritableInterface(writableName, schema, renameMap, spec, writableVariantMap)}`
     }
     const typeStr = schemaToTypeString(schema, renameMap, spec)
     return `export type ${safeName} = ${typeStr}`
@@ -459,8 +530,8 @@ function generateSchemaDeclaration(
 
     if (!hasSplit) return readDecl
 
-    // Build the write-shape (XWritable): exclude readOnly properties
-    return `${readDecl}\n\n${buildWritableInterface(writableName!, schema, renameMap, spec)}`
+    // Build the write-shape (XWritable): exclude readOnly properties (deep-render nested refs)
+    return `${readDecl}\n\n${buildWritableInterface(writableName!, schema, renameMap, spec, writableVariantMap)}`
   }
 
   // Discriminated union via oneOf/anyOf + discriminator

@@ -1,5 +1,6 @@
 import type { OpenAPIV3_1 } from 'openapi-types'
 import type { GeneratedFile } from 'openapi-zod-ts'
+import { buildWritableVariantMap } from 'openapi-zod-ts'
 import {
   SUPPORTED_METHODS,
   type SupportedMethod,
@@ -534,6 +535,7 @@ function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
   const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
   if (paths === undefined) return []
 
+  const writableVariantMap = buildWritableVariantMap(spec)
   const operations: RouteOperation[] = []
 
   for (const [path, pathItem] of Object.entries(paths)) {
@@ -547,7 +549,7 @@ function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
       const queryParams = getQueryParams(operation, spec)
       const headerParams = getHeaderParams(operation, spec)
       const cookieParams = getCookieParams(operation, spec)
-      const bodyInfo = getBodyInfo(operation)
+      const bodyInfo = getBodyInfo(operation, writableVariantMap)
       const responseStatus = getResponseStatus(operation, method)
       const responseTypeInfo = getResponseTypeName(operation)
 
@@ -759,9 +761,11 @@ function buildRouteHandler(
   let bodyVarName = 'body'
   if (op.bodyInfo !== undefined) {
     // Synthesized names (inline schemas) are schema-only; the TS type is unknown.
+    // A request body uses the XWritable variant when the schema has readOnly/writeOnly props
+    // (direct or transitive); the validation schema name below stays ${typeName}Schema.
     const typeDecl =
       op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized
-        ? op.bodyInfo.typeName
+        ? (op.bodyInfo.writableTypeName ?? op.bodyInfo.typeName)
         : 'unknown'
 
     if (op.bodyInfo.contentType === 'application/x-www-form-urlencoded') {
@@ -1013,7 +1017,7 @@ function buildExpressRouteHandler(
         // safe because safeParse already confirmed the value is structurally valid.
         const typeDecl =
           op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized
-            ? op.bodyInfo.typeName
+            ? (op.bodyInfo.writableTypeName ?? op.bodyInfo.typeName)
             : 'unknown'
         lines.push(`${indent}  const validatedBody = parseResult.data as ${typeDecl}`)
         bodyVarName = 'validatedBody'
@@ -1021,7 +1025,7 @@ function buildExpressRouteHandler(
         // Synthesized names (inline schemas) have no model type — use plain cast to unknown.
         const typeAnnotation =
           op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized
-            ? ` as ${op.bodyInfo.typeName}`
+            ? ` as ${op.bodyInfo.writableTypeName ?? op.bodyInfo.typeName}`
             : ''
         lines.push(`${indent}  const body = req.body${typeAnnotation}`)
       }

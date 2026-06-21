@@ -267,7 +267,9 @@ export function collectSortedBodyTypes(operations: OperationBase[]): string[] {
   const bodyTypes = new Set<string>()
   for (const op of operations) {
     if (op.bodyInfo?.typeName !== undefined && !op.bodyInfo.isSynthesized) {
-      bodyTypes.add(op.bodyInfo.typeName)
+      // Import the XWritable variant when the body has one, matching the body type/cast the
+      // router emits; the base read type is only needed by responses (inferred, not imported here).
+      bodyTypes.add(op.bodyInfo.writableTypeName ?? op.bodyInfo.typeName)
     }
   }
   return Array.from(bodyTypes).sort()

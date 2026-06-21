@@ -26,7 +26,7 @@ import {
 export const taskKeys = {
   all: () => ['tasks'] as const,
   list: (params?: Parameters<typeof listTasks>[0]) => ['tasks', 'list', params] as const,
-  detail: (id: string) => ['tasks', id] as const,
+  detail: (id: Parameters<typeof getTask>[0]) => ['tasks', id] as const,
 }
 
 // ── Query options factories ──────────────────────────────────
@@ -48,7 +48,7 @@ export function listTasksQueryOptions(
 }
 
 export function getTaskQueryOptions(
-  id: string,
+  id: Parameters<typeof getTask>[0],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTask>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -113,7 +113,7 @@ export function useListTasksInfinite(
 }
 
 export function useGetTask(
-  id: string | undefined | null,
+  id: Parameters<typeof getTask>[0] | undefined | null,
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof getTask>>, ApiError>,
     'queryKey' | 'queryFn'
@@ -176,7 +176,7 @@ export function useUpdateTask(
     UseMutationOptions<
       Awaited<ReturnType<typeof updateTask>>,
       ApiError,
-      { id: string; body: Parameters<typeof updateTask>[1] }
+      { id: Parameters<typeof updateTask>[0]; body: Parameters<typeof updateTask>[1] }
     >,
     'mutationFn'
   >
@@ -184,7 +184,7 @@ export function useUpdateTask(
   return useMutation<
     Awaited<ReturnType<typeof updateTask>>,
     ApiError,
-    { id: string; body: Parameters<typeof updateTask>[1] }
+    { id: Parameters<typeof updateTask>[0]; body: Parameters<typeof updateTask>[1] }
   >({
     mutationFn: ({ id, body }) => updateTask(id, body),
     ...options,
@@ -193,11 +193,19 @@ export function useUpdateTask(
 
 export function useDeleteTask(
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof deleteTask>>, ApiError, string>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof deleteTask>>,
+      ApiError,
+      Parameters<typeof deleteTask>[0]
+    >,
     'mutationFn'
   >
 ) {
-  return useMutation<Awaited<ReturnType<typeof deleteTask>>, ApiError, string>({
+  return useMutation<
+    Awaited<ReturnType<typeof deleteTask>>,
+    ApiError,
+    Parameters<typeof deleteTask>[0]
+  >({
     mutationFn: (id) => deleteTask(id),
     ...options,
   })

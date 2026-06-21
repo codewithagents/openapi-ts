@@ -143,7 +143,7 @@ export interface BusinessLineWritable {
   salesChannels?: string[]
   service: 'paymentProcessing' | 'banking'
   sourceOfFunds?: SourceOfFunds
-  webData?: WebData[]
+  webData?: WebDataWritable[]
   webDataExemption?: WebDataExemption
 }
 
@@ -156,7 +156,7 @@ export interface BusinessLineInfoWritable {
   salesChannels?: string[]
   service: 'paymentProcessing' | 'banking'
   sourceOfFunds?: SourceOfFunds
-  webData?: WebData[]
+  webData?: WebDataWritable[]
   webDataExemption?: WebDataExemption
 }
 
@@ -166,11 +166,17 @@ export interface BusinessLineInfoUpdateWritable {
   industryCode?: string
   salesChannels?: string[]
   sourceOfFunds?: SourceOfFunds
-  webData?: WebData[]
+  webData?: WebDataWritable[]
   webDataExemption?: WebDataExemption
 }
 
-export type BusinessLines = z.infer<typeof BusinessLinesSchema>
+export interface BusinessLines {
+  businessLines: BusinessLine[]
+}
+
+export interface BusinessLinesWritable {
+  businessLines: BusinessLineWritable[]
+}
 
 export type CALocalAccountIdentification = z.infer<typeof CALocalAccountIdentificationSchema>
 
@@ -278,7 +284,29 @@ export type IbanAccountIdentification = z.infer<typeof IbanAccountIdentification
 
 export type IdentificationData = z.infer<typeof IdentificationDataSchema>
 
-export type Individual = z.infer<typeof IndividualSchema>
+export interface Individual {
+  birthData?: BirthData
+  email?: string
+  identificationData?: IdentificationData
+  name: Name
+  nationality?: string
+  phone?: PhoneNumber
+  residentialAddress: Address
+  taxInformation?: TaxInformation[]
+  webData?: WebData
+}
+
+export interface IndividualWritable {
+  birthData?: BirthData
+  email?: string
+  identificationData?: IdentificationData
+  name: Name
+  nationality?: string
+  phone?: PhoneNumberWritable
+  residentialAddress: Address
+  taxInformation?: TaxInformation[]
+  webData?: WebDataWritable
+}
 
 export type LegalEntity = z.infer<typeof LegalEntitySchema>
 
@@ -286,20 +314,20 @@ export interface LegalEntityWritable {
   capabilities?: Record<string, LegalEntityCapability>
   documentDetails?: DocumentReference[]
   documents?: EntityReference[]
-  entityAssociations?: LegalEntityAssociation[]
-  individual?: Individual
-  organization?: Organization
+  entityAssociations?: LegalEntityAssociationWritable[]
+  individual?: IndividualWritable
+  organization?: OrganizationWritable
   problems?: CapabilityProblem[]
   reference?: string
   soleProprietorship?: SoleProprietorship
-  trust?: Trust
+  trust?: TrustWritable
   type?:
     | 'individual'
     | 'organization'
     | 'soleProprietorship'
     | 'trust'
     | 'unincorporatedPartnership'
-  unincorporatedPartnership?: UnincorporatedPartnership
+  unincorporatedPartnership?: UnincorporatedPartnershipWritable
   verificationPlan?: string
 }
 
@@ -339,9 +367,67 @@ export interface LegalEntityCapabilityWritable {
   requestedSettings?: CapabilitySettings
 }
 
-export type LegalEntityInfo = z.infer<typeof LegalEntityInfoSchema>
+export interface LegalEntityInfo {
+  capabilities?: Record<string, LegalEntityCapability>
+  entityAssociations?: LegalEntityAssociation[]
+  individual?: Individual
+  organization?: Organization
+  reference?: string
+  soleProprietorship?: SoleProprietorship
+  trust?: Trust
+  type?:
+    | 'individual'
+    | 'organization'
+    | 'soleProprietorship'
+    | 'trust'
+    | 'unincorporatedPartnership'
+  unincorporatedPartnership?: UnincorporatedPartnership
+  verificationPlan?: string
+}
 
-export type LegalEntityInfoRequiredType = z.infer<typeof LegalEntityInfoRequiredTypeSchema>
+export interface LegalEntityInfoWritable {
+  capabilities?: Record<string, LegalEntityCapability>
+  entityAssociations?: LegalEntityAssociationWritable[]
+  individual?: IndividualWritable
+  organization?: OrganizationWritable
+  reference?: string
+  soleProprietorship?: SoleProprietorship
+  trust?: TrustWritable
+  type?:
+    | 'individual'
+    | 'organization'
+    | 'soleProprietorship'
+    | 'trust'
+    | 'unincorporatedPartnership'
+  unincorporatedPartnership?: UnincorporatedPartnershipWritable
+  verificationPlan?: string
+}
+
+export interface LegalEntityInfoRequiredType {
+  capabilities?: Record<string, LegalEntityCapability>
+  entityAssociations?: LegalEntityAssociation[]
+  individual?: Individual
+  organization?: Organization
+  reference?: string
+  soleProprietorship?: SoleProprietorship
+  trust?: Trust
+  type: 'individual' | 'organization' | 'soleProprietorship' | 'trust' | 'unincorporatedPartnership'
+  unincorporatedPartnership?: UnincorporatedPartnership
+  verificationPlan?: string
+}
+
+export interface LegalEntityInfoRequiredTypeWritable {
+  capabilities?: Record<string, LegalEntityCapability>
+  entityAssociations?: LegalEntityAssociationWritable[]
+  individual?: IndividualWritable
+  organization?: OrganizationWritable
+  reference?: string
+  soleProprietorship?: SoleProprietorship
+  trust?: TrustWritable
+  type: 'individual' | 'organization' | 'soleProprietorship' | 'trust' | 'unincorporatedPartnership'
+  unincorporatedPartnership?: UnincorporatedPartnershipWritable
+  verificationPlan?: string
+}
 
 export type NOLocalAccountIdentification = z.infer<typeof NOLocalAccountIdentificationSchema>
 
@@ -363,7 +449,115 @@ export type OnboardingTheme = z.infer<typeof OnboardingThemeSchema>
 
 export type OnboardingThemes = z.infer<typeof OnboardingThemesSchema>
 
-export type Organization = z.infer<typeof OrganizationSchema>
+export interface Organization {
+  countryOfGoverningLaw?: string
+  dateOfIncorporation?: string
+  dateOfInitiationOfLegalProceeding?: string
+  description?: string
+  doingBusinessAs?: string
+  economicSector?: string
+  email?: string
+  financialReports?: FinancialReport[]
+  globalLegalEntityIdentifier?: string
+  headOfficeIndicator?: boolean
+  institutionalSector?:
+    | 'nonFinancialCorporation'
+    | 'centralBank'
+    | 'creditInstitutions'
+    | 'depositTakingCorporations'
+    | 'moneyMarketFunds'
+    | 'nonMMFInvestmentFunds'
+    | 'financialVehicleCorporation'
+    | 'otherFinancialIntermediaries'
+    | 'financialAuxiliaries'
+    | 'captiveFinancialInstitutionsAndMoneyLenders'
+    | 'insuranceCorporations'
+    | 'pensionFunds'
+    | 'centralGovernment'
+    | 'stateGovernment'
+    | 'localGovernment'
+    | 'socialSecurityFunds'
+    | 'nonProfitInstitutionsServingHouseholds'
+  legalForm?: string
+  legalName: string
+  phone?: PhoneNumber
+  principalPlaceOfBusiness?: Address
+  registeredAddress: Address
+  registrationNumber?: string
+  statusOfLegalProceeding?:
+    | 'noLegalActionsTaken'
+    | 'underJudicialAdministration'
+    | 'bankruptcyInsolvency'
+    | 'otherLegalMeasures'
+  stockData?: StockData
+  taxInformation?: TaxInformation[]
+  taxReportingClassification?: TaxReportingClassification
+  type?:
+    | 'associationIncorporated'
+    | 'governmentalOrganization'
+    | 'listedPublicCompany'
+    | 'nonProfit'
+    | 'partnershipIncorporated'
+    | 'privateCompany'
+  vatAbsenceReason?: 'industryExemption' | 'belowTaxThreshold'
+  vatNumber?: string
+  webData?: WebData
+}
+
+export interface OrganizationWritable {
+  countryOfGoverningLaw?: string
+  dateOfIncorporation?: string
+  dateOfInitiationOfLegalProceeding?: string
+  description?: string
+  doingBusinessAs?: string
+  economicSector?: string
+  email?: string
+  financialReports?: FinancialReport[]
+  globalLegalEntityIdentifier?: string
+  headOfficeIndicator?: boolean
+  institutionalSector?:
+    | 'nonFinancialCorporation'
+    | 'centralBank'
+    | 'creditInstitutions'
+    | 'depositTakingCorporations'
+    | 'moneyMarketFunds'
+    | 'nonMMFInvestmentFunds'
+    | 'financialVehicleCorporation'
+    | 'otherFinancialIntermediaries'
+    | 'financialAuxiliaries'
+    | 'captiveFinancialInstitutionsAndMoneyLenders'
+    | 'insuranceCorporations'
+    | 'pensionFunds'
+    | 'centralGovernment'
+    | 'stateGovernment'
+    | 'localGovernment'
+    | 'socialSecurityFunds'
+    | 'nonProfitInstitutionsServingHouseholds'
+  legalForm?: string
+  legalName: string
+  phone?: PhoneNumberWritable
+  principalPlaceOfBusiness?: Address
+  registeredAddress: Address
+  registrationNumber?: string
+  statusOfLegalProceeding?:
+    | 'noLegalActionsTaken'
+    | 'underJudicialAdministration'
+    | 'bankruptcyInsolvency'
+    | 'otherLegalMeasures'
+  stockData?: StockData
+  taxInformation?: TaxInformation[]
+  taxReportingClassification?: TaxReportingClassification
+  type?:
+    | 'associationIncorporated'
+    | 'governmentalOrganization'
+    | 'listedPublicCompany'
+    | 'nonProfit'
+    | 'partnershipIncorporated'
+    | 'privateCompany'
+  vatAbsenceReason?: 'industryExemption' | 'belowTaxThreshold'
+  vatNumber?: string
+  webData?: WebDataWritable
+}
 
 export type OwnerEntity = z.infer<typeof OwnerEntitySchema>
 
@@ -413,7 +607,7 @@ export type TermsOfServiceAcceptanceInfo = z.infer<typeof TermsOfServiceAcceptan
 export type TransferInstrument = z.infer<typeof TransferInstrumentSchema>
 
 export interface TransferInstrumentWritable {
-  bankAccount: BankAccountInfo
+  bankAccount: BankAccountInfoWritable
   capabilities?: Record<string, SupportingEntityCapability>
   documentDetails?: DocumentReference[]
   legalEntityId: string
@@ -421,7 +615,17 @@ export interface TransferInstrumentWritable {
   type: 'bankAccount' | 'recurringDetail'
 }
 
-export type TransferInstrumentInfo = z.infer<typeof TransferInstrumentInfoSchema>
+export interface TransferInstrumentInfo {
+  bankAccount: BankAccountInfo
+  legalEntityId: string
+  type: 'bankAccount' | 'recurringDetail'
+}
+
+export interface TransferInstrumentInfoWritable {
+  bankAccount: BankAccountInfoWritable
+  legalEntityId: string
+  type: 'bankAccount' | 'recurringDetail'
+}
 
 export type TransferInstrumentReference = z.infer<typeof TransferInstrumentReferenceSchema>
 
@@ -431,7 +635,75 @@ export interface TransferInstrumentReferenceWritable {
   realLastFour?: string
 }
 
-export type Trust = z.infer<typeof TrustSchema>
+export interface Trust {
+  countryOfGoverningLaw: string
+  dateOfIncorporation?: string
+  description?: string
+  doingBusinessAs?: string
+  name: string
+  principalPlaceOfBusiness?: Address
+  registeredAddress: Address
+  registrationNumber?: string
+  taxInformation?: TaxInformation[]
+  type:
+    | 'businessTrust'
+    | 'cashManagementTrust'
+    | 'charitableTrust'
+    | 'corporateUnitTrust'
+    | 'deceasedEstate'
+    | 'discretionaryTrust'
+    | 'discretionaryInvestmentTrust'
+    | 'discretionaryServicesManagementTrust'
+    | 'discretionaryTradingTrust'
+    | 'familyTrust'
+    | 'firstHomeSaverAccountsTrust'
+    | 'fixedTrust'
+    | 'fixedUnitTrust'
+    | 'hybridTrust'
+    | 'listedPublicUnitTrust'
+    | 'otherTrust'
+    | 'pooledSuperannuationTrust'
+    | 'publicTradingTrust'
+    | 'unlistedPublicUnitTrust'
+  undefinedBeneficiaryInfo?: UndefinedBeneficiary[]
+  vatAbsenceReason?: 'industryExemption' | 'belowTaxThreshold'
+  vatNumber?: string
+}
+
+export interface TrustWritable {
+  countryOfGoverningLaw: string
+  dateOfIncorporation?: string
+  description?: string
+  doingBusinessAs?: string
+  name: string
+  principalPlaceOfBusiness?: Address
+  registeredAddress: Address
+  registrationNumber?: string
+  taxInformation?: TaxInformation[]
+  type:
+    | 'businessTrust'
+    | 'cashManagementTrust'
+    | 'charitableTrust'
+    | 'corporateUnitTrust'
+    | 'deceasedEstate'
+    | 'discretionaryTrust'
+    | 'discretionaryInvestmentTrust'
+    | 'discretionaryServicesManagementTrust'
+    | 'discretionaryTradingTrust'
+    | 'familyTrust'
+    | 'firstHomeSaverAccountsTrust'
+    | 'fixedTrust'
+    | 'fixedUnitTrust'
+    | 'hybridTrust'
+    | 'listedPublicUnitTrust'
+    | 'otherTrust'
+    | 'pooledSuperannuationTrust'
+    | 'publicTradingTrust'
+    | 'unlistedPublicUnitTrust'
+  undefinedBeneficiaryInfo?: UndefinedBeneficiaryWritable[]
+  vatAbsenceReason?: 'industryExemption' | 'belowTaxThreshold'
+  vatNumber?: string
+}
 
 export type UKLocalAccountIdentification = z.infer<typeof UKLocalAccountIdentificationSchema>
 
