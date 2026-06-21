@@ -23,7 +23,7 @@ import Fastify from 'fastify'
 import fastifyFormbody from '@fastify/formbody'
 import fastifyMultipart from '@fastify/multipart'
 import { createRouter } from '../../generated/router.js'
-import { HttpError } from '../../generated/errors.js'
+import { HttpError } from '../../generated/router.js'
 import type { PetstoreService } from '../../generated/service.js'
 
 /** Build a test Fastify app with the required parsers and a custom stub service. */

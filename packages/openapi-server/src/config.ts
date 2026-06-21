@@ -35,6 +35,24 @@ export interface ServerConfig {
    * the generator use the exact schemas you own.
    */
   emit_response_validation?: boolean
+  /**
+   * Override the directory where the shared runtime folder (`_shared/`) is written.
+   * When omitted, the generator derives the shared location automatically:
+   * for a single project the output dir itself is used, so shared = `<output>/_shared/`.
+   * For multiple projects, the longest common parent directory of all output paths is used,
+   * so shared = `<commonParent>/_shared/`.
+   *
+   * Use this override when your output dirs share no common parent or when you want
+   * to consolidate the shared runtime at a specific location.
+   */
+  shared_output?: string
+}
+
+/** Validate that an optional config field is a non-empty string when present. */
+function assertOptionalString(raw: Record<string, unknown>, key: string, label: string): void {
+  if (raw[key] !== undefined && (typeof raw[key] !== 'string' || !raw[key])) {
+    throw new Error(`"${key}" must be a non-empty string ${label}`)
+  }
 }
 
 function parseServerConfig(
@@ -51,18 +69,9 @@ function parseServerConfig(
   ) {
     throw new Error('"framework" must be one of: "hono", "express", "fastify", or "none"')
   }
-  if (
-    raw['input_schema'] !== undefined &&
-    (typeof raw['input_schema'] !== 'string' || !raw['input_schema'])
-  ) {
-    throw new Error('"input_schema" must be a non-empty string path to your Zod schema file')
-  }
-  if (
-    raw['context_type'] !== undefined &&
-    (typeof raw['context_type'] !== 'string' || !raw['context_type'])
-  ) {
-    throw new Error('"context_type" must be a non-empty string TypeScript type name')
-  }
+  assertOptionalString(raw, 'input_schema', 'path to your Zod schema file')
+  assertOptionalString(raw, 'context_type', 'TypeScript type name')
+  assertOptionalString(raw, 'shared_output', 'path to the shared output directory')
   if (
     raw['emit_response_validation'] !== undefined &&
     typeof raw['emit_response_validation'] !== 'boolean'
@@ -75,6 +84,7 @@ function parseServerConfig(
     input_schema: raw['input_schema'] as string | undefined,
     context_type: raw['context_type'] as string | undefined,
     emit_response_validation: raw['emit_response_validation'] as boolean | undefined,
+    shared_output: raw['shared_output'] as string | undefined,
   }
 }
 

@@ -6,21 +6,30 @@ Generate a typed server-side service interface and an optional framework router 
 
 | File | Description |
 |---|---|
-| `service.ts` | TypeScript interface — one method per operation; implement this to wire your business logic |
-| `router.ts` | Framework router (`createRouter(service)`): routes with optional Zod validation. Only generated when `framework` is not `"none"`. |
+| `service.ts` | TypeScript interface, one method per operation; implement this to wire your business logic |
+| `router.ts` | Framework router (`createRouter(service)`): routes with optional Zod validation. Only generated when `framework` is not `"none"`. Re-exports `HttpError` from `_shared/errors.ts`. |
+| `_shared/errors.ts` | Shared `HttpError` class, emitted once per generation run. Single-project: inside the `output` dir. Multi-project: at the longest common parent of all `output` dirs. Override with `shared_output` in config. |
 
 ## Two-pass generation (schema-enhanced mode)
 
 When `input_schema` is set in config:
 
-1. **First pass** — generates `service.ts` + `router.ts` (no Zod validation)
+1. **First pass** — generates `service.ts` + `router.ts` + `_shared/errors.ts` (no Zod validation in router)
 2. **Second pass** — re-generates `router.ts` with `safeParse` calls using the schemas from `input_schema`; returns `422 { error, issues }` on validation failure
 
 `input_schema` is **never overwritten** — the user owns it.
+`_shared/errors.ts` is always emitted once per run regardless of schema mode.
 
 ## Config
 
-Default: `openapi-server.config.json` in CWD. Fields: `input_openapi`, `output`, `framework?` (`"hono"` | `"express"` | `"fastify"` | `"none"`, default: `"none"`), `input_schema?`.
+Default: `openapi-server.config.json` in CWD. Fields: `input_openapi`, `output`, `framework?` (`"hono"` | `"express"` | `"fastify"` | `"none"`, default: `"none"`), `input_schema?`, `shared_output?` (override for `_shared/errors.ts` location).
+
+## Fastify-specific runtime options
+
+`createRouter(service, options?)` accepts a `CreateRouterOptions` object:
+
+- `registerParsers?: boolean` — set `false` to skip auto-registering `@fastify/formbody` / `@fastify/multipart`
+- `registerCustomRoutes?: (app: FastifyInstance) => void | Promise<void>` — callback called after ZodTypeProvider compilers, error handler, and body parsers are set up, but before spec-generated routes. Custom routes here inherit ZodTypeProvider and HttpError handling.
 
 ## Key non-obvious decisions
 

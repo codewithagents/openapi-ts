@@ -38,7 +38,7 @@ Requires [`openapi-zod-ts`](../openapi-zod-ts). Run both generators together.
 {
   "input_openapi": "./spec/api.json",
   "output": "./generated",
-  "framework": "hono"   // or "express", "fastify", "none" (none = service.ts only, default)
+  "framework": "hono"
 }
 ```
 
@@ -54,6 +54,7 @@ npx openapi-server
 |---|---|
 | `service.ts` | TypeScript interface, one method per API operation |
 | `router.ts` | `createRouter(service)` factory, mounts every route on a Hono app |
+| `_shared/errors.ts` | Shared `HttpError` class (see below) |
 
 Run `openapi-zod-ts` first (or together) so `models.ts` exists before `service.ts` imports from it:
 
@@ -105,6 +106,9 @@ import { Hono } from 'hono'
 import type { CreatePetRequest } from './models.js'
 import type { PetstoreService } from './service.js'
 
+import { HttpError } from './_shared/errors.js'
+export { HttpError } from './_shared/errors.js'
+
 export function createRouter(service: PetstoreService): Hono {
   const app = new Hono()
 
@@ -115,21 +119,21 @@ export function createRouter(service: PetstoreService): Hono {
     return c.json(await service.listPets(params))
   })
 
-  app.post('/pets', async (c) => {
-    const body = await c.req.json<CreatePetRequest>()
-    return c.json(await service.createPet(body), 201)
-  })
-
-  app.get('/pets/:id', async (c) => {
-    return c.json(await service.getPet(c.req.param('id')))
-  })
-
-  app.delete('/pets/:id', async (c) => {
-    await service.deletePet(c.req.param('id'))
-    return new Response(null, { status: 204 })
-  })
-
+  // ... more routes
   return app
+}
+```
+
+**`generated/_shared/errors.ts`**
+
+```ts
+// This file is auto-generated. Do not edit manually.
+
+export class HttpError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message)
+    this.name = 'HttpError'
+  }
 }
 ```
 
@@ -207,17 +211,16 @@ serve({ fetch: app.fetch, port: 3001 })
 
 ## Config reference
 
-See the [full configuration reference](https://openapi.codewithagents.de/openapi-server#configuration) in the docs for a detailed options table and the `--config` CLI flag.
-
 `openapi-server.config.json`:
 
 ```json
 {
-  "input_openapi": "./spec/api.json",       // required: path to OpenAPI 3.x spec (JSON or YAML)
-  "output": "./generated",                  // required: directory to write generated files
-  "framework": "hono",                      // optional: router target (default: "none")
-  "input_schema": "./generated/schemas.ts", // optional: Zod schema file for request validation
-  "context_type": "RequestContext"          // optional: TypeScript type for per-request caller context
+  "input_openapi": "./spec/api.json",
+  "output": "./generated",
+  "framework": "hono",
+  "input_schema": "./generated/schemas.ts",
+  "context_type": "RequestContext",
+  "shared_output": "./shared"
 }
 ```
 
@@ -229,6 +232,7 @@ See the [full configuration reference](https://openapi.codewithagents.de/openapi
 | `input_schema` | No | none | Path to user-owned Zod schema file. Enables server-side request validation (see below) |
 | `context_type` | No | none | TypeScript type name to thread through service methods as a final `ctx` argument. See below. |
 | `emit_response_validation` | No | `false` | Fastify only. Synthesize inline Zod response schemas for flat inline schemas. See below. |
+| `shared_output` | No | derived | Override directory for `_shared/errors.ts`. Default: derived from output paths (see below). |
 
 Use `--config <path>` to point at a config file in a different location:
 
@@ -367,11 +371,35 @@ No extra setup needed. The generator automatically adds `import { getCookie } fr
 
 ---
 
-## Error handling and troubleshooting
+## Error handling
+
+`HttpError` is the canonical way to return structured HTTP errors from service methods. The generated `router.ts` re-exports it, so you always import from one place:
+
+```ts
+import { HttpError } from './generated/router.js'
+```
+
+This import works for all three frameworks and is stable across regenerations.
+
+`HttpError` lives in `_shared/errors.ts` (see next section). `router.ts` re-exports it with `export { HttpError } from './_shared/errors.js'` so the import path above stays clean and unchanged even in multi-spec configurations.
+
+### Framework error-shape comparison
+
+Each framework has a different error shape for built-in validation failures. Use this table as a reference when writing app-level error handlers:
+
+| Source | Framework | Status | Body shape |
+|---|---|---|---|
+| `HttpError` from service | All | any (your `.status`) | `{ error: err.message }` (Hono/Express) or `{ statusCode, code, error, message }` (Fastify) |
+| Zod validation failure | Hono, Express | 422 | `{ error: 'Invalid request body', issues: [...] }` |
+| Zod validation failure | Fastify | 400 | `{ statusCode: 400, code: 'FST_ERR_VALIDATION', error: '...', message: '...' }` |
+| Unsupported Content-Type | Hono | 415 | `{ error: 'Unsupported Media Type' }` |
+| Unsupported Content-Type | Fastify | 415 | `{ statusCode: 415, code: 'FST_ERR_CTP_INVALID_MEDIA_TYPE', error: '...', message: '...' }` |
+
+### How error propagation works
 
 The generated router maps service-call errors in two cases. Hono and Express use a per-route `try/catch`; Fastify registers a single `setErrorHandler` once (no per-route `try/catch`). Both handle the same two cases:
 
-- **`HttpError`** (exported from the generated `router.ts`): mapped to its `.status` code. Use `new HttpError(404, 'Pet not found')` inside service methods to return structured HTTP error responses.
+- **`HttpError`**: mapped to its `.status` code. Use `new HttpError(404, 'Pet not found')` inside service methods to return structured HTTP error responses.
 - **All other errors**: re-thrown to your app-level error handler (`setErrorHandler` in Fastify, error-handling middleware in Express, `app.onError` in Hono).
 
 This means custom error types that do NOT extend `HttpError` propagate to the framework layer, where you install a single error handler for logging, monitoring, and response shaping.
@@ -413,7 +441,150 @@ fastify.register(createRouter(petService), { prefix: '/api' })
 
 The same pattern applies to Express error middleware (`app.use((err, req, res, next) => { ... })`) and to Hono's `app.onError((err, c) => { ... })`.
 
-See [Error handling](https://openapi.codewithagents.de/openapi-server#error-handling) in the docs for per-framework error handler examples and [Troubleshooting](https://openapi.codewithagents.de/openapi-server#troubleshooting) for common issues such as missing Zod validation or `Cannot find module './models.js'`.
+---
+
+## Shared runtime (`_shared/`) and multi-spec mounting
+
+Every generation run writes one `_shared/errors.ts` file that all generated routers import from. This design ensures that `err instanceof HttpError` works correctly when multiple generated routers are mounted in the same server process — a check that would silently fail if each router defined its own copy of the class.
+
+### Where `_shared/` is written
+
+The generator derives the shared location automatically:
+
+- **Single project** (one `output` path): `_shared/` is placed inside the output directory itself.
+  `output: "generated"` → shared file at `generated/_shared/errors.ts`, imported as `./_shared/errors.js` in `router.ts`.
+
+- **Multiple projects** (via `projects` array in config): `_shared/` is placed at the longest common parent directory of all `output` paths.
+  `output: "gen/public"` and `output: "gen/admin"` → shared file at `gen/_shared/errors.ts`, imported as `../_shared/errors.js` in each `router.ts`.
+
+- **Override** (`shared_output` config field): set `"shared_output": "path/to/shared"` to place `_shared/errors.ts` at a specific location instead of the derived one. Useful when the output dirs share no common parent.
+
+### Multi-spec mounting example
+
+A real-world pattern: two API specs (public and admin) generate into sibling directories and are mounted in the same Fastify server. Because both routers import `HttpError` from the same `gen/_shared/errors.ts`, a single app-level error handler covers both routers and `instanceof` checks work correctly.
+
+**Config (`openapi-server.config.json`):**
+
+```json
+{
+  "projects": [
+    {
+      "input_openapi": "./specs/public.json",
+      "output": "./gen/public",
+      "framework": "fastify"
+    },
+    {
+      "input_openapi": "./specs/admin.json",
+      "output": "./gen/admin",
+      "framework": "fastify"
+    }
+  ]
+}
+```
+
+This writes:
+- `gen/public/router.ts` — imports `HttpError` from `../_shared/errors.js`
+- `gen/admin/router.ts` — imports `HttpError` from `../_shared/errors.js`
+- `gen/_shared/errors.ts` — the single shared `HttpError` class
+
+**Mounting both routers:**
+
+```ts
+import Fastify from 'fastify'
+import { HttpError } from './gen/_shared/errors.js'
+import { createRouter as createPublicRouter } from './gen/public/router.js'
+import { createRouter as createAdminRouter } from './gen/admin/router.js'
+import { publicService } from './src/publicService.js'
+import { adminService } from './src/adminService.js'
+
+const fastify = Fastify()
+
+// Both routers use the same HttpError class: instanceof works correctly.
+fastify.register(createPublicRouter(publicService), { prefix: '/api/v1' })
+fastify.register(createAdminRouter(adminService), { prefix: '/admin' })
+
+// One app-level error handler covers both routers.
+fastify.setErrorHandler((err, request, reply) => {
+  if (err instanceof HttpError) {
+    return reply.status(err.status).send({ error: err.message })
+  }
+  fastify.log.error(err)
+  return reply.status(500).send({ error: 'Internal server error' })
+})
+
+fastify.listen({ port: 3000 })
+```
+
+Because `HttpError` is a single class imported from one shared file, the `instanceof` check on line `if (err instanceof HttpError)` works for errors thrown in either router. Without the shared module, each router's locally-defined class would be a distinct identity and the check would silently fail for errors from the other router.
+
+---
+
+## Custom routes (`registerCustomRoutes`, Fastify only)
+
+The Fastify `createRouter` accepts an optional `registerCustomRoutes` callback that runs after the ZodTypeProvider compilers, error handler, and body parsers are set up, but before the spec-generated routes. Custom routes registered here inherit the ZodTypeProvider context and the HttpError error handler.
+
+```ts
+import { createRouter, HttpError } from './generated/router.js'
+
+fastify.register(
+  createRouter(petService, {
+    registerCustomRoutes: async (app) => {
+      app.get('/health', async (_req, reply) => {
+        return reply.send({ status: 'ok' })
+      })
+
+      app.get('/metrics', async (_req, reply) => {
+        const count = await db.countPets()
+        return reply.send({ pets: count })
+      })
+    },
+  }),
+  { prefix: '/api' }
+)
+```
+
+Custom routes can throw `HttpError` and it will be caught by the same error handler as the spec-generated routes:
+
+```ts
+registerCustomRoutes: async (app) => {
+  app.post('/admin/reset', async (req, reply) => {
+    const auth = req.headers.authorization
+    if (!auth) throw new HttpError(401, 'Unauthorized')
+    await db.reset()
+    return reply.status(204).send()
+  })
+}
+```
+
+**Sibling-plugin pattern for non-spec routes:**
+
+For routes that do not belong in the spec (health checks, metrics, webhook receivers), register them as a separate Fastify plugin alongside the generated router rather than embedding them in `registerCustomRoutes`:
+
+```ts
+import Fastify from 'fastify'
+import { createRouter } from './generated/router.js'
+
+const fastify = Fastify()
+
+// Non-spec routes as a standalone plugin
+fastify.register(async (app) => {
+  app.get('/health', async (_req, reply) => reply.send({ status: 'ok' }))
+  app.get('/readyz', async (_req, reply) => reply.send({ ready: true }))
+}, { prefix: '/' })
+
+// Generated router with its own ZodTypeProvider scope
+fastify.register(createRouter(petService), { prefix: '/api' })
+
+// App-level error handler
+fastify.setErrorHandler((err, request, reply) => {
+  fastify.log.error(err)
+  return reply.status(500).send({ error: 'Internal server error' })
+})
+
+fastify.listen({ port: 3000 })
+```
+
+The sibling-plugin pattern is preferred when the custom routes do not need ZodTypeProvider or HttpError handling. Use `registerCustomRoutes` when they do.
 
 ---
 
