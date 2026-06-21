@@ -25,6 +25,7 @@ These are not published. They cover the shared contract, integration tests, and 
 | [`petstore-fastify`](./petstore-fastify) | Canonical full-stack reference: Fastify, createContext auth, a cross-field validation rule, a React frontend, and browser e2e |
 | [`petstore-hono`](./petstore-hono) | Retained legacy Hono full-stack surface (Hono, React, react-query e2e) |
 | [`petstore-express`](./petstore-express) | Thin Express backend smoke (inject test plus typecheck) |
+| [`petstore-contract`](./petstore-contract) | Uniform real-HTTP contract harness proving one API contract holds identically across the Fastify, Hono, and Express adapters |
 
 ## How they fit together
 

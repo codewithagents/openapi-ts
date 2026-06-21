@@ -16,7 +16,7 @@ Five published packages: four generators plus one runtime helper. npm scope is `
 | `@codewithagents/openapi-msw` | MSW v2 handlers + seeded Faker mock data (depends on openapi-zod-ts) |
 | `@codewithagents/api-errors` | Map API error responses to form-field errors (runtime helper, not a codegen step) |
 
-Private (not published): `@codewithagents/integration` (cross-package tests, committed sample output), `@codewithagents/petstore-shared` (shared pet spec + hand-written Zod schemas, reused by the example apps via relative config paths), `petstore-fastify` (canonical full-stack reference: Fastify + createContext auth + cross-field validation + React/react-query + browser e2e), `@codewithagents/petstore-hono` (retained legacy full-stack surface, not the main demo), `petstore-express` (thin Express smoke).
+Private (not published): `@codewithagents/integration` (cross-package tests, committed sample output), `@codewithagents/petstore-shared` (shared pet spec + hand-written Zod schemas, reused by the example apps via relative config paths), `petstore-fastify` (canonical full-stack reference: Fastify + createContext auth + cross-field validation + React/react-query + browser e2e), `@codewithagents/petstore-hono` (retained legacy full-stack surface, not the main demo), `petstore-express` (thin Express smoke), `@codewithagents/petstore-contract` (uniform real-HTTP contract harness proving one contract holds across the Fastify/Hono/Express adapters).
 
 `examples`: 128 real-world OpenAPI specs = 115 matrix-only + 13 showcase (committed output in `examples/generated/`, drift-checked + typechecked).
 
@@ -41,7 +41,7 @@ Run `pnpm fallow:audit`: catches dead code, duplication, and unresolved imports 
 ## CI (`.github/workflows/`)
 | Workflow | What it does |
 |---|---|
-| `ci.yml` | Build + Lint + Test + coverage; petstore Playwright e2e runs as jobs here (not a separate workflow) |
+| `ci.yml` | Build + Lint + Test + coverage; petstore Playwright e2e and the Contract job (uniform real-HTTP across fastify/hono/express, petstore-contract) run as jobs here (not separate workflows) |
 | `examples.yml` | Showcase: generate all 128 specs, drift-check + typecheck the 13 committed (path-filtered + weekly) |
 | `smoke.yml` | Live API smoke from generated clients (push-to-main + weekly) |
 | `mutation.yml` | Stryker mutation testing (openapi-zod-ts, openapi-react-query) |

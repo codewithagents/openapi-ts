@@ -37,7 +37,7 @@ pnpm --filter @codewithagents/petstore-contract test:coverage
 3. GET /api/pets?species=cat returns only cats (includes the one you created).
 4. GET /api/pets/:id returns 200 with the exact pet.
 5. DELETE /api/pets/:id returns 204 with empty body.
-8. GET /api/pets/:id for a never-created id returns status >= 400 (see DIVERGENCES).
+8. GET /api/pets/:id for a never-created id returns a uniform 404 JSON not-found body across all three frameworks.
 
 ## DIVERGENCES
 
@@ -47,13 +47,11 @@ Genuine framework-architecture differences, locked down as a per-framework looku
 |---|---|---|---|
 | Invalid body (name='') | 400, code: FST_ERR_VALIDATION | 422, error: 'Invalid request body', issues: [] | 422, error: 'Invalid request body', issues: [] |
 | Wrong content-type (text/plain) | 400 | 415 | 422 |
-| Missing pet (00000000...) | 404 json (uniform assertion: >= 400) | 404 json (uniform assertion: >= 400) | 500 html (see bug note) |
 
-**Express 500 for missing pet (documented found-bug):** `petService.getPet` in petstore-express
-throws a plain `Error` instead of an `HttpError(404)`. Express has no handler that maps a plain
-Error to a 404, so it falls through to the default 500 handler and returns HTML. This is a real
-bug the harness surfaced. It is tracked as a follow-up and is NOT fixed here. The test only
-asserts `status >= 400` so it does not pin the 500.
+The missing-pet case used to diverge: petstore-express returned a 500 (its `getPet` threw a plain
+`Error` that fell through to the default 500 handler) while Fastify and Hono returned 404. That bug
+was fixed, so all three now return a uniform 404 JSON not-found body, pinned as invariant 8 above
+rather than a divergence.
 
 ## Typecheck note
 
