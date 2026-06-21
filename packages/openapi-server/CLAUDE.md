@@ -26,6 +26,30 @@ When `input_schema` is set in config:
 
 Default: `openapi-server.config.json` in CWD. Fields: `input_openapi`, `output`, `framework?` (`"hono"` | `"express"` | `"fastify"` | `"none"`, default: `"none"`), `input_schema?`, `shared_output?` (override for `_shared/errors.ts` location).
 
+## Fastify service interface shape
+
+Every Fastify service method receives its request data through a single required `input` object. Only facets that the operation actually has are present as keys; no empty facets are emitted.
+
+```typescript
+// Example: path param + optional query + body + context_type
+interface PetstoreService<Ctx = never> {
+  createPet(input: { body: CreatePetRequest }): Promise<Pet>
+  getPet(input: { params: { id: string } }): Promise<Pet>
+  listPets(input: { query: { species?: string } }): Promise<Pet[]>
+  getHealth(ctx: Ctx): Promise<void>                          // zero-facet: no input
+  contact(input: { body: ContactRequest }, ctx: Ctx): Promise<ContactResponse>
+}
+```
+
+Rules:
+- Facet keys (`params`, `body`, `query`, `headers`, `cookies`) are present only when the operation has them.
+- Each PRESENT facet key is REQUIRED on the outer `input` object (no `?`).
+- Per-field optionality lives INSIDE each facet (e.g. `query: { q?: string }`).
+- Zero facets: `input` is omitted entirely; the method signature is `(ctx: Ctx)` or `()`.
+- `ctx` is always a SEPARATE trailing arg after `input`; it is never inside `input`.
+
+This shape eliminates TS1016 (required parameter cannot follow an optional parameter) by construction: `input` is always required when present, so `ctx` can safely follow it.
+
 ## Fastify-specific runtime options
 
 `createRouter(service, options?)` accepts a `CreateRouterOptions` object:

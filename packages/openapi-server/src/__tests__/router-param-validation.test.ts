@@ -177,9 +177,11 @@ describe('path param with format:uuid generates Zod validation', () => {
     expect(content).toContain('params: z.object({ id: z.uuid() })')
   })
 
-  it('Fastify: path param accessed via req.params.id (ZodTypeProvider infers from schema.params)', () => {
+  it('Fastify: path param forwarded as { params: req.params } (ZodTypeProvider infers from schema.params)', () => {
     const { content } = generateFastifyRouter(uuidSpec)
-    expect(content).toContain('req.params.id')
+    // Service receives the whole narrowed req.params object bundled inside the input object.
+    expect(content).toContain('params: req.params')
+    // No individual field destructuring (e.g. req.params.id) - ZodTypeProvider handles narrowing.
     // No manual safeParse - native validation
     expect(content).not.toContain('_pv.success')
   })
@@ -567,9 +569,13 @@ describe('path param with hyphens uses quoted key in Zod object', () => {
     expect(content).toContain('req.params["job-id"] as string')
   })
 
-  it('Fastify: uses req.params["job-id"] (bracket notation for hyphenated name)', () => {
+  it('Fastify: path params forwarded as { params: req.params } (ZodTypeProvider handles narrowing)', () => {
     const { content } = generateFastifyRouter(hyphenSpec)
-    expect(content).toContain('req.params["job-id"]')
+    // The router now passes the whole narrowed req.params object as a facet of the input object.
+    // Individual bracket-notation field access (req.params["job-id"]) is no longer emitted;
+    // ZodTypeProvider infers the typed shape from schema.params and the service receives it whole.
+    expect(content).toContain('params: req.params')
+    expect(content).not.toContain('req.params["job-id"]')
   })
 })
 

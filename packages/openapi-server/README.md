@@ -80,7 +80,7 @@ Or add to `package.json`:
 
 Given the petstore spec (`GET /pets`, `POST /pets`, `GET /pets/{id}`, `DELETE /pets/{id}`):
 
-**`generated/service.ts`**
+**`generated/service.ts`** (Hono/Express)
 
 ```ts
 // This file is auto-generated. Do not edit manually.
@@ -98,6 +98,29 @@ export interface PetstoreService {
   deletePet(id: string): Promise<void>
 }
 ```
+
+**`generated/service.ts`** (Fastify, `framework: "fastify"`)
+
+For Fastify, every service method receives a single required `input` object whose keys mirror the request (only the facets the operation actually declares are present):
+
+```ts
+// This file is auto-generated. Do not edit manually.
+
+import type { CreatePetRequest, Pet } from './schema-types.js'
+
+export interface PetstoreService {
+  /** GET /pets */
+  listPets(input: { query: { species?: string } }): Promise<Pet[]>
+  /** POST /pets */
+  createPet(input: { body: CreatePetRequest }): Promise<Pet>
+  /** GET /pets/{id} */
+  getPet(input: { params: { id: string } }): Promise<Pet>
+  /** DELETE /pets/{id} */
+  deletePet(input: { params: { id: string } }): Promise<void>
+}
+```
+
+The `input` object can have up to five facet keys: `params`, `body`, `query`, `headers`, `cookies`. Each facet key is required (no `?`) when present; per-field optionality lives inside the facet (e.g. `query: { species?: string }`). Operations with no request data emit no `input` param at all.
 
 **`generated/router.ts`**
 
@@ -149,7 +172,9 @@ The router handles:
 
 ## Implementing the service
 
-Create a file that satisfies the generated interface. The compiler enforces the contract:
+Create a file that satisfies the generated interface. The compiler enforces the contract.
+
+**Hono / Express service implementation:**
 
 ```ts
 // src/server/petService.ts
@@ -182,6 +207,44 @@ export const petService: PetstoreService = {
   },
 }
 ```
+
+**Fastify service implementation** (uses the single `input` object shape):
+
+```ts
+// src/server/petService.ts
+import { randomUUID } from 'node:crypto'
+import type { PetstoreService } from '../generated/service.js'
+import type { Pet } from '../generated/schema-types.js'
+import { HttpError } from '../generated/router.js'
+
+const pets = new Map<string, Pet>()
+
+export const petService: PetstoreService = {
+  async listPets(input) {
+    const all = Array.from(pets.values())
+    const { species } = input.query
+    if (species) {
+      return all.filter(p => p.species.toLowerCase() === species.toLowerCase())
+    }
+    return all
+  },
+  async createPet(input) {
+    const pet: Pet = { id: randomUUID(), ...input.body }
+    pets.set(pet.id, pet)
+    return pet
+  },
+  async getPet(input) {
+    const pet = pets.get(input.params.id)
+    if (!pet) throw new HttpError(404, `Pet ${input.params.id} not found`)
+    return pet
+  },
+  async deletePet(input) {
+    pets.delete(input.params.id)
+  },
+}
+```
+
+For Fastify, each method receives its request data through the `input` object. Only the facets the operation declares are present: `params` for path params, `body` for request body, `query` for query params, `headers` for header params, `cookies` for cookie params.
 
 The interface is re-generated every time the spec changes. If you add an endpoint in the spec and forget to implement it, TypeScript will tell you at compile time.
 
@@ -649,16 +712,25 @@ The `context_type` config option threads a typed caller context through every ge
 **What changes in generated `service.ts`:**
 
 ```ts
-// Without context_type (default):
+// Without context_type (default, Hono/Express style):
 export interface PetstoreService {
   listPets(params?: { species?: string }): Promise<Pet[]>
   getPet(id: string): Promise<Pet>
 }
 
-// With context_type: "RequestContext":
+// With context_type: "RequestContext" (Hono/Express):
 export interface PetstoreService<Ctx = never> {
   listPets(params?: { species?: string }, ctx: Ctx): Promise<Pet[]>
   getPet(id: string, ctx: Ctx): Promise<Pet>
+}
+
+// Fastify (framework: "fastify") with context_type: "RequestContext":
+// ctx is a separate trailing arg after the required input object.
+// Zero-facet ops receive only ctx (no input param).
+export interface PetstoreService<Ctx = never> {
+  listPets(input: { query: { species?: string } }, ctx: Ctx): Promise<Pet[]>
+  getPet(input: { params: { id: string } }, ctx: Ctx): Promise<Pet>
+  getHealth(ctx: Ctx): Promise<void>  // zero-facet: no input param
 }
 ```
 
@@ -706,10 +778,10 @@ interface RequestContext {
 }
 
 const petService: PetstoreService<RequestContext> = {
-  async listPets(params, ctx) {
-    return db.listPets({ userId: ctx.userId, ...params })
+  async listPets(input, ctx) {
+    return db.listPets({ userId: ctx.userId, species: input.query.species })
   },
-  // ... other operations receive ctx as their final argument
+  // ... other operations receive ctx as their final argument after the input object
 }
 
 const app = Fastify()
@@ -753,13 +825,15 @@ app.use('*', async (c, next) => {
 export const petService: PetstoreService<Context> = {
   async listPets(params, ctx) {
     const userId = ctx.get('userId')
-    return db.listPets({ userId, ...params })
+    return db.listPets({ userId, species: params?.species })
   },
   async getPet(id, ctx) {
     const userId = ctx.get('userId')
     return db.getPet(id, userId)
   },
 }
+// Note: for Fastify (framework: "fastify"), service methods receive the single input
+// object first, then ctx: listPets(input, ctx) where input.query.species is the field.
 ```
 
 **Backward compatibility:** if `context_type` is not set in the config, the generated output is identical to previous versions. No changes to the interface shape, no extra arguments in service calls.

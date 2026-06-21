@@ -402,6 +402,12 @@ function synthesizeResponseSchemaExpr(
   return synthesizePropExpr(s)
 }
 
+function queryParamItemExpr(itemsTsType: string | undefined): string {
+  if (itemsTsType === 'number') return 'z.coerce.number()'
+  if (itemsTsType === 'boolean') return 'z.boolean()'
+  return 'z.string()'
+}
+
 function queryParamBaseExpr(param: QueryParam): string {
   if (param.delimiterStyle !== undefined) return 'z.array(z.string())'
   if (param.isDeepObject === true && param.deepObjectProperties !== undefined) {
@@ -412,6 +418,9 @@ function queryParamBaseExpr(param: QueryParam): string {
     })
     return `z.object({ ${propFields.join(', ')} })`
   }
+  // Plain repeated-key array (type:array, explode:true). Emit z.array(<itemExpr>) so the
+  // querystring schema matches the service T[] signature. Item coercion mirrors the scalar path.
+  if (param.isArray === true) return `z.array(${queryParamItemExpr(param.itemsTsType)})`
   if (param.tsType === 'number') return `z.coerce.number()${numberConstraintSuffix(param)}`
   if (param.tsType === 'boolean') return 'z.boolean()'
   return enumOrStringExpr(param)
@@ -719,19 +728,19 @@ function buildFastifyTypeProviderHandler(
     lines.push(`${inner}}`)
   }
 
-  // ── Service call args ─────────────────────────────────────────────────────
-  const serviceArgs: string[] = []
+  // ── Service call: build a single input object from the present facets, ctx separate ──
+  // Each facet key mirrors the Fastify request object. Only include facets the op has.
+  // This matches the `input: { params; body; query; headers; cookies }` shape emitted
+  // by the service signature builder, eliminating the required-after-optional TS1016.
 
-  // Path params: typed via schema.params (ZodTypeProvider infers the shape).
-  for (const rawName of op.pathParams) {
-    if (/[^a-zA-Z0-9_$]/.test(rawName)) {
-      serviceArgs.push(`req.params[${JSON.stringify(rawName)}]`)
-    } else {
-      serviceArgs.push(`req.params.${rawName}`)
-    }
+  const inputFacets: string[] = []
+
+  // params facet: pass req.params (typed by schema.params via ZodTypeProvider).
+  if (op.pathParams.length > 0) {
+    inputFacets.push('params: req.params')
   }
 
-  // Body: pass req.body to the service.
+  // body facet: pass req.body with the same cast logic as before.
   //
   // Zero-cast path (zeroCast=true, enabled when framework=fastify + input_schema configured):
   // The service parameter is z.infer of the body schema, which is exactly what ZodTypeProvider
@@ -741,6 +750,7 @@ function buildFastifyTypeProviderHandler(
   // which may differ structurally from z.infer (e.g. passthrough adds an index signature). We cast
   // to the named model type (safe: validation already ran) or fall back to `any` for synthesized.
   if (op.bodyInfo !== undefined) {
+    let bodyExpr: string
     if (zeroCast === true) {
       // Zero-cast: req.body aligns with z.infer<BodySchema> which aligns with service param.
       // For content types without Zod validation (octet-stream, multipart), fall back to unknown.
@@ -750,26 +760,27 @@ function buildFastifyTypeProviderHandler(
         (op.bodyInfo.contentType !== 'application/octet-stream' &&
           op.bodyInfo.contentType !== 'multipart/form-data')
       ) {
-        serviceArgs.push('req.body')
+        bodyExpr = 'req.body'
       } else {
-        serviceArgs.push('req.body as unknown')
+        bodyExpr = 'req.body as unknown'
       }
     } else if (op.bodyInfo.typeName !== undefined && !op.bodyInfo.isSynthesized) {
-      serviceArgs.push(`req.body as ${op.bodyInfo.typeName}`)
+      bodyExpr = `req.body as ${op.bodyInfo.typeName}`
     } else if (bodySchemaExpr !== undefined) {
-      serviceArgs.push('req.body as any')
+      bodyExpr = 'req.body as any'
     } else {
-      serviceArgs.push('req.body as unknown')
+      bodyExpr = 'req.body as unknown'
     }
+    inputFacets.push(`body: ${bodyExpr}`)
   }
 
-  // Query: typed via schema.querystring. preValidation has already reshaped req.query
-  // for deepObject/delimiter routes, and the validatorCompiler validated the shape.
+  // query facet: typed via schema.querystring. preValidation has already reshaped req.query
+  // for deepObject/delimiter routes, and the validatorCompiler validated the shape (#344).
   if (op.queryParams.length > 0) {
-    serviceArgs.push('req.query')
+    inputFacets.push('query: req.query')
   }
 
-  // Headers: construct a fresh object from the declared header fields.
+  // headers facet: construct a fresh object from the declared header fields.
   // ZodTypeProvider narrows req.headers['x'] to string (required) or string | undefined (optional)
   // for each field in schema.headers. We build a fresh object to match the precise service type.
   // No `as` cast: each property access is correctly typed by ZodTypeProvider.
@@ -780,22 +791,21 @@ function buildFastifyTypeProviderHandler(
         return `${key}: req.headers[${key}]`
       })
       .join(', ')
-    serviceArgs.push(`{ ${fields} }`)
+    inputFacets.push(`headers: { ${fields} }`)
   }
 
-  // Cookies: _ckv.data is the validated cookie object, available here because the
-  // _ckv.success guard above returns early on failure. Pass it directly.
+  // cookies facet: _ckv.data is the validated cookie object, available here because the
+  // _ckv.success guard above returns early on failure.
   if (op.cookieParams.length > 0) {
-    serviceArgs.push('_ckv.data')
+    inputFacets.push('cookies: _ckv.data')
   }
 
-  // Context: pass the createContext-derived ctx when contextType is set.
-  // ctx was produced above by `const ctx = await options.createContext(req)`.
-  if (contextType !== undefined) {
-    serviceArgs.push('ctx')
-  }
+  // Assemble the service call: (input, ctx) when facets present, (ctx) or () when not.
+  const inputArg = inputFacets.length > 0 ? `{ ${inputFacets.join(', ')} }` : undefined
+  const ctxArg = contextType !== undefined ? 'ctx' : undefined
+  const callArgs = [inputArg, ctxArg].filter((a): a is string => a !== undefined)
 
-  const serviceCall = `service.${op.methodName}(${serviceArgs.join(', ')})`
+  const serviceCall = `service.${op.methodName}(${callArgs.join(', ')})`
 
   // Response cast: the serializerCompiler validates the response at runtime against the response
   // schema. At compile time the ZodTypeProvider constrains reply.send() to the schema's inferred
@@ -820,12 +830,16 @@ function buildFastifyTypeProviderHandler(
 
   // ── Response (no per-route try/catch: setErrorHandler handles HttpError) ──
 
-  if (op.bodyInfo?.contentType === 'multipart/form-data') {
+  // Use the robust content-type detector so that $ref'd requestBodies and operations with
+  // multiple declared content types (e.g. both json and multipart) are handled correctly.
+  const isMultipartRoute = operationHasBodyContentType(op.rawOperation, 'multipart/form-data', spec)
+  const isOctetRoute = operationHasBodyContentType(op.rawOperation, 'application/octet-stream', spec)
+  if (isMultipartRoute) {
     // multipart/form-data: requires @fastify/multipart registered with { attachFieldsToBody: true }.
     lines.push(
       `${inner}// multipart/form-data: requires @fastify/multipart registered with { attachFieldsToBody: true }.`
     )
-  } else if (op.bodyInfo?.contentType === 'application/octet-stream') {
+  } else if (isOctetRoute) {
     // application/octet-stream: req.body is a Buffer from the registered content-type parser.
     lines.push(
       `${inner}// application/octet-stream: req.body is a Buffer from the registered content-type parser.`
@@ -868,6 +882,47 @@ function buildFastifyTypeProviderHandler(
   return lines.join('\n')
 }
 
+// ── Body content-type detector ────────────────────────────────────────────────
+
+/**
+ * Resolve a requestBody object, following a $ref into spec.components.requestBodies when needed.
+ * Returns the resolved RequestBodyObject or undefined when the ref cannot be resolved.
+ */
+function resolveRequestBody(
+  requestBody: OpenAPIV3_1.RequestBodyObject | OpenAPIV3_1.ReferenceObject | undefined,
+  spec: OpenAPIV3_1.Document
+): OpenAPIV3_1.RequestBodyObject | undefined {
+  if (requestBody === undefined) return undefined
+  if (!isRef(requestBody)) return requestBody as OpenAPIV3_1.RequestBodyObject
+  const refStr = (requestBody as OpenAPIV3_1.ReferenceObject).$ref
+  // Only support inline #/components/requestBodies/<Name> refs.
+  const match = /^#\/components\/requestBodies\/(.+)$/.exec(refStr)
+  if (match === null) return undefined
+  const name = match[1]
+  const components = spec.components as OpenAPIV3_1.ComponentsObject | undefined
+  const rb = (components?.requestBodies as Record<string, OpenAPIV3_1.RequestBodyObject | OpenAPIV3_1.ReferenceObject> | undefined)?.[name ?? '']
+  if (rb === undefined || isRef(rb)) return undefined
+  return rb as OpenAPIV3_1.RequestBodyObject
+}
+
+/**
+ * Return true if ANY declared content type in the operation's requestBody matches the given
+ * content type string. Resolves $ref'd requestBodies so that multipart-via-$ref is detected.
+ * This is used to gate parser-registration and per-route markers independently of getBodyInfo's
+ * json-priority logic, which only picks ONE content type even when multiple are declared.
+ */
+function operationHasBodyContentType(
+  operation: OperationObject,
+  contentType: string,
+  spec: OpenAPIV3_1.Document
+): boolean {
+  const raw = operation.requestBody as OpenAPIV3_1.RequestBodyObject | OpenAPIV3_1.ReferenceObject | undefined
+  const rb = resolveRequestBody(raw, spec)
+  if (rb === undefined) return false
+  const content = rb.content as Record<string, unknown> | undefined
+  return content !== undefined && Object.prototype.hasOwnProperty.call(content, contentType)
+}
+
 // ── Main generator export ─────────────────────────────────────────────────────
 
 // fallow-ignore-next-line complexity
@@ -896,14 +951,19 @@ export function generateFastifyRouter(
 
   // z is always needed: schema.params/querystring/headers/response use z.object/z.array/z.string.
   // Even with no operations, the cookie _ckv block uses z.
+  //
+  // Detection scans ALL declared content types on each operation's requestBody, resolving $refs,
+  // so multipart/formbody routes are found even when the requestBody is a $ref'd component or
+  // when the operation declares multiple content types (e.g. both json and multipart). This is
+  // independent of getBodyInfo's json-priority logic which only returns ONE content type.
   const hasOctetStreamRequestBody = operations.some(
-    (op) => op.bodyInfo?.contentType === 'application/octet-stream'
+    (op) => operationHasBodyContentType(op.rawOperation, 'application/octet-stream', spec)
   )
   const hasFormUrlencodedBody = operations.some(
-    (op) => op.bodyInfo?.contentType === 'application/x-www-form-urlencoded'
+    (op) => operationHasBodyContentType(op.rawOperation, 'application/x-www-form-urlencoded', spec)
   )
   const hasMultipartBody = operations.some(
-    (op) => op.bodyInfo?.contentType === 'multipart/form-data'
+    (op) => operationHasBodyContentType(op.rawOperation, 'multipart/form-data', spec)
   )
   const hasAnyParserNeeded = hasOctetStreamRequestBody || hasFormUrlencodedBody || hasMultipartBody
 

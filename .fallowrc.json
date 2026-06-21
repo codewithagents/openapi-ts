@@ -9,7 +9,7 @@
     "packages/petstore-hono/**"
   ],
   "ignoreUnresolvedImports": ["**/generated/**"],
-  "ignoreDependencies": ["zod", "@faker-js/faker", "fastify-type-provider-zod"],
+  "ignoreDependencies": ["zod", "@faker-js/faker", "fastify-type-provider-zod", "@fastify/formbody", "@fastify/multipart", "@codewithagents/petstore-hono"],
   "rules": {
     "unused-files": "warn",
     "unused-exports": "warn",

@@ -315,20 +315,33 @@ function buildReturnType(
   return info.isArray ? 'Promise<unknown[]>' : 'Promise<unknown>'
 }
 
-// Cohesive signature builder: conditionally assembles path/body/query/headers/cookies/ctx
-// args in a single pass; the branching is inherent to optional-param composition.
+// Cohesive signature builder: assembles a single required `input` object whose keys
+// mirror the Fastify request (params/body/query/headers/cookies), keeping ctx separate.
+// Zero facets -> no input param. This eliminates the required-after-optional TS1016 by
+// construction: input is always required when present, so ctx can safely follow it.
 // fallow-ignore-next-line complexity
 function buildMethodSignature(
   op: OperationInfo,
   schemaNames: Set<string>,
   contextType?: string
 ): string {
-  const args: string[] = []
+  const facets: string[] = []
 
-  for (const p of op.pathParams) {
-    args.push(`${sanitizeOperationId(p)}: string`)
+  // params facet: path params as required string fields.
+  // Use the RAW param name (with quoting for non-identifier chars) so the key matches
+  // what ZodTypeProvider puts on req.params at runtime. Do NOT sanitize (camelCase) the
+  // key: sanitizeOperationId("job-id") -> "jobId" but req.params["job-id"] is the real key.
+  if (op.pathParams.length > 0) {
+    const fields = op.pathParams
+      .map((p) => {
+        const key = /[^a-zA-Z0-9_$]/.test(p) ? JSON.stringify(p) : p
+        return `${key}: string`
+      })
+      .join('; ')
+    facets.push(`params: { ${fields} }`)
   }
 
+  // body facet: resolve type the same way as before.
   if (op.bodyInfo !== undefined) {
     // multipart/form-data and application/octet-stream bodies cannot be described by a
     // Zod body schema: the router passes req.body as unknown/Buffer for those content types.
@@ -348,19 +361,16 @@ function buildMethodSignature(
       bodyType = 'unknown'
     }
     // fallow-ignore-next-line code-duplication
-    args.push(`body: ${bodyType}`)
+    facets.push(`body: ${bodyType}`)
   }
 
+  // query facet: preserve per-field optionality; the outer facet key is always required.
   if (op.queryParams.length > 0) {
-    const allOptional = op.queryParams.every((q) => !q.required)
     const fields = op.queryParams.map((q) => `${q.name}${q.required ? '' : '?'}: ${q.tsType}`).join('; ')
-    const paramsToken = allOptional ? 'params?' : 'params'
-    args.push(`${paramsToken}: { ${fields} }`)
+    facets.push(`query: { ${fields} }`)
   }
 
-  // headers?: { 'x-api-key': string; 'x-trace-id'?: string }
-  // The outer arg is always optional (?) so callers without header params are unaffected.
-  // Inner fields reflect each header's required flag (required -> string, optional -> string | undefined).
+  // headers facet: inner fields reflect each header's required flag.
   if (op.headerParams.length > 0) {
     const fields = op.headerParams
       .map((h) => {
@@ -369,10 +379,10 @@ function buildMethodSignature(
         return `${key}${h.required ? '' : '?'}: ${valType}`
       })
       .join('; ')
-    args.push(`headers?: { ${fields} }`)
+    facets.push(`headers: { ${fields} }`)
   }
 
-  // cookies?: { session: string; preferences?: string | undefined }
+  // cookies facet: inner fields reflect each cookie's required flag.
   if (op.cookieParams.length > 0) {
     const fields = op.cookieParams
       .map((ck) => {
@@ -381,15 +391,19 @@ function buildMethodSignature(
         return `${key}${ck.required ? '' : '?'}: ${valType}`
       })
       .join('; ')
-    args.push(`cookies?: { ${fields} }`)
+    facets.push(`cookies: { ${fields} }`)
   }
 
+  const methodArgs: string[] = []
+  if (facets.length > 0) {
+    methodArgs.push(`input: { ${facets.join('; ')} }`)
+  }
   if (contextType !== undefined) {
-    args.push('ctx: Ctx')
+    methodArgs.push('ctx: Ctx')
   }
 
   const returnType = buildReturnType(op.returnInfo, schemaNames)
-  return `${op.methodName}(${args.join(', ')}): ${returnType}`
+  return `${op.methodName}(${methodArgs.join(', ')}): ${returnType}`
 }
 
 // ── Options shared by both generators ────────────────────────────────────────
