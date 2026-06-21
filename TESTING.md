@@ -12,7 +12,7 @@ We test along a few independent axes. Each axis belongs to the cheapest layer th
 | **`integration/`** | the published packages compose; output visible in PRs | committed output, drift-checked |
 | **`examples/`** | real-world breadth (128 specs) + showcase drift/typecheck | committed showcase + generated compat matrix |
 | **Backend smoke apps** (`petstore-*`) | each framework's generated router compiles and runs | thin: inject/e2e smoke only |
-| **One full-stack reference** | the whole loop: auth, shared Zod, FE hooks, error round-trip | exactly one, on the framework we ship |
+| **One full-stack reference** | the whole loop: auth, shared Zod, FE hooks, error round-trip | exactly one: `petstore-fastify` (Fastify, the framework we ship) |
 
 ## Current surfaces (inventory)
 
@@ -25,9 +25,10 @@ We test along a few independent axes. Each axis belongs to the cheapest layer th
 | `api-errors` | API errors to form-field errors | vitest unit + coverage | n/a |
 | `integration/` | cross-package composition | vitest | committed sample output |
 | `examples/` | 128-spec compat matrix + 11 showcase specs | `generate.sh` + showcase drift + typecheck | showcase committed, matrix generated in CI |
-| `petstore-hono` | full-stack (Hono backend + React frontend + react-query) | Playwright e2e | gitignored, regenerated each run. Owns the shared `spec/api.json` + `src/schemas.ts` reused by the other two petstores |
+| `petstore-shared` | the shared pet OpenAPI spec + hand-written Zod schemas (the contract all three petstores reuse) | lint (standalone schema typecheck) | committed; consumed via relative config paths |
+| `petstore-fastify` | **canonical full-stack reference**: Fastify + `createContext` auth + cross-field validation + React/react-query frontend | vitest inject + auth runtime + typecheck + API e2e + browser e2e (login + cross-field round-trip) | gitignored, regenerated each run |
+| `petstore-hono` | retained full-stack Hono+React e2e surface (keeps Hono+react-query coverage; no longer the canonical reference) | Playwright e2e | gitignored, regenerated each run |
 | `petstore-express` | Express backend smoke | vitest inject + typecheck | gitignored, regenerated each run |
-| `petstore-fastify` | Fastify backend smoke + auth lab (`generated-auth/`, `createContext`) | vitest inject + auth runtime + typecheck + Playwright e2e | gitignored, regenerated each run |
 
 CI jobs that run these: **Build, Lint & Test** (all unit tests + coverage), **Server Examples** (petstore-express + petstore-fastify typecheck + test), **E2E (Petstore)** (petstore-hono Playwright), **E2E (Petstore Fastify)**, **Showcase (Drift + Typecheck)** (examples), plus CodeQL and Code Intelligence.
 
@@ -45,24 +46,21 @@ Rules:
 
 ## The anti-bloat rule
 
-There is **exactly one** rich full-stack reference app. Everything else is thin. Before creating a new example app, ask in order:
+There is **exactly one** canonical rich full-stack reference app (`petstore-fastify`); `petstore-hono` is a retained legacy surface, not a second reference. Everything else is thin. Before creating a new example app, ask in order:
 
 1. Can a unit test cover this? Then write a unit test.
 2. Is it only "does framework X's generated router run"? Then a thin backend smoke (like `petstore-express`), inject/e2e only.
 3. Is it a new end-to-end concern (auth, validation extension, error mapping)? Then add it to the one full-stack reference. Do not spawn a parallel full-stack app.
 
-Two full-stack apps is the bloat smell. If you find yourself building a second one, consolidate instead.
+A third full-stack app is the bloat smell. If you find yourself building one, fold the concern into `petstore-fastify` instead.
 
-## Open decision: the canonical full-stack reference
+## Resolved: the canonical full-stack reference
 
-Today the full-stack surface is accidental. `petstore-hono` is doing double duty (a Hono backend smoke **and** the only full-stack app), while the auth seam (`createContext`) lives only in Fastify and `petstore-fastify` is backend-only. The framework we invest in (Fastify) and the framework that has a frontend (Hono) do not line up.
+**Decision: end-state (i).** `petstore-fastify` is the one canonical full-stack reference: Fastify + `createContext` auth + a conditional cross-field validation rule + a React/react-query frontend + a browser e2e that round-trips the cross-field error onto a form field. The shared pet contract was relocated to `petstore-shared`, so no example app owns it.
 
-A decision is needed before adding any full-stack coverage. Two coherent end-states:
+`petstore-hono` is **retained, not deleted**: it keeps its Hono + React + react-query e2e as a second full-stack surface, so that coverage is not lost, but it is no longer the canonical reference. Its e2e should move off the every-PR critical path to a path-filtered tier in the CI restructure.
 
-- **(i) One synthetic reference on Fastify.** Make the canonical full-stack app Fastify with `createContext` auth and a conditional cross-field validation rule, and demote `petstore-hono` to a thin backend smoke like `petstore-express`. We then maintain exactly one full-stack app, on the framework we ship.
-- **(ii) No synthetic full-stack app.** Declare the toolchain proven by unit tests + `petstore-hono`'s end-to-end loop + the Fastify auth runtime test, and let the real product's first authed slice be the proof. Zero synthetic bloat; the only un-covered combination (Fastify + auth + frontend) gets covered for real.
-
-Until this is decided, do not add a second full-stack app.
+There is still exactly **one canonical** full-stack reference. Do not add a third.
 
 ## Checklist before adding any test surface
 
