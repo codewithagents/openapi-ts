@@ -32,8 +32,8 @@ import {
   getQueryParams,
   type BodyInfo,
   getBodyInfo,
-  deriveEffectiveSecurity,
 } from './shared.js'
+import { deriveEffectiveSecurity } from './security-meta.js'
 
 type OperationObject = OpenAPIV3_1.OperationObject
 type ReferenceObject = OpenAPIV3_1.ReferenceObject

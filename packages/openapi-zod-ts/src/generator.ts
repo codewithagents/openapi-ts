@@ -165,6 +165,7 @@ interface SchemaDriftPlan {
  * (users add their own FE-only or BE-only refinements). A missing schema file is only
  * drift in check mode (otherwise it is a normal first-run bootstrap).
  */
+// fallow-ignore-next-line complexity
 async function detectSchemaDrift(
   config: Config,
   spec: Awaited<ReturnType<typeof parseSpec>>,

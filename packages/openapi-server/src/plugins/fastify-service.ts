@@ -23,9 +23,8 @@ import {
   getQueryParams,
   type BodyInfo,
   getBodyInfo,
-  escapeJsDocString,
-  deriveEffectiveSecurity,
 } from './shared.js'
+import { escapeJsDocString, deriveEffectiveSecurity } from './security-meta.js'
 
 // ── Simple header/cookie param descriptors (service-interface generation only) ─
 
