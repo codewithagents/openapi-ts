@@ -683,10 +683,10 @@ app.get('/pets', async (c) => {
 
 ### Fastify: the `createContext` auth seam
 
-For Fastify, `context_type` is a runtime auth boundary, not just a type. When `context_type` is set, `CreateRouterOptions` becomes generic in `Ctx` and `createRouter` **requires** an options object with a `createContext` hook:
+For Fastify, `context_type` is a runtime auth boundary, not just a type. When `context_type` is set, `createRouter` is generic over `Ctx` and **requires** an options object with a `createContext` hook. The concrete principal type is inferred at the call site from your service implementation and `createContext`, so no context type name is baked into the generated file:
 
 ```ts
-createRouter(service: PetstoreService<RequestContext>, options: CreateRouterOptions<RequestContext>)
+createRouter<Ctx = never>(service: PetstoreService<Ctx>, options: CreateRouterOptions<Ctx>)
 ```
 
 `createContext(req)` runs first inside every route handler, so it is the place to authenticate the request and build the typed principal. Throw `HttpError(401)` to reject before any handler work runs. Its return value is passed as `ctx` to every service method.
