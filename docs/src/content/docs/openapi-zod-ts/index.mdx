@@ -6,7 +6,7 @@ description: Generate TypeScript types, a native fetch client, and Zod schemas f
 import { Card, CardGrid, Tabs, TabItem, Aside, Code } from '@astrojs/starlight/components'
 import { PackageManagers } from 'starlight-package-managers'
 
-`openapi-zod-ts` reads your OpenAPI 3.x spec and writes a fully typed native `fetch` client, TypeScript interfaces, and optional Zod schemas into your project. Every generated file passes `prettier --check` and TypeScript `strict: true` out of the box, with zero runtime dependencies beyond `fetch`. The package is tested against 128 real-world specs (Stripe, GitHub, Spotify, OpenAI, and more) on every PR.
+`openapi-zod-ts` reads your OpenAPI 3.x spec and writes a fully typed native `fetch` client, TypeScript interfaces, and optional Zod schemas into your project. Every generated file passes `prettier --check` and TypeScript `strict: true` out of the box, with zero runtime dependencies beyond `fetch`. The package is tested against 128 real-world specs (Stripe, GitHub, Spotify, OpenAI, and more) on every PR. The generated output for 13 of those (the showcase specs) is committed to the repo and drift-checked plus typechecked under `tsc --noEmit --strict` on every relevant PR, so regressions surface as a failing diff.
 
 ## Overview
 
@@ -28,7 +28,7 @@ Key guarantees:
 - **Prettier-clean.** Every file passes `prettier --check` with your project's own Prettier config.
 - **`strict: true`.** All output compiles cleanly with TypeScript strict mode.
 - **SSR-safe.** Every generated function accepts an optional per-request config override. No global singleton mutation, safe for concurrent server requests.
-- **OpenAPI 3.1.x** is the primary target (including 3.1.1). OpenAPI 3.0.x is best-effort. Full support for `$ref`, `allOf`, `anyOf`, `oneOf`, and `nullable`.
+- **OpenAPI 3.1.x** is the primary target (including 3.1.1). OpenAPI 3.0.x is supported in practice: 8 of the 13 showcase specs are 3.0.x and all compile under `tsc --strict`. Full support for `$ref`, `allOf`, `anyOf`, `oneOf`, and `nullable` (3.0.x `nullable: true` is normalized to the 3.1 null-union form, so nullable fields produce the correct `T | null` types).
 
 ## Install
 
@@ -138,8 +138,8 @@ export default defineProjects([
 ```
 
 <Aside type="caution">
-  `projects` and top-level `input_openapi`/`output` are mutually exclusive. Mixing them in the
-  same config file is a validation error. Use one form or the other.
+  `projects` and top-level `input_openapi`/`output` are mutually exclusive. Mixing them in the same
+  config file is a validation error. Use one form or the other.
 </Aside>
 
 ## CLI reference
@@ -149,17 +149,17 @@ npx openapi-zod-ts                                       # uses openapi-zod-ts.c
 npx openapi-zod-ts --config ./config/openapi-zod-ts.config.json  # explicit path
 ```
 
-| Flag       | Argument      | Description                                                                                                                                                                              |
-| ---------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--config` | `<path>`      | Path to a config file (`.json`, `.js`, `.mjs`, or `.cjs`). Relative paths inside the config file resolve from the config file's directory, not from the shell's working directory.      |
-| `--input`  | `<path>`      | Path to the OpenAPI spec file. Overrides `input_openapi` from the config file for this run.                                                                                              |
-| `--output` | `<dir>`       | Output directory. Overrides `output` from the config file for this run.                                                                                                                  |
-| `--watch`  | _(none)_      | Re-run generation whenever the spec file changes. Press Ctrl-C to exit.                                                                                                                  |
+| Flag       | Argument | Description                                                                                                                                                                        |
+| ---------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--config` | `<path>` | Path to a config file (`.json`, `.js`, `.mjs`, or `.cjs`). Relative paths inside the config file resolve from the config file's directory, not from the shell's working directory. |
+| `--input`  | `<path>` | Path to the OpenAPI spec file. Overrides `input_openapi` from the config file for this run.                                                                                        |
+| `--output` | `<dir>`  | Output directory. Overrides `output` from the config file for this run.                                                                                                            |
+| `--watch`  | _(none)_ | Re-run generation whenever the spec file changes. Press Ctrl-C to exit.                                                                                                            |
 
 <Aside type="note">
   The `--config` flag accepts `.json`, `.js`, `.mjs`, and `.cjs` files. Any other extension is
-  rejected with an error. When `--config` is used, all relative paths inside the config file
-  resolve from the config file's directory, not from the shell's working directory.
+  rejected with an error. When `--config` is used, all relative paths inside the config file resolve
+  from the config file's directory, not from the shell's working directory.
 </Aside>
 
 ## Generated files in depth
@@ -259,7 +259,7 @@ try {
 } catch (err) {
   if (err instanceof ApiError) {
     console.error(err.status, err.body)
-    // err.body is unknown — narrow it before use:
+    // err.body is unknown, narrow it before use:
     if (typeof err.body === 'object' && err.body !== null && 'message' in err.body) {
       console.error((err.body as { message: string }).message)
     }
@@ -298,7 +298,7 @@ configureClient({
 configureClient({
   baseUrl: 'https://api.example.com',
   onError: (err) => {
-    // called before every ApiError is thrown — use for logging or monitoring
+    // called before every ApiError is thrown, use for logging or monitoring
     Sentry.captureException(err)
   },
 })
@@ -479,9 +479,9 @@ The generator rejects `output` and `input_openapi` paths that resolve to system 
 | Requirement    | Minimum                                                                                        |
 | -------------- | ---------------------------------------------------------------------------------------------- |
 | Node.js        | 18 (native `fetch` is required at runtime; the generator itself uses `fs/promises` and `path`) |
-| TypeScript     | 5.x recommended; output targets `strict: true`                                                 |
+| TypeScript     | 6.x (the version the monorepo runs); output targets `strict: true`                             |
 | Module format  | ESM only. The generated files use `.js` extensions in all imports (NodeNext resolution)        |
-| Prettier       | Any version in your project — the generator reads your config to format output                 |
+| Prettier       | Any version in your project. The generator reads your config to format output                  |
 | Zod (optional) | v4 required when `input_schema` is used                                                        |
 
 The package itself is published as ESM. It must be used from an ESM context (`"type": "module"` in `package.json` or a `.mjs` file).
@@ -502,6 +502,8 @@ Ensure your config includes `input_schema` pointing at an existing `schemas.ts` 
 
 ## Works with
 
+`openapi-zod-ts` is one of four generators that emit code from the same spec (`openapi-zod-ts`, `openapi-server`, `openapi-react-query`, `openapi-msw`), plus `api-errors`, a runtime helper used in app code.
+
 <CardGrid>
   <Card title="React Query hooks" icon="seti:react">
     Add `@codewithagents/openapi-react-query` to generate typed `useQuery` and `useMutation` hooks on top of the client this package produces.
@@ -510,9 +512,15 @@ Ensure your config includes `input_schema` pointing at an existing `schemas.ts` 
 
   </Card>
   <Card title="Server interface" icon="laptop">
-    Add `@codewithagents/openapi-server` to generate a typed service interface and optional Hono router from the same spec.
+    Add `@codewithagents/openapi-server` to generate a typed service interface and an optional router targeting `hono | express | fastify | none` (default `none`) from the same spec.
 
     [Learn more](/openapi-server)
+
+  </Card>
+  <Card title="MSW mock handlers" icon="random">
+    Add `@codewithagents/openapi-msw` to generate MSW v2 HTTP handlers with seeded Faker mock data from the same spec.
+
+    [Learn more](/openapi-msw)
 
   </Card>
   <Card title="Form error mapping" icon="warning">

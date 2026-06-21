@@ -1,12 +1,12 @@
 ---
 title: Server interface
-description: Generate a typed service interface and optional Hono, Express, or Fastify router from your OpenAPI spec with @codewithagents/openapi-server.
+description: Generate a typed service interface and optional Fastify, Hono, or Express router from your OpenAPI spec with @codewithagents/openapi-server.
 ---
 
 import { Card, CardGrid, Tabs, TabItem, Aside } from '@astrojs/starlight/components'
 import { PackageManagers } from 'starlight-package-managers'
 
-`@codewithagents/openapi-server` reads your OpenAPI 3.x spec and writes a typed service interface into your project. The interface is plain TypeScript with no framework imports: implement it however you want and wire it to Hono, Express, Fastify, or any router you already use. Set `"framework": "hono"` (or `"express"` / `"fastify"`) and the generator also scaffolds a ready-to-mount router, with optional Zod validation at the boundary so invalid requests never reach your service implementation.
+`@codewithagents/openapi-server` reads your OpenAPI 3.x spec and writes a typed service interface into your project. The interface is plain TypeScript with no framework imports: implement it however you want and wire it to Fastify, Hono, Express, or any router you already use. Set `"framework"` to `"fastify"`, `"hono"`, or `"express"` (default `"none"`) and the generator also scaffolds a ready-to-mount router, with optional Zod validation at the boundary so invalid requests never reach your service implementation. Fastify is the framework the project ships its canonical full-stack app on; the Hono and Express routers are first-class alternatives.
 
 ## Overview
 
@@ -20,20 +20,20 @@ Running the generator produces up to two files in your output directory:
 Key guarantees:
 
 - **Framework-agnostic service interface.** `service.ts` has zero framework dependencies. The TypeScript compiler enforces the contract: add an endpoint in the spec and forget to implement it, and the build fails.
-- **Optional router scaffolding.** Choose `"hono"`, `"express"`, or `"fastify"` to get a ready-to-mount router as a starting point. Use `"none"` to wire the interface yourself with any framework.
+- **Optional router scaffolding.** Choose `"fastify"`, `"hono"`, or `"express"` to get a ready-to-mount router as a starting point. Use `"none"` (the default) to wire the interface yourself with any framework.
 - **Supports GET, POST, PUT, PATCH, DELETE.** All five HTTP methods are generated when present in the spec.
-- **Zod validation at the boundary.** Point `input_schema` at the same Zod schema file you use with `openapi-zod-ts`. The generator adds `safeParse` calls to every route that receives a body, returning a structured `422` before the call ever reaches your service.
+- **Zod validation at the boundary.** Point `input_schema` at the same Zod schema file you use with `openapi-zod-ts`. Hono and Express get `safeParse` calls that return a structured `422` before the call ever reaches your service. Fastify wires the same schemas through `fastify-type-provider-zod` and rejects invalid requests with its native `400` (`FST_ERR_VALIDATION`).
 - **Prettier-clean output.** Every generated file passes `prettier --check` with your project's own Prettier config.
 - **`strict: true`.** All output compiles cleanly with TypeScript strict mode.
-- **OpenAPI 3.1.x** is the primary target (including 3.1.1). OpenAPI 3.0.x is best-effort. Full support for `$ref`, `allOf`, `anyOf`, `oneOf`, and `nullable`.
+- **OpenAPI 3.1.x** is the primary target (including 3.1.1). OpenAPI 3.0.x is supported in practice: 8 of the 13 showcase specs are 3.0.x and all compile under `tsc --strict`. Full support for `$ref`, `allOf`, `anyOf`, `oneOf`, and `nullable`.
 
 ## Install
 
 <PackageManagers pkg="@codewithagents/openapi-server" dev />
 
 <Aside type="note">
-  `@codewithagents/openapi-server` requires `openapi-zod-ts`. Run `openapi-zod-ts` first
-  so `models.ts` exists before `service.ts` imports from it.
+  `@codewithagents/openapi-server` requires `openapi-zod-ts`. Run `openapi-zod-ts` first so
+  `models.ts` exists before `service.ts` imports from it.
 </Aside>
 
 <Aside type="note">
@@ -135,12 +135,15 @@ npx openapi-server --config ./config/openapi-server.config.json
 
 ### Options
 
-| Field           | Type                                         | Required | Default  | Description                                                                                    |
-| --------------- | -------------------------------------------- | -------- | -------- | ---------------------------------------------------------------------------------------------- |
-| `input_openapi` | `string`                                     | Yes      | n/a      | Path to your OpenAPI spec (JSON or YAML)                                                       |
-| `output`        | `string`                                     | Yes      | n/a      | Directory to write the generated files                                                         |
-| `framework`     | `"hono" \| "express" \| "fastify" \| "none"` | No       | `"none"` | Router framework to generate. Use `"none"` to generate only `service.ts`                       |
-| `input_schema`  | `string`                                     | No       | n/a      | Path to user-owned Zod schema file. Enables server-side request validation (never overwritten) |
+| Field                      | Type                                         | Required | Default  | Description                                                                                                                                                                                                                  |
+| -------------------------- | -------------------------------------------- | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `input_openapi`            | `string`                                     | Yes      | n/a      | Path to your OpenAPI spec (JSON or YAML)                                                                                                                                                                                     |
+| `output`                   | `string`                                     | Yes      | n/a      | Directory to write the generated files                                                                                                                                                                                       |
+| `framework`                | `"hono" \| "express" \| "fastify" \| "none"` | No       | `"none"` | Router framework to generate. Use `"none"` to generate only `service.ts`                                                                                                                                                     |
+| `input_schema`             | `string`                                     | No       | n/a      | Path to user-owned Zod schema file. Enables server-side request validation (never overwritten)                                                                                                                               |
+| `context_type`             | `string`                                     | No       | n/a      | TypeScript type name threaded through every service method as a final `ctx` argument. On Fastify this becomes a required `createContext(req)` auth seam. See [request-scoped context](#request-scoped-context-context_type). |
+| `emit_response_validation` | `boolean`                                    | No       | `false`  | Fastify only. Synthesize inline Zod response schemas for flat inline response shapes. See [response validation](#response-validation-opt-in-emit_response_validation-fastify-only).                                          |
+| `shared_output`            | `string`                                     | No       | derived  | Override directory for the shared `_shared/errors.ts` file. Defaults to a location derived from the output paths.                                                                                                            |
 
 **Full config example:**
 
@@ -268,37 +271,41 @@ export function createRouter(service: PetstoreService): Router {
 </TabItem>
 <TabItem label="Fastify">
 
-`createRouter(app, service)` registers routes directly onto a `FastifyInstance` and returns `void`. Use `fastify.register` to apply a path prefix:
+`createRouter(service)` returns a `FastifyPluginAsyncZod` factory. Mount it with `fastify.register` and apply a path prefix in the register options. The router sets up `fastify-type-provider-zod` and an `HttpError` `setErrorHandler` inside the plugin scope:
 
 ```typescript
 // generated/router.ts  (auto-generated, framework: "fastify")
 
-import type { FastifyInstance } from 'fastify'
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import type { CreatePetRequest } from './models.js'
 import type { PetstoreService } from './service.js'
 
-export function createRouter(app: FastifyInstance, service: PetstoreService): void {
-  app.get<{ Querystring: { species?: string; limit?: number } }>('/pets', async (req, reply) => {
-    const params = {
-      species: req.query.species,
-      limit: req.query.limit,
-    }
-    return service.listPets(params)
-  })
+import { HttpError } from './_shared/errors.js'
+export { HttpError } from './_shared/errors.js'
 
-  app.post<{ Body: CreatePetRequest }>('/pets', async (req, reply) => {
-    reply.status(201)
-    return service.createPet(req.body)
-  })
+export function createRouter(service: PetstoreService): FastifyPluginAsyncZod {
+  return async (app) => {
+    // Validation, serialization, and the HttpError handler are wired here,
+    // inside the plugin scope, before any routes are registered.
 
-  app.get<{ Params: { id: string } }>('/pets/:id', async (req, reply) => {
-    return service.getPet(req.params.id)
-  })
+    app.get('/pets', async (req) => {
+      return service.listPets(req.query)
+    })
 
-  app.delete<{ Params: { id: string } }>('/pets/:id', async (req, reply) => {
-    await service.deletePet(req.params.id)
-    reply.status(204).send()
-  })
+    app.post('/pets', async (req, reply) => {
+      reply.status(201)
+      return service.createPet(req.body)
+    })
+
+    app.get('/pets/:id', async (req) => {
+      return service.getPet(req.params.id)
+    })
+
+    app.delete('/pets/:id', async (req, reply) => {
+      await service.deletePet(req.params.id)
+      reply.status(204).send()
+    })
+  }
 }
 ```
 
@@ -309,7 +316,7 @@ The router handles:
 
 - Path params: `{id}` becomes `:id`, extracted via the framework's native param accessor
 - Query params: extracted and typed (`string`, `number`, `boolean`)
-- Request bodies: parsed and cast to the correct model type
+- Request bodies: parsed and cast to the correct model type. On Fastify, `req.body`, `req.query`, and `req.params` are inferred from the attached Zod schemas, so handlers are fully typed with no manual generics
 - Response status: spec-driven. The generator reads your spec's response codes first (checking for `201`, then `204`, then `200`). When no explicit code is declared, it falls back to `204` for DELETE and `200` for all other methods.
 
 ## Usage examples
@@ -356,7 +363,7 @@ app.listen(3001)
 </TabItem>
 <TabItem label="Fastify">
 
-Set `"framework": "fastify"` and the generator produces a `createRouter` that registers routes directly onto a `FastifyInstance` (it returns `void`, not a new instance). Use `fastify.register` with a prefix:
+Set `"framework": "fastify"` and `createRouter(service)` returns a `FastifyPluginAsyncZod`. Mount it with `fastify.register` and pass the prefix in the register options. Add `fastify` and `fastify-type-provider-zod` to your own `dependencies`:
 
 ```typescript
 // src/server/index.ts
@@ -366,15 +373,12 @@ import { petService } from './petService.js'
 
 const fastify = Fastify()
 
-fastify.register(
-  async (instance) => {
-    createRouter(instance, petService)
-  },
-  { prefix: '/api' }
-)
+fastify.register(createRouter(petService), { prefix: '/api' })
 
 fastify.listen({ port: 3001 })
 ```
+
+The plugin installs `fastify-type-provider-zod` and an `HttpError` `setErrorHandler` inside its own scope, so request and response validation are native and stay encapsulated to the mounted routes.
 
 </TabItem>
 </Tabs>
@@ -403,7 +407,7 @@ import { petService } from './petService.js'
 
 ### Zod validation (`input_schema`)
 
-Point `input_schema` at the same `schemas.ts` you use with `openapi-zod-ts`. The generator adds `safeParse` calls to every route that receives a request body. Invalid requests get a structured `422` response and never reach your service implementation.
+Point `input_schema` at the same `schemas.ts` you use with `openapi-zod-ts`. For the Hono and Express routers the generator adds `safeParse` calls to every route that receives a request body. Invalid requests get a structured `422` response and never reach your service implementation. The Fastify router validates differently: it wires the same Zod schemas through `fastify-type-provider-zod` and rejects with Fastify's native `400` (see the Fastify note below).
 
 **Config:**
 
@@ -447,12 +451,23 @@ Invalid requests receive a structured `422` response:
 </Aside>
 
 <Aside type="note">
-  **Same schemas, both sides of the wire.** `openapi-zod-ts` validates outgoing
-  requests in the browser. `@codewithagents/openapi-server` validates incoming requests on the
-  server. One `schemas.ts`, one source of truth.
+  **Same schemas, both sides of the wire.** `openapi-zod-ts` validates outgoing requests in the
+  browser. `@codewithagents/openapi-server` validates incoming requests on the server. One
+  `schemas.ts`, one source of truth.
 </Aside>
 
-The generator runs in two passes: first it writes `router.ts` without any Zod imports, then it rewrites `router.ts` with `safeParse` calls for every route whose body type has a matching schema in `input_schema`. If the schema file does not exist yet at generation time, the second pass is skipped and validation is added on the next run.
+<Aside type="note">
+  **Fastify validation is native.** The Fastify router does not hand-roll the `safeParse` block
+  shown above. It registers `fastify-type-provider-zod` once and attaches each operation's Zod
+  schemas to the route (`schema: { body, querystring, params, headers, response }`), so Fastify
+  validates and types requests through its own pipeline. Validation failures return Fastify's
+  native `400` (`FST_ERR_VALIDATION`), not the `422 { error, issues }` envelope that Hono and
+  Express emit. Cookie params (`in: cookie`) are the exception: Fastify has no native cookie
+  schema, so those keep a `_ckv` safeParse block and still return `422 { error: 'Invalid request
+  cookies', issues }`.
+</Aside>
+
+The generator runs in two passes: first it writes `router.ts` without any Zod imports, then it rewrites `router.ts` with validation for every route whose body type has a matching schema in `input_schema`. For Hono and Express this means `safeParse` calls; for Fastify it means schemas threaded through `fastify-type-provider-zod`. If the schema file does not exist yet at generation time, the second pass is skipped and validation is added on the next run.
 
 ## Middleware and authentication
 
@@ -510,26 +525,35 @@ import { petService } from './petService.js'
 
 const app = Fastify()
 
-// Register auth as a scoped plugin before the routes
+// The Fastify router accepts plugin-scoped lifecycle hooks directly.
+// onRequest fires before validation: ideal for auth.
 app.register(
-  async (instance) => {
-    instance.addHook('onRequest', async (req, reply) => {
+  createRouter(petService, {
+    onRequest: async (req, reply) => {
       if (req.headers.authorization !== `Bearer ${process.env.API_TOKEN}`) {
         return reply.status(401).send({ error: 'Unauthorized' })
       }
-    })
-    createRouter(instance, petService)
-  },
+    },
+  }),
   { prefix: '/api' }
 )
 ```
+
+The Fastify router takes `onRequest`, `preHandler`, `onSend`, and `onError` hooks in its `CreateRouterOptions`, each accepting a single handler or an array. They are plugin-scoped: they cover the generated routes (and any `registerCustomRoutes`) without leaking to the parent instance.
 
 </TabItem>
 </Tabs>
 
 ## Error handling
 
-The generated router does **not** wrap service calls in `try/catch`. If your service method throws, the error propagates to the framework's own error handler, which typically returns `500`. Add a custom error handler to control the response shape:
+The generated router maps thrown errors in two cases. Throw `HttpError` (re-exported from `router.ts`) from a service method to return a structured response at a chosen status; any other error propagates to your app-level handler. Hono and Express implement this with a per-route `try/catch`; Fastify registers a single `HttpError` `setErrorHandler` inside its plugin scope. Add a framework-level error handler to shape responses for the errors that propagate:
+
+```typescript
+import { HttpError } from '../generated/router.js'
+
+// Inside a service method:
+if (!pet) throw new HttpError(404, 'Pet not found')
+```
 
 <Tabs>
 <TabItem label="Hono">
@@ -579,33 +603,126 @@ import { petService } from './petService.js'
 
 const app = Fastify()
 
+// The router maps HttpError itself. This app-level handler covers
+// every other error the router re-throws.
 app.setErrorHandler((err, req, reply) => {
   console.error(err)
-  reply.status(500).send({ error: err.message })
+  reply.status(500).send({ error: 'Internal server error' })
 })
 
-app.register(
-  async (instance) => {
-    createRouter(instance, petService)
-  },
-  { prefix: '/api' }
-)
+app.register(createRouter(petService), { prefix: '/api' })
 ```
 
 </TabItem>
 </Tabs>
 
+## Request-scoped context (`context_type`)
+
+Set `context_type` to thread a typed caller context through every generated service method. Use it to pass an authentication principal, a tenant ID, or any per-request metadata without coupling service code to framework types. Each method gains a final `ctx` argument, and the interface becomes generic with a `Ctx = never` default so existing implementations keep compiling.
+
+```json
+{
+  "input_openapi": "./spec/api.json",
+  "output": "./generated",
+  "framework": "fastify",
+  "context_type": "RequestContext"
+}
+```
+
+For Hono and Express the router passes the framework's native request or context object as `ctx`. For Fastify, `context_type` is a runtime auth seam, not just a type: `createRouter` becomes generic over `Ctx` and **requires** an options object with a `createContext(req)` hook. The hook runs first inside every handler, so it is the place to authenticate the request and build the typed principal. Throw `HttpError(401)` to reject before any handler work runs; the return value is passed as `ctx` to every service method.
+
+```typescript
+import Fastify from 'fastify'
+import { createRouter, HttpError } from '../generated/router.js'
+import type { PetstoreService } from '../generated/service.js'
+
+interface RequestContext {
+  userId: string
+  scopes: string[]
+}
+
+const petService: PetstoreService<RequestContext> = {
+  async listPets(params, ctx) {
+    return db.listPets({ userId: ctx.userId, ...params })
+  },
+  // ... other operations receive ctx as their final argument
+}
+
+const app = Fastify()
+app.register(
+  createRouter(petService, {
+    createContext: (req) => {
+      const userId = req.headers['x-user-id']
+      if (typeof userId !== 'string') throw new HttpError(401, 'Unauthorized')
+      return { userId, scopes: [] }
+    },
+  }),
+  { prefix: '/v1' }
+)
+```
+
+Operation-level `security` from the spec (falling back to the global `security`) is surfaced on each route at `req.routeOptions.config.security` as `Array<{ scheme, scopes }>`, and as a `@security` JSDoc tag on each service method. Security is metadata only: `createContext` (or a `preHandler` hook) is where you enforce it.
+
+<Aside type="tip">
+  The canonical full-stack reference,
+  [`petstore-fastify`](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-fastify),
+  is a live demonstration of this seam: Fastify with `createContext` auth, a cross-field validation
+  rule, and a React/react-query frontend that round-trips a cross-field error onto a form field.
+</Aside>
+
+## Custom routes and lifecycle hooks (Fastify)
+
+The Fastify `createRouter` accepts a `CreateRouterOptions` object with several Fastify-only escape hatches:
+
+- **`registerCustomRoutes(app)`**: register non-spec routes (health checks, metrics) that inherit the ZodTypeProvider context and the `HttpError` handler. Runs after the compilers and parsers are set up, before the spec routes.
+- **`onRequest`, `preHandler`, `onSend`, `onError`**: plugin-scoped lifecycle hooks, each a single handler or an array. They cover generated and custom routes but do not propagate to the parent instance. Execution order per request: `onRequest` then `preHandler` then handler then `onSend`.
+- **`registerParsers: false`**: skip auto-registering `@fastify/formbody` and `@fastify/multipart` so you can register them yourself with custom options.
+
+`onError` hooks fire for observability only; the registered `HttpError` handler (or your `setErrorHandler`) remains the single response producer.
+
+```typescript
+import { createRouter, HttpError } from '../generated/router.js'
+
+fastify.register(
+  createRouter(petService, {
+    registerCustomRoutes: async (app) => {
+      app.get('/health', async (_req, reply) => reply.send({ status: 'ok' }))
+    },
+    onRequest: authHook,
+    onError: [metricsHook, loggingHook],
+  }),
+  { prefix: '/api' }
+)
+```
+
+## Non-JSON request bodies (Fastify)
+
+Fastify 5 natively parses only `application/json` and `text/plain`. For other content types declared in your spec, the Fastify router registers the required plugins automatically inside its plugin scope:
+
+| Content type                        | What the router does                                                                      | You install            |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------- |
+| `application/x-www-form-urlencoded` | Auto-registers `@fastify/formbody`                                                        | `@fastify/formbody`    |
+| `multipart/form-data`               | Auto-registers `@fastify/multipart` with `attachFieldsToBody: true`                       | `@fastify/multipart`   |
+| `application/octet-stream`          | Emits an `addContentTypeParser` call; the body is forwarded to your service as a `Buffer` | nothing (core Fastify) |
+
+Pass `registerParsers: false` to register the multipart plugin yourself when you need custom options such as upload size limits.
+
+## Response validation opt-in (`emit_response_validation`, Fastify only)
+
+Set `emit_response_validation: true` to have the Fastify emitter synthesize inline Zod expressions for `schema.response` on routes that have no named schema from `input_schema`. The synthesizer is intentionally minimal: it handles flat objects with scalar properties, scalar top-level responses, and arrays of scalars, and falls back to `z.unknown()` for `$ref`, `allOf`, `oneOf`, `anyOf`, or nested objects. For complete, type-safe response validation, point `input_schema` at the `schemas.ts` from `openapi-zod-ts` instead.
+
 ## What is out of scope
 
-The generator intentionally omits several OpenAPI features. These are not validated or generated:
+Coverage differs by framework. The Fastify router validates the most through `fastify-type-provider-zod`; the Hono and Express routers cover bodies via `safeParse` and leave the rest to you.
 
-| Feature                      | Status                                                                                                              |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Response-body validation     | Not generated. Validate in your service if needed.                                                                  |
-| Request headers and cookies  | Not extracted or validated.                                                                                         |
-| Security scheme enforcement  | Not generated. Add auth middleware manually (see above).                                                            |
-| `multipart/form-data` bodies | Not generated. Wire file upload routes manually.                                                                    |
-| Path parameter validation    | Not generated. Path params are passed to your service as raw strings. Validate them in your service implementation. |
+| Feature                              | Fastify                                                                                                                                | Hono / Express                                                                |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Request body validation              | Native via `fastify-type-provider-zod`. Rejects with `400 FST_ERR_VALIDATION`.                                                         | `safeParse` when `input_schema` is set. Rejects with `422 { error, issues }`. |
+| Query and path validation            | Native, against the Zod schemas attached to each route.                                                                                | Not validated. Path params reach your service as raw strings.                 |
+| Request header and cookie validation | Headers validated natively; cookie params validated via a `_ckv` safeParse block (`422`). Requires `@fastify/cookie`.                  | Not extracted or validated.                                                   |
+| Response-body validation             | Available. Point `input_schema` at your `schemas.ts`, or set `emit_response_validation` for simple inline shapes.                      | Not generated. Validate in your service if needed.                            |
+| Security scheme enforcement          | Surfaced as metadata: `req.routeOptions.config.security` and a `@security` JSDoc tag. Enforce it in `createContext` or a `preHandler`. | Not generated. Add auth middleware manually (see above).                      |
+| `multipart/form-data` bodies         | Auto-registers `@fastify/multipart` with `attachFieldsToBody: true` so `req.body` is populated.                                        | Wire file upload routes manually.                                             |
 
 ## Troubleshooting
 
@@ -616,9 +733,11 @@ Check that `input_schema` is set in your config and the schema file exists. If t
 `service.ts` imports from `models.ts` which is generated by `openapi-zod-ts`. Run `openapi-zod-ts` before `openapi-server`. A combined script (`"generate": "openapi-zod-ts && openapi-server"`) prevents this.
 
 **My service throws but the client sees `500` with no details.**
-The generated router does not catch errors. Add a framework error handler as shown in the [Error handling](#error-handling) section above.
+The generated router maps `HttpError` to its status, but re-throws every other error to your app-level handler, which typically returns a bare `500`. Throw `HttpError(status, message)` for responses you control, and add a framework error handler as shown in the [Error handling](#error-handling) section for everything else.
 
 ## Works with
+
+`@codewithagents/openapi-server` is one of five published packages driven from the same OpenAPI 3.x spec: four generators (`openapi-zod-ts`, `openapi-server`, `openapi-react-query`, `openapi-msw`) plus `api-errors`, a runtime helper used in app code.
 
 <CardGrid>
   <Card title="Types and fetch client" icon="seti:typescript">
@@ -633,6 +752,12 @@ The generated router does not catch errors. Add a framework error handler as sho
     [Learn more](/openapi-react-query)
 
   </Card>
+  <Card title="MSW mock handlers" icon="seti:json">
+    Add `@codewithagents/openapi-msw` to generate MSW v2 HTTP handlers with seeded Faker mock data, so the frontend can develop against the same spec before the server is live.
+
+    [Learn more](/openapi-msw)
+
+  </Card>
   <Card title="Form error mapping" icon="puzzle">
     Add `@codewithagents/api-errors` to map API error responses from the generated client directly to form field errors.
 
@@ -640,3 +765,5 @@ The generated router does not catch errors. Add a framework error handler as sho
 
   </Card>
 </CardGrid>
+
+See the [`petstore-fastify` demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-fastify) for the canonical full-stack example: Fastify with `createContext` auth, a cross-field validation rule, and a React/react-query frontend, with these packages working together.

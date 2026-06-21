@@ -1,14 +1,14 @@
 # examples
 
-128 real-world OpenAPI specs run through `openapi-zod-ts`. Two tiers: **showcase specs** with committed generated output and **compatibility matrix specs** that prove breadth.
+128 real-world OpenAPI specs run through the core generator, `openapi-zod-ts`. Two tiers: **showcase specs** with committed generated output and **compatibility matrix specs** that prove breadth. The same spec corpus also underpins the wider toolchain (`openapi-zod-ts`, `@codewithagents/openapi-server`, `@codewithagents/openapi-react-query`, and `@codewithagents/openapi-msw`), which all consume specs of this shape.
 
 ## Two tiers
 
 ### Showcase specs (13)
 
-Generated output is committed to `examples/generated/`. CI regenerates on every relevant PR and fails if output has drifted. All 13 generated clients also pass `tsc --strict`.
+Generated output is committed to `examples/generated/`. CI regenerates on every relevant PR and fails if output has drifted. All 13 generated clients also pass `tsc --noEmit --strict`.
 
-These are the "golden examples" — they prove the generator handles real edge cases end-to-end.
+These are the "golden examples": they prove the generator handles real edge cases end-to-end.
 
 | Name | Version | Paths | Industry |
 |------|---------|-------|----------|
@@ -32,22 +32,22 @@ Spec files are committed to `examples/specs/` and configs to `examples/configs/`
 
 **All 115 generate without errors.** Together with the 13 showcase specs, that's 128/128 total.
 
-A sample of the APIs covered: Stripe, GitHub, Google Calendar, Google Drive, Google Sheets, Spotify, Slack, Vercel, Cloudflare, Twilio, Plaid, Notion, Jira, Okta, Asana, Bitbucket, Box, Brex, CircleCI, Figma (via Notion), Klarna, Linode, NASA, Pinecone, SendGrid, Square, Webflow, Xero, YouTube, Zoom, Zuora, and many more.
+A sample of the APIs covered: Stripe, GitHub, Google Calendar, Google Drive, Google Sheets, Spotify, Slack, Vercel, Cloudflare, Twilio, Plaid, Notion, Jira, Okta, Asana, Bitbucket, Box, Brex, CircleCI, Figma, Klarna, Linode, NASA, Pinecone, SendGrid, Square, Webflow, Xero, YouTube, Zoom, Zuora, and many more.
 
 ## What the generator handles
 
 Edge cases covered by the full 128-spec suite:
 
-- **Dots in operationIds** — `calendar.calendars.insert` → `calendarCalendarsInsert` (Google API style)
-- **Spaces and special characters** — operationIds with whitespace, parens, or braces are sanitized to valid identifiers
-- **Kebab-case operationIds** — `post-applePay-sessions` → `postApplePaySessions`
-- **Hyphenated schema names** — `CapabilityProblemEntity-recursive` → `CapabilityProblemEntityRecursive`
-- **Hyphenated and mixed path segments** — `/api-keys` → `createApiKeys`
-- **Array query params** — `project_ids[]` → TS property `project_ids`, wire name `project_ids[]`
-- **Dot-notation query params** — `place.fields` → TS property `placeFields`, wire name `place.fields`
-- **Path-item level parameters** — inherited by all operations in the path
-- **Schema name conflicts with global types** — OpenAI has a schema called `Response`
-- **100+ query parameters on a single endpoint** — Open-Meteo
+- **Dots in operationIds**: `calendar.calendars.insert` → `calendarCalendarsInsert` (Google API style)
+- **Spaces and special characters**: operationIds with whitespace, parens, or braces are sanitized to valid identifiers
+- **Kebab-case operationIds**: `post-applePay-sessions` → `postApplePaySessions`
+- **Hyphenated schema names**: `CapabilityProblemEntity-recursive` → `CapabilityProblemEntityRecursive`
+- **Hyphenated and mixed path segments**: `/api-keys` → `createApiKeys`
+- **Array query params**: `project_ids[]` → TS property `project_ids`, wire name `project_ids[]`
+- **Dot-notation query params**: `place.fields` → TS property `placeFields`, wire name `place.fields`
+- **Path-item level parameters**: inherited by all operations in the path
+- **Schema name conflicts with global types**: OpenAI has a schema called `Response`
+- **100+ query parameters on a single endpoint**: Open-Meteo
 - **3.0.x specs alongside 3.1.x specs**
 
 ## Regenerating showcase output
@@ -77,9 +77,9 @@ The `Examples` workflow (`.github/workflows/examples.yml`) runs on every relevan
 - **Steps**:
   1. Build the generator packages
   2. Run all 128 configs: all 115 compat matrix specs must generate without errors (parameterized tests via `pnpm test`)
-  3. `git diff --exit-code examples/generated/` — fails if showcase output has drifted
-  4. `tsc --noEmit` on all generated output in `examples/generated/`
+  3. `git diff --exit-code examples/generated/`, which fails if showcase output has drifted
+  4. `tsc --noEmit --strict` on all generated output in `examples/generated/`
 
 If CI fails with "Showcase generated output is out of date", run `pnpm generate` in `examples/` and commit the updated output.
 
-> **Note:** The `resend` spec was patched from `openapi: "3.1.2"` → `"3.1.0"` because 3.1.2 is not an official OpenAPI version. The 3.0.x specs are accepted by the generator (3.0-specific constructs like `nullable: true` pass through; full 3.0 normalization is a planned feature).
+> **Note:** The `resend` spec was patched from `openapi: "3.1.2"` → `"3.1.0"` because 3.1.2 is not an official OpenAPI version. The 3.0.x specs are accepted by the generator: most 3.0-only constructs (including `nullable: true`) are normalized to their 3.1 equivalents, and a few remaining 3.0 edge cases are still being closed.

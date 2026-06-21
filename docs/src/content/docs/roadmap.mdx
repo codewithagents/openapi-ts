@@ -5,7 +5,17 @@ description: What is shipped, what is in progress, and what is planned for the C
 
 import { Aside } from '@astrojs/starlight/components'
 
-The mission of this toolchain is zero-footprint bridge between OpenAPI and Zod for both sides of the wire. Every package is a `devDependency` or a peer-dep-only tool. Nothing published here adds bytes to a production bundle that are not already there.
+The mission of this toolchain is to be a zero-footprint bridge between OpenAPI and Zod for both sides of the wire. Every package is a `devDependency` or a peer-dep-only tool. Nothing published here adds bytes to a production bundle that are not already there.
+
+This page mirrors the [`ROADMAP.md`](https://github.com/codewithagents/openapi-zod-ts/blob/main/ROADMAP.md) in the repo. The five published packages are four generators (`openapi-zod-ts`, `@codewithagents/openapi-server`, `@codewithagents/openapi-react-query`, `@codewithagents/openapi-msw`) plus one runtime helper (`@codewithagents/api-errors`).
+
+| Package                               | Version | One-liner                                                                                                                |
+| ------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `openapi-zod-ts`                      | v2.1.0  | Core generator: TypeScript models, native fetch client, and Zod schemas from an OpenAPI 3.1 spec. CLI: `openapi-zod-ts`. |
+| `@codewithagents/openapi-server`      | v2.0.0  | Framework-agnostic service interface plus an optional router. CLI: `openapi-server`.                                     |
+| `@codewithagents/openapi-react-query` | v3.12.1 | Typed React Query v5 hooks over the generated client.                                                                    |
+| `@codewithagents/openapi-msw`         | v0.2.0  | MSW v2 handlers with seeded Faker mock data. CLI: `openapi-msw`.                                                         |
+| `@codewithagents/api-errors`          | v1.2.0  | Maps backend API error responses to form-field errors. Runtime helper, not a codegen step.                               |
 
 ## Now: shipped
 
@@ -15,9 +25,9 @@ Maps backend API error responses to form field errors. Framework-agnostic core w
 
 Supported parsers: RFC 7807 / RFC 9457 Problem Details, Spring Boot validation errors, violations / invalid-params shapes, JSON:API error objects, Laravel and DRF error formats, flat field/message objects, GraphQL error extensions, Zod flatten output, and Axios response wrappers.
 
-### `openapi-zod-ts` (shipped)
+### `openapi-zod-ts` (v2.1.0)
 
-A CLI `devDependency` that reads an OpenAPI 3.1 spec and an optional user-owned Zod schema, then generates self-contained TypeScript. No runtime package required. The generated client uses only native `fetch`.
+A CLI `devDependency` that reads an OpenAPI 3.1 spec and an optional user-owned Zod schema, then generates self-contained TypeScript. No runtime package required. The generated client uses only native `fetch`. Ships the `openapi-zod-ts` CLI.
 
 Core features shipped:
 
@@ -39,27 +49,33 @@ A separate package layered on top of `openapi-zod-ts`. Reads the same `openapi.j
 - Imports from `openapi-zod-ts`'s `client.ts` output
 - Peer dependency: `@tanstack/react-query`
 
-### `@codewithagents/openapi-server` (v1.8.0)
+### `@codewithagents/openapi-server` (v2.0.0)
 
-Server-side counterpart to `openapi-zod-ts`. Reads the same `openapi.json` and generates a framework-agnostic service interface plus optional routers for Hono, Express, and Fastify.
-
-The full-stack story this enables:
-
-```
-openapi.json + schemas.ts
-    ├── openapi-zod-ts        → client validates responses with user's Zod schemas
-    └── openapi-server        → server validates requests with the same Zod schemas
-```
+Server-side counterpart to `openapi-zod-ts`. Reads the same `openapi.json` and generates a framework-agnostic service interface plus an optional router selected by `framework`: `"hono" | "express" | "fastify" | "none"` (default `"none"`, which emits only the service interface and lets you wire it to any framework yourself). Fastify is the framework the project ships its canonical full-stack app on. Ships the `openapi-server` CLI.
 
 Peer dependencies: `hono`, `express`, or `fastify` depending on the chosen framework.
 
 ### `@codewithagents/openapi-msw` (v0.2.0)
 
-Generates MSW v2 HTTP handlers with seeded Faker mock data from an OpenAPI 3.1 spec. Produces a single `handlers.ts` file ready to drop into a Storybook or Vitest browser setup.
+Generates MSW v2 HTTP handlers with seeded Faker mock data from an OpenAPI 3.1 spec. Depends on `openapi-zod-ts`. Produces a single `handlers.ts` file ready to drop into a Storybook or Vitest browser setup. Ships the `openapi-msw` CLI.
 
 - One `http.<method>(path, resolver)` handler per operation
 - Faker-seeded responses derived from response schemas
-- Peer dependencies: `msw` and `@faker-js/faker`
+- Peer dependencies: `msw` (`^2`) and `@faker-js/faker` (`^9`)
+
+## The full-stack story
+
+One spec drives four generators. The shared `schemas.ts` is the single source of validation truth across the wire.
+
+```
+openapi.json + schemas.ts
+    ├── openapi-zod-ts                      → client validates responses with the user's Zod schemas
+    ├── @codewithagents/openapi-server      → server validates requests with the same Zod schemas
+    ├── @codewithagents/openapi-react-query → React Query v5 hooks over the generated client
+    └── @codewithagents/openapi-msw         → MSW v2 handlers with seeded Faker mock data
+```
+
+`@codewithagents/api-errors` then maps server validation failures back onto form fields in app code. The canonical end-to-end reference wiring all of this together is [`packages/petstore-fastify`](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-fastify): Fastify plus `createContext` auth, a cross-field validation rule, and a React / react-query frontend with browser e2e that round-trips a cross-field error onto a form field. `@codewithagents/petstore-hono` is a retained legacy Hono variant.
 
 <Aside type="note">
   This roadmap reflects the current state of the project. Priorities shift as feedback comes in.

@@ -18,9 +18,10 @@ Unlike most generators, the output is not a black box you regenerate and forget.
 | Package | Version | Coverage | Description |
 |---|---|---|---|
 | [`@codewithagents/api-errors`](./packages/api-errors) | [![npm](https://img.shields.io/npm/v/@codewithagents/api-errors.svg)](https://npmjs.com/package/@codewithagents/api-errors) | [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=api-errors&branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts) | Map API error responses to form field errors, framework-agnostic core + React Hook Form adapter |
-| [`openapi-zod-ts`](./packages/openapi-zod-ts) | [![npm](https://img.shields.io/npm/v/openapi-zod-ts.svg)](https://npmjs.com/package/openapi-zod-ts) | [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=openapi-zod-ts&branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts) | Generate TypeScript models + native `fetch` client + Zod schemas from an OpenAPI 3.x spec |
+| [`openapi-zod-ts`](./packages/openapi-zod-ts) | [![npm](https://img.shields.io/npm/v/openapi-zod-ts.svg)](https://npmjs.com/package/openapi-zod-ts) | [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=openapi-zod-ts&branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts) | Generate TypeScript models + native `fetch` client + Zod schemas from an OpenAPI 3.1 spec (3.0.x supported) |
 | [`@codewithagents/openapi-react-query`](./packages/openapi-react-query) | [![npm](https://img.shields.io/npm/v/@codewithagents/openapi-react-query.svg)](https://npmjs.com/package/@codewithagents/openapi-react-query) | [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=openapi-react-query&branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts) | Generate typed React Query v5 hooks: `useQuery`, `useMutation`, key factories |
-| [`@codewithagents/openapi-server`](./packages/openapi-server) | [![npm](https://img.shields.io/npm/v/@codewithagents/openapi-server.svg)](https://npmjs.com/package/@codewithagents/openapi-server) | [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=openapi-server&branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts) | Generate a framework-agnostic service interface from OpenAPI 3.x. Optional Hono router included, or skip it and wire to any framework you choose |
+| [`@codewithagents/openapi-server`](./packages/openapi-server) | [![npm](https://img.shields.io/npm/v/@codewithagents/openapi-server.svg)](https://npmjs.com/package/@codewithagents/openapi-server) | [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=openapi-server&branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts) | Generate a framework-agnostic service interface from OpenAPI 3.1, plus an optional router for Hono, Express, or Fastify (default: none, wire to any framework you choose) |
+| [`@codewithagents/openapi-msw`](./packages/openapi-msw) | [![npm](https://img.shields.io/npm/v/@codewithagents/openapi-msw.svg)](https://npmjs.com/package/@codewithagents/openapi-msw) | [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?flag=openapi-msw&branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts) | Generate MSW v2 HTTP handlers with seeded Faker mock data from an OpenAPI 3.1 spec |
 
 Each package has its own README with full usage docs and configuration reference.
 
@@ -32,11 +33,14 @@ One spec, four generators:
 
 ```
 spec/api.json
-  ├── openapi-zod-ts          → models.ts, client.ts       (TypeScript types + fetch client)
-  ├── openapi-server       → service.ts                 (framework-agnostic service interface)
-  │                          router.ts                  (optional — Hono, or wire to any framework)
-  └── openapi-react-query  → hooks.ts                   (React Query v5 hooks)
+  ├── openapi-zod-ts       → models.ts, client.ts   (TypeScript types + fetch client)
+  ├── openapi-server       → service.ts             (framework-agnostic service interface)
+  │                          router.ts              (optional: Hono, Express, or Fastify; default none)
+  ├── openapi-react-query  → hooks.ts               (React Query v5 hooks)
+  └── openapi-msw          → handlers.ts            (MSW v2 mock handlers + seeded Faker data)
 ```
+
+`@codewithagents/api-errors` is the runtime helper that sits alongside this output, mapping backend error responses onto form fields. It is not a codegen step.
 
 You write: your business logic (implement the service interface).
 Everything else is generated and stays in sync when the spec changes.
@@ -47,11 +51,11 @@ Everything else is generated and stays in sync when the spec changes.
 
 **Zero footprint.** Every package is a `devDependency` or generates code that uses only what your project already has. We never add a runtime dependency you didn't choose.
 
-**Latest only.** TypeScript 6 (actively supported), OpenAPI 3.x (3.1.1 primary target), Zod v4, React Query v5. No legacy shims, no backports. Opinionated cuts mean less code, faster iteration, and a clear upgrade path.
+**Latest only.** TypeScript 6 (actively supported), OpenAPI 3.1 (3.1.1 primary target, 3.0.x supported in practice), Zod v4, React Query v5. No legacy shims, no backports. Opinionated cuts mean less code, faster iteration, and a clear upgrade path.
 
 **You own the output.** The Zod schema file is bootstrapped once and never overwritten. Add your own validation rules, error messages, and business logic. The generator treats your file as source of truth.
 
-**Readable output.** Generated code looks like code you'd write yourself — no opaque abstractions, no minified magic. You can read it, review it, and commit it.
+**Readable output.** Generated code looks like code you'd write yourself, no opaque abstractions, no minified magic. You can read it, review it, and commit it.
 
 **Agent-friendly.** One `devDependency`, one command, a fully-typed API client with runtime validation. Designed to work well when an AI agent is building or maintaining your project.
 
@@ -67,12 +71,12 @@ Everything else is generated and stays in sync when the spec changes.
 | Zod schema file you own, never overwritten | **Yes** | No | No | No | n/a |
 | Runtime request + response validation | Yes | Yes | Yes | Yes | No |
 | React Query hooks | Yes (React) | Yes (multi) | Yes (multi) | Yes (React, Vue, SWR) | Companion pkg |
-| Server-side service interface + router | **Yes** | No | No | No | No |
-| Mocks (MSW / faker) | No | Yes | Yes | Yes | No |
+| Server-side service interface + router | **Yes** (Hono, Express, Fastify) | No | No | No | No |
+| Mocks (MSW / faker) | **Yes** (openapi-msw, MSW v2 + Faker) | Yes | Yes | Yes | No |
 | Swagger 2.0 | No | No | Yes | Yes | No |
-| Stable 1.0 | Yes | No (0.x) | Yes | Yes | Yes |
+| Stable 1.0+ release | Yes (2.x) | No (0.x) | Yes | Yes | Yes |
 
-**Pick something else if** your frontend is Vue/Svelte/Angular (hey-api, orval, kubb), you need generated mocks (orval, kubb), you have a Swagger 2.0 spec (orval, kubb), or you want the largest ecosystem (hey-api). Full breakdown, including where the alternatives win: **[How it compares](https://openapi.codewithagents.de/comparison)**.
+**Pick something else if** your frontend is Vue/Svelte/Angular (hey-api, orval, kubb), you have a Swagger 2.0 spec (orval, kubb), or you want the largest ecosystem (hey-api). Full breakdown, including where the alternatives win: **[How it compares](https://openapi.codewithagents.de/comparison)**.
 
 ---
 
@@ -80,7 +84,7 @@ Everything else is generated and stays in sync when the spec changes.
 
 Code generators have a wide blast radius. A subtle regression in the generator touches every project that runs it. These are the layers we use to catch problems before they reach you.
 
-**Near-100% test coverage.** All four packages run at 100% statements, functions, and lines. Branches sit at 99%+ across the board. The remaining gap is a handful of genuinely unreachable defensive guards (`?? fallback` patterns where the fallback can never trigger by construction). Coverage is tracked per-package via [Codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts) and blocks PRs when it drops.
+**Near-100% test coverage.** Every published package runs at ~100% statements, functions, and lines. Branches sit at 99%+ across the board. The remaining gap is a handful of genuinely unreachable defensive guards (`?? fallback` patterns where the fallback can never trigger by construction). Coverage is tracked per-package via [Codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts) and blocks PRs when it drops.
 
 **128 real-world OpenAPI specs.** The generator runs against a [compatibility matrix](./examples/) of 128 publicly available specs: Stripe, GitHub, Google Calendar, Spotify, Twitter/X, OpenAI, Adyen, Slack, Vercel, Cloudflare, Twilio, Plaid, Notion, Jira, Okta, and more. **128/128 generate without errors** on every PR. The 13 showcase specs (`1Password Connect`, `Adyen Checkout`, `Adyen Legal Entity`, `Canada Holidays`, `Dev.to`, `Exchange Rate`, `Open-Meteo`, `OpenAI`, `Petstore`, `Redocly Museum`, `Resend`, `Spotify`, `Twitter`) have committed output and are drift-checked on every relevant PR. If anything regresses, CI fails.
 
@@ -88,7 +92,7 @@ Code generators have a wide blast radius. A subtle regression in the generator t
 
 **Mutation testing with Stryker.** `openapi-zod-ts` and `openapi-react-query` run [Stryker](https://stryker-mutator.io/) mutation tests locally. Mutation testing deliberately introduces bugs into the source code and verifies that the test suite catches them. High line coverage that doesn't actually catch regressions shows up here.
 
-**Full-stack E2E tests.** The [`petstore`](./packages/petstore-hono) package is a complete runnable full-stack app: one spec drives generated types, fetch client, React Query hooks, a Hono server with Zod validation, and end-to-end [Playwright](https://playwright.dev/) tests. Every PR runs the full round-trip — spec change to browser assertion.
+**Full-stack E2E tests.** The [`petstore-fastify`](./packages/petstore-fastify) package is the canonical runnable full-stack reference: one shared spec drives generated types, fetch client, React Query hooks, and a Fastify server with `createContext` auth and a cross-field validation rule. A React + react-query frontend logs in for a bearer token, then submits a secured `/contact` form whose cross-field error round-trips back onto the right form field. [Playwright](https://playwright.dev/) e2e runs the full loop on every PR: spec change to browser assertion. The legacy [`petstore-hono`](./packages/petstore-hono) package is retained as a Hono surface for coverage.
 
 **Static analysis on every PR.** [Fallow](https://github.com/fallow-rs/fallow) runs on every pull request and posts inline review comments flagging dead code, duplication, and unresolved imports introduced by the diff. [CodeQL](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/codeql.yml) handles security scanning.
 

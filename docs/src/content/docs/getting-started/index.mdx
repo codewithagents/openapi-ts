@@ -6,7 +6,7 @@ description: What the toolchain does, and the spec-to-UI pipeline mental model.
 import { Card, CardGrid, Aside } from '@astrojs/starlight/components'
 import PipelineDiagram from '../../../components/PipelineDiagram.astro'
 
-A TypeScript OpenAPI toolchain that turns a spec into everything you need: types, a fetch client, React Query hooks, Zod schemas, a server-side service interface, and form error mapping. Every generated file compiles under `strict: true` with zero runtime wrapper dependencies. The pipeline is tested against 128 real-world specs (Stripe, GitHub, Spotify, OpenAI, and more) on every PR.
+A TypeScript OpenAPI toolchain that turns a spec into everything you need: types, a fetch client, React Query hooks, Zod schemas, a server-side service interface, MSW mock handlers, and form error mapping. Every generated file compiles under `strict: true` with zero runtime wrapper dependencies. The pipeline is tested against 128 real-world specs (Stripe, GitHub, Spotify, OpenAI, and more) on every PR.
 
 ## The pipeline
 
@@ -16,12 +16,13 @@ Everything flows from a single spec. One source of truth. When the spec changes,
 
 ## Packages
 
-| Package                                                       | What it does                                                                       |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| [`openapi-zod-ts`](/openapi-zod-ts)                 | Generates TypeScript interfaces, a native `fetch` client, and optional Zod schemas |
-| [`@codewithagents/openapi-react-query`](/openapi-react-query) | Generates typed React Query v5 hooks from the client `openapi-zod-ts` produces        |
-| [`@codewithagents/openapi-server`](/openapi-server)           | Generates a typed service interface and optional Hono, Express, or Fastify router  |
-| [`@codewithagents/api-errors`](/api-errors)                   | Maps API error responses to form field errors at runtime (no codegen step)         |
+| Package                                                       | What it does                                                                                                            |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| [`openapi-zod-ts`](/openapi-zod-ts)                           | Generates TypeScript interfaces, a native `fetch` client, and optional Zod schemas                                      |
+| [`@codewithagents/openapi-react-query`](/openapi-react-query) | Generates typed React Query v5 hooks from the client `openapi-zod-ts` produces                                          |
+| [`@codewithagents/openapi-server`](/openapi-server)           | Generates a typed service interface and an optional router (`hono` \| `express` \| `fastify` \| `none`, default `none`) |
+| [`@codewithagents/openapi-msw`](/openapi-msw)                 | Generates MSW v2 HTTP handlers with seeded Faker mock data from your spec                                               |
+| [`@codewithagents/api-errors`](/api-errors)                   | Maps API error responses to form field errors at runtime (no codegen step)                                              |
 
 Each package is independent. Use only the ones your project needs. They share one spec and one output directory when used together.
 
@@ -34,12 +35,12 @@ If your team maintains an OpenAPI spec, the toolchain turns it into a first-clas
 ## Prerequisites
 
 - Node.js 18 or later
-- An OpenAPI 3.1 spec (JSON or YAML). OpenAPI 3.0.x is well-supported in practice: 8 of the 13 showcase specs are 3.0.x and all compile. A few 3.0-only constructs like `nullable` are not yet normalized to 3.1 semantics.
+- An OpenAPI 3.1 spec (JSON or YAML). OpenAPI 3.0.x is well-supported in practice: 8 of the 13 showcase specs are 3.0.x and all compile. 3.0-only constructs like `nullable: true` are normalized to the 3.1 null-union form, so nullable fields produce the correct `T | null` types.
 - TypeScript with `strict: true` recommended (all generated output passes it out of the box)
 
 <Aside type="tip">
-  Start with only `openapi-zod-ts`. Get a typed client working, then layer in hooks or
-  a server interface when you need them.
+  Start with only `openapi-zod-ts`. Get a typed client working, then layer in hooks or a server
+  interface when you need them.
 </Aside>
 
 ## Next step

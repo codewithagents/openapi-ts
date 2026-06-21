@@ -29,3 +29,15 @@ pnpm -r test -t SECURITY
 
 When adding a new generator code path that emits a spec-derived string, add a matching
 `SECURITY:` test that feeds an adversarial payload through it.
+
+## Automated security
+
+Two safeguards run without manual intervention:
+
+- **Static analysis:** [CodeQL](.github/workflows/codeql.yml) scans every pull request
+  for security issues before merge.
+- **Supply chain:** all five published packages (`openapi-zod-ts`,
+  `@codewithagents/openapi-react-query`, `@codewithagents/openapi-server`,
+  `@codewithagents/openapi-msw`, and `@codewithagents/api-errors`) publish to npm via
+  OIDC Trusted Publishing. There is no long-lived npm token stored in the repository or
+  CI to leak.

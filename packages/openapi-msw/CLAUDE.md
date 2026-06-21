@@ -1,6 +1,6 @@
-# @codewithagents/openapi-msw
+# @codewithagents/openapi-msw (v0.2.0). CLI: `openapi-msw`
 
-Generates MSW v2 HTTP handlers with seeded Faker mock data from an OpenAPI 3.1 spec.
+Generates MSW v2 HTTP handlers with seeded Faker mock data from an OpenAPI 3.x spec (3.1 primary target, 3.0.x best-effort). Depends on `openapi-zod-ts` (`parseSpec`, config-core, cli-core); peer deps `msw` ^2 and `@faker-js/faker` ^9.
 
 ## What it generates
 
@@ -11,15 +11,29 @@ A single `handlers.ts` file containing:
 - One `http.<method>(path, resolver)` handler per operation
 - `export const handlers = [...]`
 
+## Config
+
+Default: `openapi-msw.config.json` in CWD. Point elsewhere with `--config <path>` (relative paths in the config resolve from the config file's directory).
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `input_openapi` | string | required | Path to the OpenAPI 3.1 spec (JSON or YAML) |
+| `output` | string | required | Directory to write `handlers.ts` (created recursively) |
+| `seed` | number | `42` | Passed to `faker.seed()`; integer >= 0 |
+| `max_array_items` | number | `3` | Array length in generated mocks; integer >= 1 |
+| `depth_cap` | number | `30` | Schema recursion depth before emitting `null`; integer >= 1 |
+
+Multi-spec generation via a top-level `projects` array (inherited from openapi-zod-ts config-core). Mixing `projects` with top-level `input_openapi`/`output` throws.
+
 ## Peer dependencies
 
-`msw` and `@faker-js/faker` are peer dependencies. You must install them yourself:
+`msw` ^2 and `@faker-js/faker` ^9 are peer dependencies, not bundled. Install them yourself:
 
 ```
 pnpm add msw @faker-js/faker
 ```
 
-The generated `handlers.ts` file imports `faker` from `@faker-js/faker` directly, so it must be present in your project.
+The generated `handlers.ts` imports `http`/`HttpResponse` from `msw` and `faker` from `@faker-js/faker` directly, so both must be present in the project that uses the handlers.
 
 ## Non-obvious decisions
 
@@ -33,4 +47,11 @@ The generated `handlers.ts` file imports `faker` from `@faker-js/faker` directly
 
 **2xx response selection**: Prefers 200, then 201, then the first 2xx code. 204 (no body) emits `HttpResponse.json(null, { status: 204 })`. Operations whose only 2xx response has a non-JSON content type (text/plain, text/csv, octet-stream, image) emit `new HttpResponse(null, { status: N })` to avoid claiming application/json.
 
-**Peer deps**: msw and @faker-js/faker are peer dependencies. Install them in the project that uses the generated handlers.
+## Test / build
+
+```
+pnpm test    # vitest run (excludes compat-matrix)
+pnpm build   # tsc + esbuild CJS CLI bundle, chmod +x
+```
+
+The 128-spec compat matrix runs separately via `pnpm test:matrix` and is excluded from `test` / `test:coverage`.

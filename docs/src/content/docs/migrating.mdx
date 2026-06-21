@@ -53,6 +53,15 @@ This toolchain works differently:
    npm install -D @codewithagents/openapi-react-query
    ```
 
+   If your old setup relied on MSW or Faker mocks (orval and kubb both ship mock
+   generation), add `@codewithagents/openapi-msw`. It generates MSW v2 handlers
+   with seeded Faker data from the same spec, so you do not lose mocking when you
+   switch:
+
+   ```bash
+   npm install -D @codewithagents/openapi-msw
+   ```
+
 3. **Create the config file.**
 
    Create `openapi-zod-ts.config.json` in your project root:
@@ -208,7 +217,7 @@ This toolchain works differently:
 
 **`schemas.ts` is yours after bootstrap.** The first run with `input_schema` writes the file. Every subsequent run skips it. If the spec changes and the schema drifts, the generator prints a warning, but does not update the file automatically.
 
-**OpenAPI 3.0.x support is best-effort.** OpenAPI 3.1 is the primary target. For 3.0.x specs, `nullable: true` is normalized to the 3.1 null-union form (`type: [..., "null"]`) before generation runs, so nullable fields produce the correct `T | null` types. Other 3.0.x constructs may receive less complete treatment than their 3.1 equivalents.
+**OpenAPI 3.0.x is supported in practice.** OpenAPI 3.1 (including 3.1.1) is the primary target, and 3.0.x works too: 8 of the 13 showcase specs are 3.0.x and all compile under `tsc --strict`. For 3.0.x specs, `nullable: true` is normalized to the 3.1 null-union form (`type: [..., "null"]`) before generation runs, so nullable fields produce the correct `T | null` types. A few 3.0-only constructs are still being normalized to 3.1 semantics.
 
 **ESM only.** The generated files use `.js` extensions in imports (NodeNext resolution). Your project must use `"type": "module"` or be configured for ESM.
 
@@ -275,6 +284,13 @@ None of these change the runtime behavior of existing working calls, but regener
     Generate typed `useQuery` and `useMutation` hooks on top of the generated client.
 
     [openapi-react-query guide](/openapi-react-query)
+
+  </Card>
+  <Card title="Mock data with MSW" icon="random">
+    Generate MSW v2 handlers with seeded Faker data from the same spec. The
+    replacement for orval or kubb mock generation.
+
+    [openapi-msw guide](/openapi-msw)
 
   </Card>
 </CardGrid>
