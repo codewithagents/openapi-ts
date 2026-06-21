@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.0.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.10.0...openapi-server-v2.0.0) (2026-06-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **openapi-server:** Fastify auth/context seam + global runtime hooks; opt-in CI drift gate (#335, #336, #337) ([#339](https://github.com/codewithagents/openapi-zod-ts/issues/339))
+* **openapi-server:** shared _shared/errors.ts runtime for cross-router HttpError + registerCustomRoutes (#329-#333) ([#338](https://github.com/codewithagents/openapi-zod-ts/issues/338))
+* **openapi-server:** generated Fastify service interface and HttpError envelope/module path changed.
+* createRouter(service) now returns a FastifyPluginAsyncZod plugin; mount via app.register(createRouter(service), { prefix }) instead of createRouter(instance, service).
+* **openapi-server:** the generated Fastify router output is restructured to use fastify-type-provider-zod's native validation pipeline. Request body, query, param, and header validation failures now return Fastify's native 400 (FST_ERR_VALIDATION) instead of the 422 { error, issues } envelope used by the Hono and Express routers (cookie validation still returns 422). Generated imports and route registration shape change, and the package now expects fastify and fastify-type-provider-zod as peer dependencies.
+
+### Features
+
+* native zero-cast Fastify codegen (plugin factory, z.infer types, inline-response synthesis) ([#327](https://github.com/codewithagents/openapi-zod-ts/issues/327)) ([7f533d4](https://github.com/codewithagents/openapi-zod-ts/commit/7f533d49fce7de2b892dec54908a7390b6bb1091))
+* **openapi-server:** Fastify auth/context seam + global runtime hooks; opt-in CI drift gate ([#335](https://github.com/codewithagents/openapi-zod-ts/issues/335), [#336](https://github.com/codewithagents/openapi-zod-ts/issues/336), [#337](https://github.com/codewithagents/openapi-zod-ts/issues/337)) ([#339](https://github.com/codewithagents/openapi-zod-ts/issues/339)) ([c4eb03e](https://github.com/codewithagents/openapi-zod-ts/commit/c4eb03e2ff763bc408a6d7ba3f6b5d1fbac91879))
+* **openapi-server:** maximally native Fastify codegen ([#328](https://github.com/codewithagents/openapi-zod-ts/issues/328)) ([eb60286](https://github.com/codewithagents/openapi-zod-ts/commit/eb602861022b06f131a9030b93244c5511557818))
+* **openapi-server:** replace Fastify router with fastify-type-provider-zod emitter ([dbf4f18](https://github.com/codewithagents/openapi-zod-ts/commit/dbf4f18b01501740b94f20087fcd303a4a832d24))
+* **openapi-server:** shared _shared/errors.ts runtime for cross-router HttpError + registerCustomRoutes ([#329](https://github.com/codewithagents/openapi-zod-ts/issues/329)-[#333](https://github.com/codewithagents/openapi-zod-ts/issues/333)) ([#338](https://github.com/codewithagents/openapi-zod-ts/issues/338)) ([120f79f](https://github.com/codewithagents/openapi-zod-ts/commit/120f79ff4ecd1e0900c87c1476d061068d3645d8))
+
+
+### Bug Fixes
+
+* **openapi-server:** emit Zod 4 top-level format validators for path params ([ea9d0c7](https://github.com/codewithagents/openapi-zod-ts/commit/ea9d0c79e7937b38d31d6eae1d7a6a55718b50cd))
+* **openapi-server:** generic createRouter so context_type output typechecks, with Fastify auth runtime test ([#340](https://github.com/codewithagents/openapi-zod-ts/issues/340)) ([6a40843](https://github.com/codewithagents/openapi-zod-ts/commit/6a408437d45ed0a636045f6b48b20730f358a7ef))
+* **openapi-server:** guard cookie read so missing @fastify/cookie returns 422 ([ea9d0c7](https://github.com/codewithagents/openapi-zod-ts/commit/ea9d0c79e7937b38d31d6eae1d7a6a55718b50cd))
+* **openapi-server:** import ZodTypeProvider as type-only for verbatimModuleSyntax ([#326](https://github.com/codewithagents/openapi-zod-ts/issues/326)) ([ea9d0c7](https://github.com/codewithagents/openapi-zod-ts/commit/ea9d0c79e7937b38d31d6eae1d7a6a55718b50cd))
+
 ## [1.10.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v1.9.0...openapi-server-v1.10.0) (2026-06-19)
 
 
