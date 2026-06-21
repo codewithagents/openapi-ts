@@ -402,6 +402,12 @@ function synthesizeResponseSchemaExpr(
   return synthesizePropExpr(s)
 }
 
+function queryParamItemExpr(itemsTsType: string | undefined): string {
+  if (itemsTsType === 'number') return 'z.coerce.number()'
+  if (itemsTsType === 'boolean') return 'z.boolean()'
+  return 'z.string()'
+}
+
 function queryParamBaseExpr(param: QueryParam): string {
   if (param.delimiterStyle !== undefined) return 'z.array(z.string())'
   if (param.isDeepObject === true && param.deepObjectProperties !== undefined) {
@@ -412,6 +418,9 @@ function queryParamBaseExpr(param: QueryParam): string {
     })
     return `z.object({ ${propFields.join(', ')} })`
   }
+  // Plain repeated-key array (type:array, explode:true). Emit z.array(<itemExpr>) so the
+  // querystring schema matches the service T[] signature. Item coercion mirrors the scalar path.
+  if (param.isArray === true) return `z.array(${queryParamItemExpr(param.itemsTsType)})`
   if (param.tsType === 'number') return `z.coerce.number()${numberConstraintSuffix(param)}`
   if (param.tsType === 'boolean') return 'z.boolean()'
   return enumOrStringExpr(param)
@@ -820,12 +829,16 @@ function buildFastifyTypeProviderHandler(
 
   // ── Response (no per-route try/catch: setErrorHandler handles HttpError) ──
 
-  if (op.bodyInfo?.contentType === 'multipart/form-data') {
+  // Use the robust content-type detector so that $ref'd requestBodies and operations with
+  // multiple declared content types (e.g. both json and multipart) are handled correctly.
+  const isMultipartRoute = operationHasBodyContentType(op.rawOperation, 'multipart/form-data', spec)
+  const isOctetRoute = operationHasBodyContentType(op.rawOperation, 'application/octet-stream', spec)
+  if (isMultipartRoute) {
     // multipart/form-data: requires @fastify/multipart registered with { attachFieldsToBody: true }.
     lines.push(
       `${inner}// multipart/form-data: requires @fastify/multipart registered with { attachFieldsToBody: true }.`
     )
-  } else if (op.bodyInfo?.contentType === 'application/octet-stream') {
+  } else if (isOctetRoute) {
     // application/octet-stream: req.body is a Buffer from the registered content-type parser.
     lines.push(
       `${inner}// application/octet-stream: req.body is a Buffer from the registered content-type parser.`
@@ -868,6 +881,47 @@ function buildFastifyTypeProviderHandler(
   return lines.join('\n')
 }
 
+// ── Body content-type detector ────────────────────────────────────────────────
+
+/**
+ * Resolve a requestBody object, following a $ref into spec.components.requestBodies when needed.
+ * Returns the resolved RequestBodyObject or undefined when the ref cannot be resolved.
+ */
+function resolveRequestBody(
+  requestBody: OpenAPIV3_1.RequestBodyObject | OpenAPIV3_1.ReferenceObject | undefined,
+  spec: OpenAPIV3_1.Document
+): OpenAPIV3_1.RequestBodyObject | undefined {
+  if (requestBody === undefined) return undefined
+  if (!isRef(requestBody)) return requestBody as OpenAPIV3_1.RequestBodyObject
+  const refStr = (requestBody as OpenAPIV3_1.ReferenceObject).$ref
+  // Only support inline #/components/requestBodies/<Name> refs.
+  const match = /^#\/components\/requestBodies\/(.+)$/.exec(refStr)
+  if (match === null) return undefined
+  const name = match[1]
+  const components = spec.components as OpenAPIV3_1.ComponentsObject | undefined
+  const rb = (components?.requestBodies as Record<string, OpenAPIV3_1.RequestBodyObject | OpenAPIV3_1.ReferenceObject> | undefined)?.[name ?? '']
+  if (rb === undefined || isRef(rb)) return undefined
+  return rb as OpenAPIV3_1.RequestBodyObject
+}
+
+/**
+ * Return true if ANY declared content type in the operation's requestBody matches the given
+ * content type string. Resolves $ref'd requestBodies so that multipart-via-$ref is detected.
+ * This is used to gate parser-registration and per-route markers independently of getBodyInfo's
+ * json-priority logic, which only picks ONE content type even when multiple are declared.
+ */
+function operationHasBodyContentType(
+  operation: OperationObject,
+  contentType: string,
+  spec: OpenAPIV3_1.Document
+): boolean {
+  const raw = operation.requestBody as OpenAPIV3_1.RequestBodyObject | OpenAPIV3_1.ReferenceObject | undefined
+  const rb = resolveRequestBody(raw, spec)
+  if (rb === undefined) return false
+  const content = rb.content as Record<string, unknown> | undefined
+  return content !== undefined && Object.prototype.hasOwnProperty.call(content, contentType)
+}
+
 // ── Main generator export ─────────────────────────────────────────────────────
 
 // fallow-ignore-next-line complexity
@@ -896,14 +950,19 @@ export function generateFastifyRouter(
 
   // z is always needed: schema.params/querystring/headers/response use z.object/z.array/z.string.
   // Even with no operations, the cookie _ckv block uses z.
+  //
+  // Detection scans ALL declared content types on each operation's requestBody, resolving $refs,
+  // so multipart/formbody routes are found even when the requestBody is a $ref'd component or
+  // when the operation declares multiple content types (e.g. both json and multipart). This is
+  // independent of getBodyInfo's json-priority logic which only returns ONE content type.
   const hasOctetStreamRequestBody = operations.some(
-    (op) => op.bodyInfo?.contentType === 'application/octet-stream'
+    (op) => operationHasBodyContentType(op.rawOperation, 'application/octet-stream', spec)
   )
   const hasFormUrlencodedBody = operations.some(
-    (op) => op.bodyInfo?.contentType === 'application/x-www-form-urlencoded'
+    (op) => operationHasBodyContentType(op.rawOperation, 'application/x-www-form-urlencoded', spec)
   )
   const hasMultipartBody = operations.some(
-    (op) => op.bodyInfo?.contentType === 'multipart/form-data'
+    (op) => operationHasBodyContentType(op.rawOperation, 'multipart/form-data', spec)
   )
   const hasAnyParserNeeded = hasOctetStreamRequestBody || hasFormUrlencodedBody || hasMultipartBody
 
