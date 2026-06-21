@@ -35,6 +35,7 @@ describe('parseCliArgs', () => {
         configFile: resolve(fakeCwd, 'config.json'),
         cwd: dirname(resolve(fakeCwd, 'config.json')),
         watch: false,
+        check: false,
       })
     })
 
@@ -45,6 +46,7 @@ describe('parseCliArgs', () => {
         configFile: '/abs/path/config.json',
         cwd: '/abs/path',
         watch: false,
+        check: false,
       })
     })
 
@@ -70,7 +72,7 @@ describe('parseCliArgs', () => {
   describe('bare invocation (no flags)', () => {
     it('returns run action with cwd and no configFile when no args given', () => {
       const result = parseCliArgs([...baseArgv], fakeCwd)
-      expect(result).toEqual({ action: 'run', cwd: fakeCwd, watch: false })
+      expect(result).toEqual({ action: 'run', cwd: fakeCwd, watch: false, check: false })
     })
 
     it('configFile is undefined when no --config flag', () => {
@@ -228,6 +230,50 @@ describe('parseCliArgs', () => {
     it('short-circuits --help before --watch', () => {
       const result = parseCliArgs([...baseArgv, '--help', '--watch'], fakeCwd)
       expect(result).toEqual({ action: 'help' })
+    })
+  })
+
+  describe('--check', () => {
+    it('sets check to true when --check is given', () => {
+      const result = parseCliArgs([...baseArgv, '--check'], fakeCwd)
+      expect(result.action).toBe('run')
+      if (result.action === 'run') {
+        expect(result.check).toBe(true)
+      }
+    })
+
+    it('sets check to false when --check is not given', () => {
+      const result = parseCliArgs([...baseArgv], fakeCwd)
+      expect(result.action).toBe('run')
+      if (result.action === 'run') {
+        expect(result.check).toBe(false)
+      }
+    })
+
+    it('returns error action when --check and --watch are combined', () => {
+      const result = parseCliArgs([...baseArgv, '--check', '--watch'], fakeCwd)
+      expect(result.action).toBe('error')
+    })
+
+    it('error message for --check --watch mentions both flags', () => {
+      const result = parseCliArgs([...baseArgv, '--check', '--watch'], fakeCwd)
+      if (result.action === 'error') {
+        expect(result.message).toContain('--check')
+        expect(result.message).toContain('--watch')
+      }
+    })
+
+    it('combines --check with --input and --output', () => {
+      const result = parseCliArgs(
+        [...baseArgv, '--check', '--input', 'spec.json', '--output', 'out/'],
+        fakeCwd
+      )
+      expect(result.action).toBe('run')
+      if (result.action === 'run') {
+        expect(result.check).toBe(true)
+        expect(result.inputOverride).toBe(resolve(fakeCwd, 'spec.json'))
+        expect(result.outputOverride).toBe(resolve(fakeCwd, 'out/'))
+      }
     })
   })
 })

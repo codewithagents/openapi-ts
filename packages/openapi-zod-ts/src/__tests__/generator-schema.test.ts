@@ -145,3 +145,67 @@ describe('schema-enhanced mode — drift detection', () => {
     expect(warnSpy).not.toHaveBeenCalled()
   })
 })
+
+// ── Drift gate (#336): --check flag and config.drift === 'error' ───────────────
+
+describe('schema-enhanced mode: drift gate (#336)', () => {
+  // A schema file that omits TagSchema and CreateTaskRequestSchema, so the spec drifts.
+  const partialSchema = [
+    "import { z } from 'zod'",
+    'export const TaskStatusSchema = z.enum(["pending", "in_progress", "done"])',
+    'export const TaskSchema = z.object({ id: z.string(), title: z.string() })',
+  ].join('\n')
+
+  it('check mode throws when a required schema is missing from input_schema', async () => {
+    const { configPath, tmpDir: dir, schemaPath } = await makeConfig(taskApiFixture)
+    await writeFile(schemaPath, partialSchema, 'utf-8')
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await expect(generate(dir, { configPath, check: true })).rejects.toThrow(/drift/i)
+  })
+
+  it("config.drift 'error' throws when drift is detected", async () => {
+    const { configPath, tmpDir: dir, schemaPath } = await makeConfig(taskApiFixture, {
+      drift: 'error',
+    })
+    await writeFile(schemaPath, partialSchema, 'utf-8')
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await expect(generate(dir, configPath)).rejects.toThrow(/drift/i)
+  })
+
+  it("config.drift 'error' failure is atomic: no output files are written", async () => {
+    const { configPath, tmpDir: dir, outDir, schemaPath } = await makeConfig(taskApiFixture, {
+      drift: 'error',
+    })
+    await writeFile(schemaPath, partialSchema, 'utf-8')
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await expect(generate(dir, configPath)).rejects.toThrow(/drift/i)
+    // The drift gate runs before any writes, so the output directory stays empty.
+    await expect(access(join(outDir, 'models.ts'))).rejects.toThrow()
+    await expect(access(join(outDir, 'client.ts'))).rejects.toThrow()
+  })
+
+  it("config.drift 'warn' (the default) only warns and does NOT throw on drift", async () => {
+    const { configPath, tmpDir: dir, schemaPath } = await makeConfig(taskApiFixture)
+    await writeFile(schemaPath, partialSchema, 'utf-8')
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await expect(generate(dir, configPath)).resolves.toBeUndefined()
+  })
+
+  it('check mode throws when the input_schema file does not exist', async () => {
+    const { configPath, tmpDir: dir } = await makeConfig(taskApiFixture)
+    // schemas.ts is never created, so check mode reports it as drift.
+    await expect(generate(dir, { configPath, check: true })).rejects.toThrow(
+      /does not exist|drift/i
+    )
+  })
+
+  it('check mode writes no files when schemas are in sync', async () => {
+    const { configPath, tmpDir: dir, outDir } = await makeConfig(taskApiFixture)
+    await generate(dir, configPath) // bootstrap a full, in-sync schema + generated files
+    const { rm } = await import('node:fs/promises')
+    await rm(outDir, { recursive: true, force: true })
+    await expect(generate(dir, { configPath, check: true })).resolves.toBeUndefined()
+    // No writes in check mode: the generated dir must not be recreated.
+    await expect(access(join(outDir, 'models.ts'))).rejects.toThrow()
+  })
+})

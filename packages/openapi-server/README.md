@@ -588,6 +588,47 @@ The sibling-plugin pattern is preferred when the custom routes do not need ZodTy
 
 ---
 
+## Global lifecycle hooks (Fastify only)
+
+The Fastify `createRouter` accepts four optional hook options in `CreateRouterOptions`. Each accepts a single handler or an array of handlers:
+
+| Option | Fastify lifecycle point | Typical use |
+|---|---|---|
+| `onRequest` | Very first hook, before validation | Authentication, rate-limiting, request ID injection |
+| `preHandler` | After validation, before handler | Authorization, context enrichment |
+| `onSend` | After handler, before response is sent | Response header injection, logging |
+| `onError` | When a handler or hook throws | Observability, error metrics |
+
+Hooks are **plugin-scoped**: they apply to all spec-generated routes and to any routes added via `registerCustomRoutes`, but they do NOT propagate to the parent Fastify instance (standard Fastify encapsulation).
+
+Hook execution order per request: `onRequest` -> `preHandler` -> route handler -> `onSend`.
+
+```ts
+import { createRouter } from './generated/router.js'
+import type { onRequestHookHandler } from 'fastify'
+
+// A reusable onRequest hook that validates a Bearer token.
+const authHook: onRequestHookHandler = async (req, reply) => {
+  const token = req.headers.authorization
+  if (!token?.startsWith('Bearer ')) {
+    return reply.status(401).send({ error: 'Unauthorized' })
+  }
+}
+
+fastify.register(
+  createRouter(petService, {
+    onRequest: authHook,
+    // Arrays are also accepted when you need multiple hooks.
+    onError: [metricsHook, loggingHook],
+  }),
+  { prefix: '/api' }
+)
+```
+
+**`onError` vs `errorHandler`:** `onError` hooks fire for observability (logging, metrics) but do NOT produce the response. The `errorHandler` option (or the built-in HttpError handler) is the single response-producer. Both can coexist safely: the error handler writes the response, then any `onError` hooks run.
+
+---
+
 ## Request-scoped context / caller principal (`context_type`)
 
 The `context_type` config option threads a typed caller context through every generated service method. Use it to pass an authentication principal, a tenant ID, or any per-request metadata without coupling service code to framework types.
@@ -623,13 +664,13 @@ The generic default `Ctx = never` keeps the interface usable when no context is 
 
 **What changes in generated `router.ts`:**
 
-The generated router passes the framework's native request/context object as the final argument to every service call:
+For Hono and Express the generated router passes the framework's native request/context object as the final argument to every service call. For Fastify the router passes the value returned by a required `createContext(req)` hook (see the Fastify section below):
 
 | Framework | ctx value passed |
 |---|---|
 | Hono | `c` (the Hono `Context` object) |
 | Express | `req` (the Express `Request` object) |
-| Fastify | `req` (the Fastify `FastifyRequest` object) |
+| Fastify | the value returned by your `createContext(req)` hook, not the raw request |
 
 ```ts
 // Generated Hono handler (with context_type: "RequestContext"):
@@ -640,7 +681,50 @@ app.get('/pets', async (c) => {
 })
 ```
 
-**Implementing the service with context:**
+### Fastify: the `createContext` auth seam
+
+For Fastify, `context_type` is a runtime auth boundary, not just a type. When `context_type` is set, `CreateRouterOptions` becomes generic in `Ctx` and `createRouter` **requires** an options object with a `createContext` hook:
+
+```ts
+createRouter(service: PetstoreService<RequestContext>, options: CreateRouterOptions<RequestContext>)
+```
+
+`createContext(req)` runs first inside every route handler, so it is the place to authenticate the request and build the typed principal. Throw `HttpError(401)` to reject before any handler work runs. Its return value is passed as `ctx` to every service method.
+
+```ts
+import Fastify from 'fastify'
+import { createRouter, HttpError, type CreateRouterOptions } from '../generated/router.js'
+import type { PetstoreService } from '../generated/service.js'
+
+interface RequestContext {
+  userId: string
+  scopes: string[]
+}
+
+const petService: PetstoreService<RequestContext> = {
+  async listPets(params, ctx) {
+    return db.listPets({ userId: ctx.userId, ...params })
+  },
+  // ... other operations receive ctx as their final argument
+}
+
+const app = Fastify()
+app.register(
+  createRouter(petService, {
+    // Validate the token or session and build the typed principal. Throw to reject.
+    createContext: (req) => {
+      const userId = req.headers['x-user-id']
+      if (typeof userId !== 'string') throw new HttpError(401, 'Unauthorized')
+      return { userId, scopes: [] }
+    },
+  }),
+  { prefix: '/v1' }
+)
+```
+
+Operation-level `security` from the spec (falling back to the global `security`) is surfaced on each route at `req.routeOptions.config.security` as `Array<{ scheme, scopes }>`, so `createContext` (or a `preHandler` hook) can enforce per-operation scope requirements. It is also emitted as a `@security` JSDoc tag on each service method. Security is exposed as metadata only: `createContext` is where you enforce it.
+
+**Implementing the service with context (Hono):**
 
 ```ts
 import type { PetstoreService } from '../generated/service.js'

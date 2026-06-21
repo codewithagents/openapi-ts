@@ -14,6 +14,12 @@ export type CliAction =
       /** Overrides config output when provided via --output */
       outputOverride?: string
       watch: boolean
+      /**
+       * When true, run in read-only check mode: no files are written, any drift
+       * is treated as an error, and the process exits non-zero on drift.
+       * Incompatible with --watch.
+       */
+      check: boolean
     }
   | { action: 'error'; message: string }
 
@@ -38,6 +44,16 @@ export function parseCliArgs(argv: string[], cwd: string): CliAction {
   }
 
   const watch = args.includes('--watch')
+  const check = args.includes('--check')
+
+  if (check && watch) {
+    return {
+      action: 'error',
+      message:
+        'Error: --check and --watch cannot be used together. ' +
+        '--check is a read-only one-shot verification; it cannot watch for changes.',
+    }
+  }
 
   let inputOverride: string | undefined
   const inputIdx = args.indexOf('--input')
@@ -78,5 +94,6 @@ export function parseCliArgs(argv: string[], cwd: string): CliAction {
     ...(inputOverride !== undefined && { inputOverride }),
     ...(outputOverride !== undefined && { outputOverride }),
     watch,
+    check,
   }
 }

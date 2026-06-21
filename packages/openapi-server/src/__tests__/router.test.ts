@@ -1033,8 +1033,10 @@ describe('generateFastifyRouter', () => {
     // since fastify-type-provider-zod does not export ValidatorCompiler/SerializerCompiler type names.
     expect(result.content).not.toContain('ValidatorCompiler }')
     expect(result.content).not.toContain('SerializerCompiler }')
-    // FastifyRequest and FastifyReply are type-only from fastify (for CreateRouterOptions).
-    expect(result.content).toContain("import type { FastifyRequest, FastifyReply } from 'fastify'")
+    // FastifyRequest, FastifyReply and hook handler types are type-only from fastify.
+    expect(result.content).toContain("from 'fastify'")
+    expect(result.content).toMatch(/import type \{[^}]*FastifyRequest[^}]*\} from 'fastify'/)
+    expect(result.content).toMatch(/import type \{[^}]*FastifyReply[^}]*\} from 'fastify'/)
   })
 
   it('exports createRouter function returning FastifyPluginAsyncZod', () => {
@@ -2188,22 +2190,31 @@ describe('context type option (issue #310)', () => {
   })
 
   describe('Fastify — with contextType', () => {
-    it('createRouter signature uses the generic service reference and returns FastifyPluginAsyncZod', () => {
+    it('createRouter signature uses the generic service reference and required options: CreateRouterOptions<Ctx>', () => {
       const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
+      // options is required (no ?) when contextType is set because createContext is required
       expect(content).toContain(
-        'createRouter(service: PetStoreService<RequestContext>, options?: CreateRouterOptions): FastifyPluginAsyncZod'
+        'createRouter(service: PetStoreService<RequestContext>, options: CreateRouterOptions<RequestContext>): FastifyPluginAsyncZod'
       )
     })
 
-    it('service calls pass req as the final argument (only arg for GET /pets)', () => {
+    it('emits CreateRouterOptions<Ctx = never> generic interface with createContext field when contextType set', () => {
       const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
-      expect(content).toContain('service.listPets(req)')
+      expect(content).toContain('export interface CreateRouterOptions<Ctx = never> {')
+      expect(content).toContain('createContext: (req: FastifyRequest) => Ctx | Promise<Ctx>')
     })
 
-    it('path-param route passes path param then req: service.getPet(req.params.id, req)', () => {
+    it('service calls pass ctx (from createContext) as the final argument (only arg for GET /pets)', () => {
       const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
-      // Fastify uses dot notation for path params; ctx (req) is appended last
-      expect(content).toContain('service.getPet(req.params.id, req)')
+      // createContext is called first, result is ctx; service receives ctx not raw req
+      expect(content).toContain('const ctx = await options.createContext(req)')
+      expect(content).toContain('service.listPets(ctx)')
+    })
+
+    it('path-param route passes path param then ctx: service.getPet(req.params.id, ctx)', () => {
+      const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
+      // Fastify uses dot notation for path params; ctx (from createContext) is appended last
+      expect(content).toContain('service.getPet(req.params.id, ctx)')
     })
   })
 
@@ -2243,10 +2254,10 @@ describe('context type option (issue #310)', () => {
       expect(content).toContain("service.updatePet((req.params['id'] as string), body, params, req)")
     })
 
-    it('Fastify: arg order is path, body, query params, req', () => {
+    it('Fastify: arg order is path, body, query params, ctx (from createContext)', () => {
       const { content } = generateFastifyRouter(fullArgSpec, { contextType: 'RequestContext' })
-      // Fastify dot notation for path param; body is req.body (cast to model); query is req.query; ctx is req
-      expect(content).toContain('service.updatePet(req.params.id, req.body as UpdatePetRequest, req.query, req)')
+      // Fastify dot notation for path param; body is req.body (cast to model); query is req.query; ctx from createContext
+      expect(content).toContain('service.updatePet(req.params.id, req.body as UpdatePetRequest, req.query, ctx)')
     })
   })
 })
@@ -3998,5 +4009,100 @@ describe('generateFastifyRouter: registerCustomRoutes hook in CreateRouterOption
     expect(customRoutesPos).toBeGreaterThan(0)
     expect(firstRoutePos).toBeGreaterThan(0)
     expect(customRoutesPos).toBeLessThan(firstRoutePos)
+  })
+})
+
+// ── Issue #337: global runtime hooks on generated Fastify routes ──────────────
+
+describe('generateFastifyRouter: global hook fields in CreateRouterOptions (issue #337)', () => {
+  function simpleSpec() {
+    return makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+  }
+
+  it('emits onRequest field on CreateRouterOptions interface', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('onRequest?: onRequestHookHandler | onRequestHookHandler[]')
+  })
+
+  it('emits preHandler field on CreateRouterOptions interface', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('preHandler?: preHandlerHookHandler | preHandlerHookHandler[]')
+  })
+
+  it('emits onSend field on CreateRouterOptions interface', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('onSend?: onSendHookHandler | onSendHookHandler[]')
+  })
+
+  it('emits onError field on CreateRouterOptions interface', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('onError?: onErrorHookHandler | onErrorHookHandler[]')
+  })
+
+  it('imports hook handler types as type-only from fastify', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('onRequestHookHandler')
+    expect(content).toContain('preHandlerHookHandler')
+    expect(content).toContain('onSendHookHandler')
+    expect(content).toContain('onErrorHookHandler')
+    // Must be part of a type-only import from fastify
+    expect(content).toMatch(/import type \{[^}]*onRequestHookHandler[^}]*\} from 'fastify'/)
+  })
+
+  it('emits app.addHook for all four hooks in the plugin body', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain("app.addHook('onRequest', _h)")
+    expect(content).toContain("app.addHook('preHandler', _h)")
+    expect(content).toContain("app.addHook('onSend', _h)")
+    expect(content).toContain("app.addHook('onError', _h)")
+  })
+
+  it('emits _asHookArray helper in the plugin body', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('_asHookArray')
+    expect(content).toContain('Array.isArray(v)')
+  })
+
+  it('hook registration appears after setErrorHandler', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    const lastErrorHandlerPos = content.lastIndexOf('setErrorHandler')
+    const firstAddHookPos = content.indexOf('app.addHook(')
+    expect(lastErrorHandlerPos).toBeGreaterThan(0)
+    expect(firstAddHookPos).toBeGreaterThan(0)
+    expect(firstAddHookPos).toBeGreaterThan(lastErrorHandlerPos)
+  })
+
+  it('hook registration appears before registerCustomRoutes call', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    const firstAddHookPos = content.indexOf('app.addHook(')
+    const customRoutesPos = content.indexOf('await options.registerCustomRoutes(app)')
+    expect(firstAddHookPos).toBeGreaterThan(0)
+    expect(customRoutesPos).toBeGreaterThan(0)
+    expect(firstAddHookPos).toBeLessThan(customRoutesPos)
+  })
+
+  it('hook registration appears before spec routes', () => {
+    const withRouteSpec = makeSpec({
+      '/pets/{id}': {
+        get: {
+          operationId: 'getPet',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(withRouteSpec)
+    const firstAddHookPos = content.indexOf('app.addHook(')
+    const firstRoutePos = content.indexOf('app.get("/pets/:id"')
+    expect(firstAddHookPos).toBeGreaterThan(0)
+    expect(firstRoutePos).toBeGreaterThan(0)
+    expect(firstAddHookPos).toBeLessThan(firstRoutePos)
   })
 })

@@ -373,3 +373,81 @@ describe('lab-routes inject() suite', () => {
     expect(res.statusCode).toBe(500)
   })
 })
+
+// ── Issue #337: global runtime hooks passed through CreateRouterOptions ────────
+
+describe('issue #337: global hook options on createRouter (onRequest, onError)', () => {
+  it('onRequest hook fires on every request and can set a response header', async () => {
+    let onRequestFired = false
+    const service = makeStub({
+      async listPets() {
+        return []
+      },
+    })
+    const app = Fastify()
+    app.register(
+      createRouter(service, {
+        // Hook sets a flag and adds a custom response header.
+        onRequest: async (_req, reply) => {
+          onRequestFired = true
+          reply.header('x-hook-fired', 'yes')
+        },
+        // Disable parser registration: the stub service does not need them.
+        registerParsers: false,
+      })
+    )
+    const res = await app.inject({ method: 'GET', url: '/pets' })
+    expect(res.statusCode).toBe(200)
+    expect(onRequestFired).toBe(true)
+    expect(res.headers['x-hook-fired']).toBe('yes')
+  })
+
+  it('onRequest accepts an array of hooks and all hooks fire', async () => {
+    const fired: string[] = []
+    const service = makeStub({
+      async listPets() {
+        return []
+      },
+    })
+    const app = Fastify()
+    app.register(
+      createRouter(service, {
+        onRequest: [
+          async () => {
+            fired.push('first')
+          },
+          async () => {
+            fired.push('second')
+          },
+        ],
+        registerParsers: false,
+      })
+    )
+    const res = await app.inject({ method: 'GET', url: '/pets' })
+    expect(res.statusCode).toBe(200)
+    expect(fired).toEqual(['first', 'second'])
+  })
+
+  it('onError hook fires when a service method throws an HttpError', async () => {
+    let onErrorFired = false
+    const service = makeStub({
+      async getPet(_id) {
+        throw new HttpError(404, 'not found in hook test')
+      },
+    })
+    const app = Fastify()
+    app.register(
+      createRouter(service, {
+        onError: async (_req, _reply, _err) => {
+          onErrorFired = true
+        },
+        registerParsers: false,
+      })
+    )
+    const res = await app.inject({ method: 'GET', url: '/pets/no-such-pet' })
+    // The errorHandler maps HttpError(404) to a 404 response.
+    expect(res.statusCode).toBe(404)
+    // The onError hook must have fired even though errorHandler handled the response.
+    expect(onErrorFired).toBe(true)
+  })
+})

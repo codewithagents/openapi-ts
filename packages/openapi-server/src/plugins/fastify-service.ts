@@ -24,6 +24,7 @@ import {
   type BodyInfo,
   getBodyInfo,
 } from './shared.js'
+import { escapeJsDocString, deriveEffectiveSecurity } from './security-meta.js'
 
 // ── Simple header/cookie param descriptors (service-interface generation only) ─
 
@@ -233,6 +234,8 @@ interface OperationInfo {
   // fallow-ignore-next-line code-duplication
   // Parallel interface field to service.ts OperationInfo; both emitters need these fields.
   returnInfo: ReturnInfo & { isSynthesizedResponse?: boolean }
+  /** Effective security requirements for this operation (operation.security ?? spec.security). */
+  effectiveSecurity: Array<{ scheme: string; scopes: string[] }>
 }
 
 // Parallel operation collector to service.ts; each emitter owns its own collection pass.
@@ -257,8 +260,9 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
       const returnInfo = getReturnInfo(operation) as ReturnInfo & {
         isSynthesizedResponse?: boolean
       }
+      const effectiveSecurity = deriveEffectiveSecurity(operation, spec)
 
-      operations.push({ methodName, httpMethod: method, path, pathParams, queryParams, headerParams, cookieParams, bodyInfo, returnInfo })
+      operations.push({ methodName, httpMethod: method, path, pathParams, queryParams, headerParams, cookieParams, bodyInfo, returnInfo, effectiveSecurity })
     }
   }
 
@@ -505,7 +509,20 @@ export function generateFastifyTypedService(
   lines.push(interfaceDecl)
 
   for (const op of operations) {
-    lines.push(`  /** ${op.httpMethod.toUpperCase()} ${op.path} */`)
+    if (op.effectiveSecurity.length > 0) {
+      // Emit a multi-line JSDoc with @security tags for each security requirement.
+      // Scheme and scope strings from the spec are escaped to prevent comment injection.
+      lines.push('  /**')
+      lines.push(`   * ${op.httpMethod.toUpperCase()} ${op.path}`)
+      for (const { scheme, scopes } of op.effectiveSecurity) {
+        const safeScheme = escapeJsDocString(scheme)
+        const safeScopesStr = scopes.map((s) => escapeJsDocString(s)).join(' ')
+        lines.push(`   * @security ${safeScheme}${safeScopesStr.length > 0 ? ' ' + safeScopesStr : ''}`)
+      }
+      lines.push('   */')
+    } else {
+      lines.push(`  /** ${op.httpMethod.toUpperCase()} ${op.path} */`)
+    }
     lines.push(`  ${buildMethodSignature(op, schemaNames, contextType)}`)
   }
 

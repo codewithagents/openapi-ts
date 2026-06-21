@@ -30,6 +30,20 @@ Generate TypeScript models, native fetch client, and Zod schemas from an OpenAPI
 ## Config
 Default: `openapi-zod-ts.config.json` in CWD. `--config <path>` resolves relative paths from config file's directory.
 
+### `drift` field (optional)
+Controls how schema drift is handled when `input_schema` is configured:
+- Omitted or `'warn'` (default): log warnings to stderr, continue, exit 0. Behavior unchanged from before.
+- `'error'`: throw and exit non-zero when drift is detected (missing component schema or missing synthesized inline-response schema in the user's schema file).
+
+Drift detection only applies when `input_schema` is configured. Extra exports in the schema file are always allowed (users add FE-only or BE-only refinements).
+
+### `--check` CLI flag
+Run a read-only drift check. No files are written. Any drift is an error (regardless of `config.drift`). Exits non-zero on drift.
+
+Recommended CI usage: run `openapi-zod-ts --check` (or `openapi-zod-ts --config path/to/config.json --check`) as a PR gate alongside `pnpm fallow:audit`. This catches FE/BE contract drift before a merge lands.
+
+Cannot be combined with `--watch`.
+
 ## Test / build
 ```
 pnpm test           # vitest (excludes integration)
