@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.1.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.0.1...openapi-zod-ts-v2.1.0) (2026-06-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **openapi-server:** Fastify auth/context seam + global runtime hooks; opt-in CI drift gate (#335, #336, #337) ([#339](https://github.com/codewithagents/openapi-zod-ts/issues/339))
+* createRouter(service) now returns a FastifyPluginAsyncZod plugin; mount via app.register(createRouter(service), { prefix }) instead of createRouter(instance, service).
+
+### Features
+
+* native zero-cast Fastify codegen (plugin factory, z.infer types, inline-response synthesis) ([#327](https://github.com/codewithagents/openapi-zod-ts/issues/327)) ([7f533d4](https://github.com/codewithagents/openapi-zod-ts/commit/7f533d49fce7de2b892dec54908a7390b6bb1091))
+* **openapi-server:** Fastify auth/context seam + global runtime hooks; opt-in CI drift gate ([#335](https://github.com/codewithagents/openapi-zod-ts/issues/335), [#336](https://github.com/codewithagents/openapi-zod-ts/issues/336), [#337](https://github.com/codewithagents/openapi-zod-ts/issues/337)) ([#339](https://github.com/codewithagents/openapi-zod-ts/issues/339)) ([c4eb03e](https://github.com/codewithagents/openapi-zod-ts/commit/c4eb03e2ff763bc408a6d7ba3f6b5d1fbac91879))
+
 ## [2.0.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.0.0...openapi-zod-ts-v2.0.1) (2026-06-15)
 
 
