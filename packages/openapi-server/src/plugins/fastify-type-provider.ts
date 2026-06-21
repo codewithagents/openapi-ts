@@ -34,6 +34,17 @@ import {
   getBodyInfo,
 } from './shared.js'
 import { deriveEffectiveSecurity } from './security-meta.js'
+import {
+  type HeaderParam,
+  type CookieParam,
+  type ResponseStatus,
+  getHeaderParams,
+  getCookieParams,
+  getResponseStatus,
+  collectSortedBodyTypes,
+  collectUsedSchemaNames,
+  collectUsedResponseSchemaNames,
+} from './operation-ir.js'
 
 type OperationObject = OpenAPIV3_1.OperationObject
 type ReferenceObject = OpenAPIV3_1.ReferenceObject
@@ -42,34 +53,9 @@ type ResponseObject = OpenAPIV3_1.ResponseObject
 
 // ── Local types (not shared with router.ts to avoid circular deps) ─────────────
 
-interface HeaderParam {
-  rawName: string
-  required: boolean
-  enum?: string[]
-  minLength?: number
-  maxLength?: number
-  pattern?: string
-}
-
-interface CookieParam {
-  rawName: string
-  required: boolean
-  enum?: string[]
-  minLength?: number
-  maxLength?: number
-  pattern?: string
-}
-
 interface PathParamValidation {
   rawName: string
   zodExpr: string
-}
-
-interface ResponseStatus {
-  status: number
-  isVoid: boolean
-  responseContentType: 'application/json' | 'text/plain' | 'application/octet-stream'
-  isMultiStatus?: boolean
 }
 
 interface RouteOperation {
@@ -125,146 +111,6 @@ interface RouterOptions {
 
 function toFastifyPath(openapiPath: string): string {
   return openapiPath.replace(/\{([^}]+)\}/g, ':$1')
-}
-
-// ── Header param helpers ──────────────────────────────────────────────────────
-
-// fallow-ignore-next-line complexity
-function getHeaderParams(operation: OperationObject, spec: OpenAPIV3_1.Document): HeaderParam[] {
-  const parameters = operation.parameters as (ParameterObject | ReferenceObject)[] | undefined
-  if (parameters === undefined) return []
-  const result: HeaderParam[] = []
-  for (const p of parameters) {
-    const resolved = resolveParam(p, spec)
-    if (resolved === undefined || resolved.in !== 'header') continue
-    const param: HeaderParam = { rawName: resolved.name, required: resolved.required === true }
-    const schema = resolved.schema as OpenAPIV3_1.SchemaObject | undefined
-    if (schema !== undefined && !isRef(schema)) {
-      const s = schema as OpenAPIV3_1.SchemaObject
-      if (Array.isArray(s.enum)) param.enum = s.enum as string[]
-      if (typeof s.minLength === 'number') param.minLength = s.minLength
-      if (typeof s.maxLength === 'number') param.maxLength = s.maxLength
-      if (typeof s.pattern === 'string') param.pattern = s.pattern
-    }
-    result.push(param)
-  }
-  return result
-}
-
-// ── Cookie param helpers ──────────────────────────────────────────────────────
-
-// fallow-ignore-next-line complexity
-function getCookieParams(operation: OperationObject, spec: OpenAPIV3_1.Document): CookieParam[] {
-  const parameters = operation.parameters as (ParameterObject | ReferenceObject)[] | undefined
-  if (parameters === undefined) return []
-  const result: CookieParam[] = []
-  for (const p of parameters) {
-    const resolved = resolveParam(p, spec)
-    if (resolved === undefined || resolved.in !== 'cookie') continue
-    const param: CookieParam = { rawName: resolved.name, required: resolved.required === true }
-    const schema = resolved.schema as OpenAPIV3_1.SchemaObject | undefined
-    if (schema !== undefined && !isRef(schema)) {
-      const s = schema as OpenAPIV3_1.SchemaObject
-      if (Array.isArray(s.enum)) param.enum = s.enum as string[]
-      if (typeof s.minLength === 'number') param.minLength = s.minLength
-      if (typeof s.maxLength === 'number') param.maxLength = s.maxLength
-      if (typeof s.pattern === 'string') param.pattern = s.pattern
-    }
-    result.push(param)
-  }
-  return result
-}
-
-// ── Response status helpers ───────────────────────────────────────────────────
-
-// Parallel response helpers to router.ts (same shapes, separate generation passes).
-// fallow-ignore-next-line code-duplication
-function response200IsVoid(resp: ResponseObject | ReferenceObject): boolean {
-  if (isRef(resp)) return false
-  const r = resp as ResponseObject
-  const content = r.content as Record<string, unknown> | undefined
-  return content === undefined || Object.keys(content).length === 0
-}
-
-function detectResponseContentType(
-  resp: ResponseObject | ReferenceObject
-): 'application/json' | 'text/plain' | 'application/octet-stream' {
-  if (isRef(resp)) return 'application/json'
-  const r = resp as ResponseObject
-  const content = r.content as Record<string, unknown> | undefined
-  if (content === undefined) return 'application/json'
-  if ('text/plain' in content) return 'text/plain'
-  if ('application/octet-stream' in content) return 'application/octet-stream'
-  return 'application/json'
-}
-
-// fallow-ignore-next-line complexity
-function getResponseStatus(
-  operation: OperationObject,
-  httpMethod: SupportedMethod
-): ResponseStatus {
-  const responses = operation.responses as
-    | Record<string, ResponseObject | ReferenceObject>
-    | undefined
-
-  if (responses === undefined) {
-    return httpMethod === 'delete'
-      ? { status: 204, isVoid: true, responseContentType: 'application/json' }
-      : { status: 200, isVoid: false, responseContentType: 'application/json' }
-  }
-
-  const contentfulTwoxxKeys = Object.keys(responses)
-    .filter((k) => /^2\d\d$/.test(k) && k !== '204')
-    .sort()
-  if (contentfulTwoxxKeys.length > 1) {
-    return {
-      status: 200,
-      isVoid: false,
-      responseContentType: 'application/json',
-      isMultiStatus: true,
-    }
-  }
-
-  if (responses['201'] !== undefined) {
-    return {
-      status: 201,
-      isVoid: false,
-      responseContentType: detectResponseContentType(responses['201']),
-    }
-  }
-  if (responses['204'] !== undefined) {
-    return { status: 204, isVoid: true, responseContentType: 'application/json' }
-  }
-  if (responses['200'] !== undefined) {
-    if (response200IsVoid(responses['200'])) {
-      return { status: 204, isVoid: true, responseContentType: 'application/json' }
-    }
-    return {
-      status: 200,
-      isVoid: false,
-      responseContentType: detectResponseContentType(responses['200']),
-    }
-  }
-
-  const twoxxKeys = Object.keys(responses).filter(
-    (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
-  )
-  if (twoxxKeys.length === 1) {
-    const code = parseInt(twoxxKeys[0], 10)
-    const resp = responses[twoxxKeys[0]]
-    const isVoid = isRef(resp)
-      ? false
-      : (() => {
-          const r = resp as ResponseObject
-          const content = r.content as Record<string, unknown> | undefined
-          return content === undefined || Object.keys(content).length === 0
-        })()
-    return { status: code, isVoid, responseContentType: detectResponseContentType(resp) }
-  }
-
-  return httpMethod === 'delete'
-    ? { status: 204, isVoid: true, responseContentType: 'application/json' }
-    : { status: 200, isVoid: false, responseContentType: 'application/json' }
 }
 
 // getResponseTypeName is a branchy codegen dispatcher (response-status priority + $ref/inline
@@ -411,49 +257,6 @@ function collectOperations(spec: OpenAPIV3_1.Document, schemaNames?: Set<string>
   }
 
   return operations
-}
-
-// ── Schema name collection ────────────────────────────────────────────────────
-
-function collectSortedBodyTypes(operations: RouteOperation[]): string[] {
-  const bodyTypes = new Set<string>()
-  for (const op of operations) {
-    if (op.bodyInfo?.typeName !== undefined && !op.bodyInfo.isSynthesized) {
-      // Only include types that don't have a corresponding schema (no schema.body wiring).
-      // If schema.body IS set, the type provider infers the type directly from the schema.
-      // We still need the type import for cast-based body usage (no schema available).
-      bodyTypes.add(op.bodyInfo.typeName)
-    }
-  }
-  return Array.from(bodyTypes).sort()
-}
-
-function collectUsedSchemaNames(
-  operations: RouteOperation[],
-  schemaNames: Set<string>
-): Set<string> {
-  const used = new Set<string>()
-  for (const op of operations) {
-    const typeName = op.bodyInfo?.typeName
-    if (typeName === undefined) continue
-    const schemaName = `${typeName}Schema`
-    if (schemaNames.has(schemaName)) used.add(schemaName)
-  }
-  return used
-}
-
-function collectUsedResponseSchemaNames(
-  operations: RouteOperation[],
-  schemaNames: Set<string>
-): Set<string> {
-  const used = new Set<string>()
-  for (const op of operations) {
-    if (op.responseTypeName === undefined) continue
-    if (op.responseStatus.isMultiStatus === true) continue
-    const schemaName = `${op.responseTypeName}Schema`
-    if (schemaNames.has(schemaName)) used.add(schemaName)
-  }
-  return used
 }
 
 // ── Zod expression builders ───────────────────────────────────────────────────
