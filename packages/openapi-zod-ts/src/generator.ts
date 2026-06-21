@@ -6,7 +6,7 @@ import { parseSpec } from './parser.js'
 import { generateTypes } from './plugins/types.js'
 import { generateClientConfig } from './plugins/client-config.js'
 import { generateClient, hasCookieAuth, detectAuthSchemes } from './plugins/client.js'
-import { generateZodSchemas, collectSynthesizedResponseSchemaNames } from './plugins/zod.js'
+import { generateZodSchemas } from './plugins/zod.js'
 import { generateIndexBarrel } from './plugins/index-barrel.js'
 import { generateServer } from './plugins/server.js'
 import { buildWritableVariantMap } from './utils/writable-variants.js'
@@ -25,6 +25,12 @@ export interface GenerateOptions {
    * Incompatible with watch mode.
    */
   check?: boolean
+  /**
+   * When true, overwrite the input_schema file with a fresh bootstrap from the spec
+   * (the re-bootstrap remedy for drift). Drift is not gated on this run since the file
+   * is being regenerated. Destructive: customizations in the schema file are replaced.
+   */
+  resetSchema?: boolean
 }
 
 async function formatTs(content: string, filePath: string): Promise<string> {
@@ -99,10 +105,13 @@ async function generateOne(
   generatedFiles.push(generateIndexBarrel())
 
   const check = opts.check === true
+  const resetSchema = opts.resetSchema === true
 
   // Drift detection is a read-only pass that runs BEFORE any writes. This keeps
   // generation atomic: when a drift gate fails, the output directory is left
   // untouched rather than half-written. It also gives a single gate site.
+  // --reset-schema is the remedy for drift, so it never gates: the schema file is
+  // about to be re-bootstrapped from the spec anyway.
   let driftPlan: SchemaDriftPlan | undefined
   if (config.input_schema !== undefined) {
     const schemaPath = resolve(cwd, config.input_schema)
@@ -110,7 +119,7 @@ async function generateOne(
     for (const msg of driftPlan.driftMessages) {
       console.warn(`${prefix}Drift: ${msg}`)
     }
-    if (driftPlan.driftMessages.length > 0 && (check || config.drift === 'error')) {
+    if (driftPlan.driftMessages.length > 0 && !resetSchema && (check || config.drift === 'error')) {
       throw new Error(
         `Schema drift detected:\n${driftPlan.driftMessages.map((m) => `  - ${m}`).join('\n')}`
       )
@@ -142,7 +151,16 @@ async function generateOne(
 
   // Phase 4: Zod integration (bootstrap on first run, schema-enhanced thereafter).
   if (config.input_schema !== undefined && driftPlan !== undefined) {
-    await writeZodIntegration(cwd, config, spec, outputDir, prefix, writableVariantMap, driftPlan)
+    await writeZodIntegration(
+      cwd,
+      config,
+      spec,
+      outputDir,
+      prefix,
+      writableVariantMap,
+      driftPlan,
+      resetSchema
+    )
   }
 
   console.log(`${prefix}Done! Generated ${generatedFiles.length} file(s).`)
@@ -197,24 +215,18 @@ async function detectSchemaDrift(
     exportedSchemas.add(match[1]!)
   }
 
-  // Missing component schemas.
-  const specSchemaNames = Object.keys(spec.components?.schemas ?? {})
-  for (const name of specSchemaNames) {
-    if (!exportedSchemas.has(`${name}Schema`)) {
-      driftMessages.push(
-        `${name}Schema is in the OpenAPI spec but not found in ${config.input_schema}. Run with --reset-schema to re-bootstrap.`
-      )
-    }
-  }
-
-  // Missing synthesized inline-response schemas. These are bootstrapped by
-  // generateZodSchemas() but may be absent if the file predates this feature or the
-  // user removed them accidentally.
-  const synthesizedNames = collectSynthesizedResponseSchemaNames(spec)
-  for (const schemaName of synthesizedNames) {
+  // The expected schema set is exactly what a fresh bootstrap would emit, so the
+  // checker and the bootstrapper stay in lockstep: a file produced by --reset-schema
+  // always passes --check. Deriving expectations from generateZodSchemas() (rather than
+  // re-deriving them from spec.components plus synthesized names) avoids flagging schemas
+  // the bootstrapper intentionally inlines (e.g. discriminated-union members) or does
+  // not synthesize. Extra user exports remain allowed (FE-only or BE-only refinements).
+  const bootstrapped = generateZodSchemas(spec).content
+  for (const match of bootstrapped.matchAll(/^export\s+const\s+(\w+Schema)\b/gm)) {
+    const schemaName = match[1]!
     if (!exportedSchemas.has(schemaName)) {
       driftMessages.push(
-        `${schemaName} is synthesized from an inline response but not found in ${config.input_schema}. Run with --reset-schema to re-bootstrap, or add it manually.`
+        `${schemaName} is in the OpenAPI contract but not found in ${config.input_schema}. Run with --reset-schema to re-bootstrap.`
       )
     }
   }
@@ -235,16 +247,22 @@ async function writeZodIntegration(
   outputDir: string,
   prefix: string,
   writableVariantMap: ReturnType<typeof buildWritableVariantMap>,
-  plan: SchemaDriftPlan
+  plan: SchemaDriftPlan,
+  resetSchema: boolean
 ): Promise<void> {
   const schemaPath = resolve(cwd, config.input_schema!)
 
-  if (!plan.schemaExists) {
-    // First run: bootstrap the schema file. Write once, never overwrite.
+  if (!plan.schemaExists || resetSchema) {
+    // First run bootstraps the schema file (write once). --reset-schema force-rewrites
+    // an existing file from the spec, which is how a user clears reported drift. Either
+    // way the schema-enhanced regeneration of models/client/router happens on the next
+    // run, against the freshly written file.
     const zodFile = generateZodSchemas(spec)
     await writeFile(schemaPath, zodFile.content, 'utf-8')
     console.log(
-      `${prefix}  ✓ ${config.input_schema} (bootstrapped: edit freely, won't be overwritten)`
+      resetSchema && plan.schemaExists
+        ? `${prefix}  ✓ ${config.input_schema} (reset: re-bootstrapped from the spec, customizations overwritten)`
+        : `${prefix}  ✓ ${config.input_schema} (bootstrapped: edit freely, won't be overwritten)`
     )
     return
   }
