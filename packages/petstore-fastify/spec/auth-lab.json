@@ -17,6 +17,43 @@
           "id": { "type": "string" },
           "name": { "type": "string" }
         }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string" }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "required": ["token", "user"],
+        "properties": {
+          "token": { "type": "string" },
+          "user": { "$ref": "#/components/schemas/User" }
+        }
+      },
+      "ContactRequest": {
+        "type": "object",
+        "required": ["method", "message"],
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": ["email", "phone"]
+          },
+          "email": { "type": "string" },
+          "phone": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      },
+      "ContactResponse": {
+        "type": "object",
+        "required": ["accepted", "method"],
+        "properties": {
+          "accepted": { "type": "boolean", "const": true },
+          "method": { "type": "string" }
+        }
       }
     }
   },
@@ -33,6 +70,73 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "Authenticate and receive a token.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contact": {
+      "post": {
+        "operationId": "contact",
+        "summary": "Submit a contact request.",
+        "security": [{ "bearerAuth": ["profile:read"] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ContactRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contact request accepted.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContactResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" },
+                    "issues": {
+                      "type": "array",
+                      "items": { "type": "object" }
+                    }
+                  }
+                }
               }
             }
           }
