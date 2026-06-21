@@ -1,0 +1,6 @@
+{
+  "input_openapi": "spec/auth-lab.json",
+  "output": "generated-auth/",
+  "framework": "fastify",
+  "context_type": "AuthContext"
+}
