@@ -103,8 +103,9 @@ export default defineConfig({
           label: 'Guides',
           items: [
             { label: 'Types & fetch client', slug: 'openapi-zod-ts' },
-            { label: 'React Query hooks', slug: 'openapi-react-query' },
             { label: 'Server interface', slug: 'openapi-server' },
+            { label: 'React Query hooks', slug: 'openapi-react-query' },
+            { label: 'MSW mock handlers', slug: 'openapi-msw' },
             { label: 'Form error mapping', slug: 'api-errors' },
           ],
         },

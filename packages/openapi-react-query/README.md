@@ -7,7 +7,7 @@
 
 📖 **[Full documentation](https://openapi.codewithagents.de/openapi-react-query)**
 
-Generate typed [React Query v5](https://tanstack.com/query/v5) hooks from an OpenAPI 3.x spec. Run once, get a fully typed `useQuery` hook per GET endpoint and a `useMutation` hook per write operation. No hand-written boilerplate.
+Generate typed [React Query v5](https://tanstack.com/query/v5) hooks from an OpenAPI 3.1 spec. Run once, get a fully typed `useQuery` hook per GET endpoint and a `useMutation` hook per write operation. No hand-written boilerplate.
 
 - **One hook per operation**: a `useQuery` variant for every GET and a `useMutation` for every write. Types are derived directly from the generated client, no duplication.
 - **`queryOptions()` factories**: a plain `xxxQueryOptions()` factory alongside every `useQuery` hook, enabling `queryClient.prefetchQuery()` in Next.js App Router server components and `<HydrationBoundary>` SSR patterns.
@@ -17,7 +17,7 @@ Generate typed [React Query v5](https://tanstack.com/query/v5) hooks from an Ope
 - **Suspense variants**: set `suspense: true` to generate `useSuspense*` hooks alongside every query hook.
 - **Prettier-clean output**: every generated file passes `prettier --check` out of the box.
 
-Works alongside [`openapi-zod-ts`](https://www.npmjs.com/package/openapi-zod-ts) which generates the underlying typed fetch client. All generated files are committed without running a formatter. See the [petstore demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-hono) for a full-stack example combining all four packages.
+This package consumes the typed fetch client emitted by [`openapi-zod-ts`](https://www.npmjs.com/package/openapi-zod-ts): it has a runtime dependency on it, so `openapi-zod-ts` must run first. The generated hooks derive their data and variable types directly from that client output. It sits alongside the other generators in the toolchain, [`@codewithagents/openapi-server`](https://www.npmjs.com/package/@codewithagents/openapi-server) (service interface plus optional `hono | express | fastify | none` router) and [`@codewithagents/openapi-msw`](https://www.npmjs.com/package/@codewithagents/openapi-msw) (seeded MSW v2 handlers), plus the [`@codewithagents/api-errors`](https://www.npmjs.com/package/@codewithagents/api-errors) runtime helper. See the [petstore-fastify demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-fastify) for the canonical full-stack example that wires these together.
 
 ## Install
 
@@ -25,6 +25,8 @@ Works alongside [`openapi-zod-ts`](https://www.npmjs.com/package/openapi-zod-ts)
 npm install -D @codewithagents/openapi-react-query openapi-zod-ts
 npm install @tanstack/react-query
 ```
+
+`@tanstack/react-query ^5` is a peer dependency, and React Query v5 requires React 18 or later. `openapi-zod-ts` is a runtime dependency of this generator and must produce its client output first (see [Generate](#generate)).
 
 ## Configure
 
@@ -39,7 +41,8 @@ Create `openapi-react-query.config.json` in your project root:
   "stale_time": 30000,
   "gc_time": 300000,
   "suspense": false,
-  "auto_invalidate": false
+  "auto_invalidate": false,
+  "infinite_query": "auto"
 }
 ```
 
@@ -51,6 +54,7 @@ Create `openapi-react-query.config.json` in your project root:
 | `gc_time` | No | `300000` | `gcTime` in ms applied to all `useQuery` hooks |
 | `suspense` | No | `false` | When `true`, generates a `useSuspense*` variant alongside every query hook |
 | `auto_invalidate` | No | `false` | When `true`, mutation hooks auto-invalidate related queries on success |
+| `infinite_query` | No | `'auto'` | `boolean \| 'auto'`. Generates a `useXxxInfinite` hook for paginated list operations. `'auto'` detects paginated GETs; `true` forces generation, `false` disables it |
 | `overrides` | No | none | Per-resource cache timing (see [Per-resource cache timing](#per-resource-cache-timing)) |
 
 ## Generate
@@ -90,7 +94,7 @@ export const taskKeys = {
 **queryOptions factories**: one per GET operation, for use in RSC / server-side prefetching:
 
 ```ts
-// Plain function — no hooks, safe to call in any context (RSC, loaders, tests)
+// Plain function, no hooks, safe to call in any context (RSC, loaders, tests)
 export function listTasksQueryOptions(params?, options?) {
   return queryOptions({
     queryKey: taskKeys.list(params),
@@ -309,6 +313,8 @@ Relative paths in each config resolve from the config file's directory.
 ## Testing
 
 The generator also produces a `test-utils.ts` file alongside `hooks.ts`. It exports `createTestQueryClient()` and `createWrapper()` to eliminate test boilerplate. See [Testing your hooks](https://openapi.codewithagents.de/openapi-react-query#testing-your-hooks) in the docs for copy-pasteable Vitest examples using MSW.
+
+To mock the HTTP layer those tests hit, [`@codewithagents/openapi-msw`](https://www.npmjs.com/package/@codewithagents/openapi-msw) generates seeded MSW v2 handlers from the same OpenAPI spec, so the request mocks stay in sync with the client the hooks call.
 
 ## Troubleshooting
 

@@ -1,13 +1,15 @@
 # openapi-zod-ts
 
-Generate TypeScript models, native fetch client, and Zod schemas from an OpenAPI 3.x spec (3.1 primary target, 3.0.x best-effort).
+Published to npm as `openapi-zod-ts` (unscoped, v2.1.0). This is the core generator: TypeScript models, native fetch client, and Zod v4 schemas from an OpenAPI 3.x spec (3.1 primary target; 3.0.x supported in practice, 8 of the 13 showcase specs are 3.0.x and all compile under `tsc --strict`). Zero runtime footprint.
+
+**Related packages:** `@codewithagents/openapi-react-query` and `@codewithagents/openapi-msw` build on this client output; `@codewithagents/openapi-server` is the server-side counterpart.
 
 ## Generates
-- `models.ts` — TypeScript interfaces
-- `client.ts` — typed `fetch` functions (zero runtime deps)
-- `client-config.ts` — base URL + default fetch options
-- `index.ts` — barrel re-export
-- `zod.ts` (optional) — bootstrapped once, **never overwritten** — user owns it
+- `models.ts`: TypeScript interfaces
+- `client.ts`: typed `fetch` functions (zero runtime deps)
+- `client-config.ts`: base URL + default fetch options
+- `index.ts`: barrel re-export
+- `zod.ts` (optional): Zod v4 schemas, bootstrapped once, **never overwritten on regen**, the user owns it
 
 ## Plugins (`src/plugins/`)
 | File | Generates |
@@ -19,13 +21,13 @@ Generate TypeScript models, native fetch client, and Zod schemas from an OpenAPI
 | `index-barrel.ts` | index.ts |
 
 ## Non-obvious decisions
-- **`.js` extensions** in all generated imports — required for NodeNext module resolution
-- **`resolveParamRef(p, spec)`** — resolves `$ref: '#/components/parameters/Name'` before filtering path/query/header params
-- **`hasCookieAuth(spec)`** — checks `components.securitySchemes` for `type: apiKey, in: cookie`; sets `credentials: 'include'` default in client-config
-- **`getRequestBodyInfo()`** — returns `{ typeName, kind: 'json' | 'multipart', multipartFields? }`; multipart generates `FormData` building code
-- **Array query params** — `searchParams.append` in `for...of` loop (not `set`) for `string[]`/`number[]`
-- **Header params** — `headerNameToCamelCase()` converts `X-My-Header` → `xMyHeader`; merged into `params`, spread into fetch headers
-- **Zod schema ordering** (`zod.ts` plugin) — schemas are topologically sorted before emission so dependencies always precede their dependents; mutual cycles are detected via Kahn's algorithm and both schemas wrapped in `z.lazy()`
+- **`.js` extensions** in all generated imports: required for NodeNext module resolution
+- **`resolveParamRef(p, spec)`**: resolves `$ref: '#/components/parameters/Name'` before filtering path/query/header params
+- **`hasCookieAuth(spec)`**: checks `components.securitySchemes` for `type: apiKey, in: cookie`; sets `credentials: 'include'` default in client-config
+- **`getRequestBodyInfo()`**: returns `{ typeName, kind: 'json' | 'multipart', multipartFields? }`; multipart generates `FormData` building code
+- **Array query params**: `searchParams.append` in `for...of` loop (not `set`) for `string[]`/`number[]`
+- **Header params**: `headerNameToCamelCase()` converts `X-My-Header` to `xMyHeader`; merged into `params`, spread into fetch headers
+- **Zod schema ordering** (`zod.ts` plugin): schemas are topologically sorted before emission so dependencies always precede their dependents; mutual cycles are detected via Kahn's algorithm and both schemas wrapped in `z.lazy()`
 
 ## Config
 Default: `openapi-zod-ts.config.json` in CWD. `--config <path>` resolves relative paths from config file's directory.
@@ -49,11 +51,13 @@ Cannot be combined with `--watch`.
 pnpm test           # vitest (excludes integration)
 pnpm build          # tsc + chmod +x dist/cli.js
 ```
-Fixtures live in `src/__fixtures__/specs/` — all fictional, never real client specs.
+Fixtures live in `src/__fixtures__/specs/`: all fictional, never real client specs.
 
-## Integration test suite — examples/
+Stryker mutation testing runs here (`stryker.config.json`); run it locally to catch tests that pass without truly asserting behavior.
+
+## Integration test suite: examples/
 The `examples/` directory at the repo root is the real-world integration suite for this generator:
-- **11 showcase specs** — committed generated output, snapshot drift detection, typecheck on every relevant PR
-- **117 compat matrix specs** — generated at CI time, current pass rate 74/117
-- Known failure patterns: dots in operationIds (Google APIs), spaces, special characters
+- **13 showcase specs**: committed generated output, drift detection plus `tsc --strict` typecheck on every relevant PR
+- **115 compat matrix specs**: generated at CI time, all 115 generate without errors (128/128 total)
+- Known edge cases handled: dots in operationIds (Google APIs), spaces, special characters
 - See `examples/README.md` for the full breakdown

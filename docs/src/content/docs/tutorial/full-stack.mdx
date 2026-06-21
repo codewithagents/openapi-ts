@@ -1,34 +1,44 @@
 ---
 title: Full-stack tutorial
-description: End-to-end walkthrough of the petstore-hono demo, showing all four packages composing into one typed full-stack application.
+description: End-to-end walkthrough of the petstore-fastify demo, showing the four generators plus api-errors composing into one typed full-stack application.
 ---
 
-import { Tabs, TabItem, Aside, Card, CardGrid } from '@astrojs/starlight/components'
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components'
 
-This tutorial walks through the [`petstore-hono` demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-hono), a complete runnable application that shows every `@codewithagents` package working together. One OpenAPI spec file drives TypeScript types, a fetch client, a Hono router with Zod validation, React Query hooks, and Playwright end-to-end tests. Nothing in `generated/` is written by hand.
+This tutorial walks through the [`petstore-fastify` demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-fastify), the one canonical full-stack reference app for the toolchain. One OpenAPI spec drives TypeScript types, a native fetch client, a Fastify service interface and router with Zod validation, and React Query v5 hooks. A React frontend logs in for a bearer token, then submits a secured form whose cross-field validation rule round-trips its error onto the exact field that failed. Nothing in `generated/` or `generated-auth/` is written by hand.
+
+The codegen surface here is four generators (`openapi-zod-ts`, `openapi-server`, `openapi-react-query`, `openapi-msw`) plus `@codewithagents/api-errors`, a runtime helper for mapping API errors to form fields. This app exercises the first three generators across two specs and shows where the other two fit.
+
+<Aside type="note">
+  A retained legacy Hono variant, `petstore-hono`, keeps Hono router coverage alive but is no longer
+  the canonical reference. Fastify is the framework this project ships its reference app on.
+</Aside>
 
 ## What you will build
 
-A pet management app: list pets, add a pet (with server-side validation errors shown inline in the form), and delete a pet. The full round-trip looks like this:
+The Auth Lab slice of the app: a login screen that exchanges credentials for a bearer token, then a secured contact form. The contact form has a conditional cross-field rule. When the contact method is `email`, the email field is required; when it is `phone`, the phone field is required. The full round-trip looks like this:
 
 ```
-Browser form -> POST /api/pets -> Hono router -> Zod safeParse
-  -> 422 { issues: [{ path: ["name"], message: "Name is required" }] }
-  -> React renders the error next to the name field
+React form -> ContactRequestSchema.parse(body)  (generated client, before the request)
+  -> superRefine fails: issue { path: ["email"], message: "Email is required when method is email" }
+  -> ZodError thrown client-side, caught in useContact onError
+  -> React renders the message on the email field
 ```
 
-| Layer                        | File                       | Generated?                    |
-| ---------------------------- | -------------------------- | ----------------------------- |
-| TypeScript types             | `generated/models.ts`      | Yes, by `openapi-zod-ts`         |
-| Fetch client                 | `generated/client.ts`      | Yes, by `openapi-zod-ts`         |
-| Zod schemas                  | `generated/schemas.ts`     | Bootstrapped once, then yours |
-| Server interface             | `generated/service.ts`     | Yes, by `openapi-server`      |
-| Hono router + Zod validation | `generated/router.ts`      | Yes, by `openapi-server`      |
-| React Query hooks            | `generated/hooks.ts`       | Yes, by `openapi-react-query` |
-| Business logic               | `src/server/petService.ts` | You write this                |
-| React UI                     | `src/client/App.tsx`       | You write this                |
+The same shared schema also guards the server: an inject test proves a missing-field payload is rejected before any service code runs. One Zod `superRefine`, written once in `src/auth-schemas.ts`, protects both ends.
 
-**The key insight:** everything in `generated/` is disposable. Change `spec/api.json`, run `pnpm generate`, and the types, client, hooks, and router regenerate automatically. Your business logic in `src/` is untouched because it implements a stable TypeScript interface.
+| Layer                           | File                             | Generated?                    |
+| ------------------------------- | -------------------------------- | ----------------------------- |
+| TypeScript types                | `generated-auth/schema-types.ts` | Yes, by `openapi-zod-ts`      |
+| Fetch client                    | `generated-auth/client.ts`       | Yes, by `openapi-zod-ts`      |
+| Zod schemas + cross-field rule  | `src/auth-schemas.ts`            | Bootstrapped once, then yours |
+| Server interface                | `generated-auth/service.ts`      | Yes, by `openapi-server`      |
+| Fastify router + Zod validation | `generated-auth/router.ts`       | Yes, by `openapi-server`      |
+| React Query hooks               | `generated-auth/hooks.ts`        | Yes, by `openapi-react-query` |
+| Auth wiring + business logic    | `src/server/authApp.ts`          | You write this                |
+| React UI                        | `src/client/App.tsx`             | You write this                |
+
+**The key insight:** everything in `generated/` and `generated-auth/` is disposable. Change a spec, run `pnpm generate`, and the types, client, hooks, and router regenerate. Your business logic in `src/` is untouched because it implements a stable TypeScript interface. `src/auth-schemas.ts` is the one exception inside the generated flow: the generator bootstraps it once, then never overwrites it, so the cross-field rule you add survives every regeneration.
 
 ## Quick start
 
@@ -39,543 +49,494 @@ git clone https://github.com/codewithagents/openapi-zod-ts.git
 cd openapi-zod-ts
 pnpm install
 pnpm build
-cd packages/petstore-hono
+cd packages/petstore-fastify
 pnpm dev
 ```
 
-This starts two servers concurrently:
+`pnpm dev` regenerates from the specs, then starts two processes via `concurrently`:
 
-- **Vite** on `http://localhost:5173`: React frontend with hot reload
-- **Hono** on `http://localhost:3001`: API server (Vite proxies `/api` requests to it)
+- **Vite** on `http://localhost:5173`: the React frontend with hot reload
+- **Fastify** on `http://localhost:3004` (`fullstackServer.ts`): serves the API plus the built frontend; Vite proxies `/api` requests to it
 
-Open `http://localhost:5173` and you will see a live pet management UI.
+Open `http://localhost:5173`, log in with any username and password, and you will land on the secured contact form. There is also a backend-only server: `pnpm start` boots the pet API alone on port 3003 (`src/server/index.ts`).
 
 ---
 
 ## 1. The OpenAPI spec
 
-Everything starts from `spec/api.json`. It is an OpenAPI 3.1 document describing four endpoints:
+The Auth Lab slice starts from `spec/auth-lab.json`, an OpenAPI 3.1 document with three operations: a public `login`, a secured `getMe`, and a secured `contact`. Bearer auth is declared at the top level, and `login` opts out with `security: []`:
 
 ```json
 {
   "openapi": "3.1.0",
-  "info": { "title": "Petstore", "version": "1.0.0" },
-  "paths": {
-    "/pets": {
-      "get": {
-        "operationId": "listPets",
-        "parameters": [
-          { "name": "species", "in": "query", "required": false, "schema": { "type": "string" } }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Pet" } }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "operationId": "createPet",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/CreatePetRequest" } }
-          }
-        },
-        "responses": {
-          "201": {
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Pet" } } }
-          }
-        }
-      }
+  "info": { "title": "Auth Lab", "version": "1.0.0" },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer" }
     },
-    "/pets/{id}": {
-      "get": {
-        "operationId": "getPet",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
-        ],
-        "responses": {
-          "200": {
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Pet" } } }
-          }
+    "schemas": {
+      "ContactRequest": {
+        "type": "object",
+        "required": ["method", "message"],
+        "properties": {
+          "method": { "type": "string", "enum": ["email", "phone"] },
+          "email": { "type": "string" },
+          "phone": { "type": "string" },
+          "message": { "type": "string" }
         }
-      },
-      "delete": {
-        "operationId": "deletePet",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
-        ],
-        "responses": { "204": { "description": "Deleted" } }
       }
     }
   },
-  "components": {
-    "schemas": {
-      "Pet": {
-        "type": "object",
-        "required": ["id", "name", "species"],
-        "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "species": { "type": "string" }
-        }
-      },
-      "CreatePetRequest": {
-        "type": "object",
-        "required": ["name", "species"],
-        "properties": {
-          "name": { "type": "string" },
-          "species": { "type": "string" }
-        }
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/login": { "post": { "operationId": "login", "security": [] } },
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "security": [{ "bearerAuth": ["profile:read"] }]
+      }
+    },
+    "/contact": {
+      "post": {
+        "operationId": "contact",
+        "security": [{ "bearerAuth": ["profile:read"] }]
       }
     }
   }
 }
 ```
 
-This single file is the source of truth for every generated file in the project.
+The spec describes shape and security, but not the cross-field rule. The spec cannot express "email is required only when method is email"; that is conditional logic, and it belongs in a Zod schema you own. The spec is the source of truth for every generated file; the cross-field rule is the source of truth for the one thing the spec cannot say.
+
+<Aside type="note">
+  This app actually generates from two specs. The Pet API spec lives in the shared package at
+  `../petstore-shared/spec/api.json` and produces plain CRUD into `generated/`. The Auth Lab spec,
+  `spec/auth-lab.json`, produces the secured surface into `generated-auth/`. This tutorial follows
+  the Auth Lab target because the cross-field round-trip is the headline feature.
+</Aside>
 
 ## 2. Generate types, client, and Zod schemas
 
-The first generator to run is `openapi-zod-ts`. It reads the spec and writes `models.ts`, `client.ts`, `client-config.ts`, `index.ts`, and (when `input_schema` points at an existing file) rewrites `models.ts` to derive types from your Zod schemas.
+The first generator to run is `openapi-zod-ts`. It reads the spec and writes `schema-types.ts`, `client.ts`, `client-config.ts`, and `index.ts`. When `input_schema` points at a file, it bootstraps that file with a plain `z.object()` per schema on the first run, then never touches it again.
 
-**`openapi-zod-ts.config.json`:**
+**`openapi-zod-ts.auth.config.json`:**
 
 ```json
 {
-  "input_openapi": "spec/api.json",
-  "output": "generated/",
-  "input_schema": "generated/schemas.ts"
+  "input_openapi": "spec/auth-lab.json",
+  "output": "generated-auth/",
+  "input_schema": "src/auth-schemas.ts"
 }
 ```
 
-The `input_schema` field is the key. On the very first run, if `generated/schemas.ts` does not exist, `openapi-zod-ts` bootstraps it with a plain `z.object()` for every schema in the spec, then never touches it again. The file is yours to extend.
-
-The petstore's `generated/schemas.ts` adds custom validation messages that were not in the spec:
+The `input_schema` field is the key. Because `src/auth-schemas.ts` already exists, the generator leaves it alone and derives the response types in `schema-types.ts` from it. This is where the cross-field rule lives:
 
 ```typescript
-// generated/schemas.ts (bootstrapped by openapi-zod-ts, then yours)
+// src/auth-schemas.ts (bootstrapped by openapi-zod-ts, then yours)
 import { z } from 'zod'
 
-export const PetSchema = z
+// ContactRequest carries a conditional cross-field rule: the contact field named by
+// `method` is required.
+export const ContactRequestSchema = z
   .object({
-    id: z.string(),
-    name: z.string(),
-    species: z.string(),
+    method: z.enum(['email', 'phone']),
+    email: z.string().optional(),
+    phone: z.string().optional(),
+    message: z.string().min(1, 'Message is required'),
   })
-  .passthrough()
-
-export const CreatePetRequestSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  species: z.string().min(1, 'Species is required'),
-})
+  .superRefine((data, ctx) => {
+    if (data.method === 'email' && !data.email?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['email'],
+        message: 'Email is required when method is email',
+      })
+    }
+    if (data.method === 'phone' && !data.phone?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['phone'],
+        message: 'Phone is required when method is phone',
+      })
+    }
+  })
 ```
 
-The `.min(1, ...)` rules are business logic you own. They will surface as validation error messages on the client and on the server.
-
-After `openapi-zod-ts` runs with Zod integration, `generated/models.ts` derives its types from the schemas rather than duplicating them:
+The `path: ['email']` and `path: ['phone']` on each issue are what makes the round-trip land on the right form field later. The generated `client.ts` calls `ContactRequestSchema.parse(body)` before sending `POST /contact`, so this rule runs client-side, before the network, on every submit:
 
 ```typescript
-// generated/models.ts (auto-generated)
-import type { z } from 'zod'
-import type { PetSchema, CreatePetRequestSchema } from './schemas.js'
-
-export type Pet = z.infer<typeof PetSchema>
-export type CreatePetRequest = z.infer<typeof CreatePetRequestSchema>
+// generated-auth/client.ts (auto-generated, excerpt)
+export async function contact(
+  body: ContactRequest,
+  config?: RequestConfig
+): Promise<ContactResponse> {
+  ContactRequestSchema.parse(body)
+  // ...fetch POST /contact...
+  return ContactResponseSchema.parse(await res.json())
+}
 ```
 
-The generated `client.ts` also calls `CreatePetRequestSchema.parse(body)` before sending `POST /pets`, and `PetSchema.parse(await res.json())` after every response, so type drift between client and server is caught at runtime.
-
 <Aside type="note">
-  `openapi-zod-ts` is a prerequisite for both `openapi-server` and `openapi-react-query`. Run it first
-  so `models.ts` exists before the other generators import from it.
+  `openapi-zod-ts` is a prerequisite for both `openapi-server` and `openapi-react-query`. Run it
+  first so `schema-types.ts` exists before the other generators import from it.
 </Aside>
 
-## 3. Generate the server interface and Hono router
+## 3. Generate the server interface and Fastify router
 
-`openapi-server` reads the same spec and writes two files: a plain TypeScript interface (`service.ts`) and a ready-to-mount Hono router (`router.ts`).
+`openapi-server` reads the same spec and writes two files: a plain TypeScript interface (`service.ts`) and a ready-to-mount Fastify plugin (`router.ts`).
 
-**`openapi-server.config.json`:**
+**`openapi-server.auth.config.json`:**
 
 ```json
 {
-  "input_openapi": "spec/api.json",
-  "output": "generated/",
-  "framework": "hono",
-  "input_schema": "generated/schemas.ts"
+  "input_openapi": "spec/auth-lab.json",
+  "output": "generated-auth/",
+  "framework": "fastify",
+  "context_type": "AuthContext",
+  "input_schema": "src/auth-schemas.ts"
 }
 ```
 
-`framework: "hono"` tells the generator to produce a `createRouter` factory. `input_schema` points at the same `schemas.ts` as `openapi-zod-ts`, so the router gets Zod validation wired in automatically.
+`framework` accepts `hono | express | fastify | none`, defaulting to `none` (a framework-agnostic interface with no router). Here it is `fastify`. `context_type: "AuthContext"` makes the generated interface generic over a context type you define, threaded into every secured method. `input_schema` points at the same `auth-schemas.ts`, so the router validates against the shared Zod schemas.
 
-**Generated `generated/service.ts`:**
+**Generated `generated-auth/service.ts`:**
 
 ```typescript
-// generated/service.ts (auto-generated)
-import type { CreatePetRequest, Pet } from './models.js'
+// generated-auth/service.ts (auto-generated)
+import type {
+  ContactRequest,
+  ContactResponse,
+  LoginRequest,
+  LoginResponse,
+  User,
+} from './schema-types.js'
 
-export interface PetstoreService {
-  /** GET /pets */
-  listPets(params?: { species?: string }): Promise<Pet[]>
-  /** POST /pets */
-  createPet(body: CreatePetRequest): Promise<Pet>
-  /** GET /pets/{id} */
-  getPet(id: string): Promise<Pet>
-  /** DELETE /pets/{id} */
-  deletePet(id: string): Promise<void>
+export interface AuthLabService<Ctx = never> {
+  /**
+   * GET /me
+   * @security bearerAuth profile:read
+   */
+  getMe(ctx: Ctx): Promise<User>
+  /** POST /login */
+  login(body: LoginRequest, ctx: Ctx): Promise<LoginResponse>
+  /**
+   * POST /contact
+   * @security bearerAuth profile:read
+   */
+  contact(body: ContactRequest, ctx: Ctx): Promise<ContactResponse>
 }
 ```
 
-This interface is regenerated every time the spec changes. Add an endpoint and forget to implement it: TypeScript fails the build.
+Every secured method receives `ctx: Ctx` as its final argument. The interface is regenerated whenever the spec changes. Add an operation and forget to implement it, and TypeScript fails the build.
 
-**Generated `generated/router.ts` (with Zod validation):**
+**Generated `generated-auth/router.ts` (Fastify plugin):**
+
+The router is a `FastifyPluginAsyncZod`. It uses `fastify-type-provider-zod` so the request body and response are validated against the Zod schemas, registers an `HttpError` error handler, surfaces operation security metadata on the route config, and calls a `createContext` callback you supply before each handler:
 
 ```typescript
-// generated/router.ts (auto-generated)
-import { Hono } from 'hono'
-import type { CreatePetRequest } from './models.js'
-import type { PetstoreService } from './service.js'
-import { CreatePetRequestSchema } from './schemas.js'
+// generated-auth/router.ts (auto-generated, excerpt)
+export function createRouter<Ctx = never>(
+  service: AuthLabService<Ctx>,
+  options: CreateRouterOptions<Ctx>
+): FastifyPluginAsyncZod {
+  return async (app) => {
+    app.setValidatorCompiler(validatorCompiler)
+    app.setSerializerCompiler(serializerCompiler)
+    // Default HttpError handler maps HttpError(status, message) to a JSON error response.
 
-export function createRouter(service: PetstoreService): Hono {
-  const app = new Hono()
+    app.post(
+      '/contact',
+      {
+        schema: { body: ContactRequestSchema, response: { 200: ContactResponseSchema } },
+        config: {
+          operationId: 'contact',
+          security: [{ scheme: 'bearerAuth', scopes: ['profile:read'] }],
+        },
+      },
+      async (req, reply) => {
+        const ctx = await options.createContext(req)
+        return reply.send(await service.contact(req.body, ctx))
+      }
+    )
+    // ...login and me routes...
+  }
+}
+```
 
-  app.get('/pets', async (c) => {
-    const params = { species: c.req.query('species') ?? undefined }
-    return c.json(await service.listPets(params))
-  })
+Two things are wired automatically. The route `schema.body` is `ContactRequestSchema`, so Fastify validates the body (including the `superRefine` cross-field rule) before your handler runs and rejects a bad payload with a 400. And `config.security` carries the required scopes, which your `createContext` can inspect to decide whether a route is public or needs a token.
 
-  app.post('/pets', async (c) => {
-    const body = await c.req.json<CreatePetRequest>()
-    // Validate request body: returns 422 with Zod issues on failure
-    const parseResult = CreatePetRequestSchema.safeParse(body)
-    if (!parseResult.success) {
-      return c.json({ error: 'Invalid request body', issues: parseResult.error.issues }, 422)
-    }
-    const validatedBody = parseResult.data
-    return c.json(await service.createPet(validatedBody), 201)
-  })
+<Aside type="tip">
+  The `service.ts` interface has zero framework imports. Set `framework` to `none` for a
+  framework-agnostic interface, or `hono` / `express` / `fastify` to also emit a router. See the
+  [openapi-server guide](/openapi-server) for the full router surface.
+</Aside>
 
-  app.get('/pets/:id', async (c) => {
-    return c.json(await service.getPet(c.req.param('id')))
-  })
+## 4. Implement the service and the createContext auth seam
 
-  app.delete('/pets/:id', async (c) => {
-    await service.deletePet(c.req.param('id'))
-    return new Response(null, { status: 204 })
-  })
+`src/server/authApp.ts` does three things: defines the `AuthContext` shape, implements `AuthLabService<AuthContext>`, and registers the generated router with a `createContext` that enforces auth.
+
+```typescript
+// src/server/authApp.ts (you write this)
+import fastifyStatic from '@fastify/static'
+import Fastify from 'fastify'
+import { createRouter, HttpError } from '../../generated-auth/router.js'
+import type { AuthLabService } from '../../generated-auth/service.js'
+
+// The principal threaded through all secured service methods.
+export interface AuthContext {
+  userId: string
+  scopes: string[]
+}
+
+export const authLabService: AuthLabService<AuthContext> = {
+  async getMe(ctx) {
+    return { id: ctx.userId, name: `user-${ctx.userId}` }
+  },
+  async login(body) {
+    // Issue a token equal to the username so it can be echoed back in tests.
+    return { token: body.username, user: { id: body.username, name: `user-${body.username}` } }
+  },
+  async contact(body, ctx) {
+    void ctx
+    return { accepted: true, method: body.method }
+  },
+}
+
+export function buildAuthApp(options: { serveStatic?: string } = {}) {
+  const app = Fastify()
+
+  app.register(
+    createRouter<AuthContext>(authLabService, {
+      createContext: (req) => {
+        const security = req.routeOptions.config.security
+        // Routes with no security metadata (login overrides with security: []) are public.
+        if (security === undefined || security.length === 0) {
+          return { userId: 'anonymous', scopes: [] }
+        }
+        // All other routes require a Bearer token.
+        const auth = req.headers['authorization']
+        if (typeof auth !== 'string' || !auth.startsWith('Bearer ')) {
+          throw new HttpError(401, 'Unauthorized')
+        }
+        return { userId: auth.slice('Bearer '.length), scopes: ['profile:read'] }
+      },
+    }),
+    { prefix: '/api' }
+  )
+
+  if (options.serveStatic !== undefined) {
+    app.register(fastifyStatic, { root: options.serveStatic })
+  }
 
   return app
 }
 ```
 
-The generator runs in two passes: first it writes `router.ts` without Zod imports, then it rewrites it with `safeParse` calls for every route whose body type has a matching schema in `input_schema`. The `POST /pets` route gets `CreatePetRequestSchema.safeParse` because `CreatePetRequestSchema` exists in `schemas.ts`. An invalid request gets a `422` with the Zod issue list before your service implementation is ever called.
+The `createContext` callback is the auth seam. It reads the operation's security metadata that the generated router placed on `req.routeOptions.config.security`, treats a missing or empty list as public, and otherwise requires a Bearer token. Throwing `HttpError(401)` here rejects the request before any service method runs. The returned `AuthContext` is threaded into `getMe` and `contact` as their `ctx` argument.
 
-<Aside type="tip">
-  Hono is this demo's choice, not a requirement. The `service.ts` interface has zero framework
-  imports. You can wire the same interface to Express, Fastify, or any HTTP server you already use.
-  See the [openapi-server guide](/openapi-server) for Express and Fastify examples.
+The router is mounted with `app.register(createRouter(...), { prefix: '/api' })`, so the generated routes live under `/api`. `fullstackServer.ts` calls `buildAuthApp({ serveStatic: dist })` to serve the built React frontend alongside the API on port 3004.
+
+<Aside type="caution">
+  The reference `createContext` is deliberately minimal: it checks for a Bearer token but does not
+  verify it. The point of the seam is to show where real auth plugs in, not to ship a token
+  validator. Replace the body of `createContext` with your own verification.
 </Aside>
 
-## 4. Implement the service
+## 5. Generate React Query hooks
 
-Open `generated/service.ts` and create a file that satisfies the interface. The petstore uses an in-memory `Map`:
+`openapi-react-query` reads the auth-lab spec and writes `hooks.ts` plus a `test-utils.ts` helper. It derives all types from the generated client functions, so there are no duplicate type declarations.
 
-```typescript
-// src/server/petService.ts (you write this)
-import { randomUUID } from 'node:crypto'
-import type { PetstoreService } from '../../generated/service.js'
-import type { Pet } from '../../generated/models.js'
-
-const pets = new Map<string, Pet>()
-
-export const petService: PetstoreService = {
-  async listPets(params) {
-    const all = Array.from(pets.values())
-    if (params?.species) {
-      return all.filter((p) => p.species.toLowerCase() === params.species!.toLowerCase())
-    }
-    return all
-  },
-  async createPet(body) {
-    const pet: Pet = { id: randomUUID(), ...body }
-    pets.set(pet.id, pet)
-    return pet
-  },
-  async getPet(id) {
-    const pet = pets.get(id)
-    if (!pet) throw new Error(`Pet ${id} not found`)
-    return pet
-  },
-  async deletePet(id) {
-    pets.delete(id)
-  },
-}
-
-/** Reset all pets (only used in dev/test environments) */
-export function resetPets(): void {
-  pets.clear()
-}
-```
-
-TypeScript enforces that every method matches the generated interface signature. If you add an operation to `spec/api.json` and run `pnpm generate`, `petService.ts` will produce a type error until you implement the new method.
-
-## 5. Wire the router and serve
-
-`src/server/index.ts` creates a Hono app, mounts the generated router at `/api`, and starts the server:
-
-```typescript
-// src/server/index.ts (you write this)
-import { serve } from '@hono/node-server'
-import { serveStatic } from '@hono/node-server/serve-static'
-import { Hono } from 'hono'
-import { createRouter } from '../../generated/router.js'
-import { petService, resetPets } from './petService.js'
-
-const app = new Hono()
-
-// Dev-only reset endpoint (used by Playwright tests before each test)
-if (process.env.NODE_ENV !== 'production') {
-  app.delete('/api/pets', (_c) => {
-    resetPets()
-    return new Response(null, { status: 204 })
-  })
-}
-
-const apiRouter = createRouter(petService)
-app.route('/api', apiRouter)
-
-// Serve built React app for everything else
-app.use('/*', serveStatic({ root: './dist' }))
-
-const port = Number(process.env.PORT ?? 3001)
-serve({ fetch: app.fetch, port })
-```
-
-`createRouter` returns a plain `Hono` instance. Mount it at any prefix, add middleware, or nest it inside a larger app.
-
-## 6. Generate React Query hooks
-
-The third generator writes `hooks.ts` and a `test-utils.ts` helper. It reads the spec and derives all types from the generated client functions, so there are no duplicate type declarations.
-
-**`openapi-react-query.config.json`:**
+**`openapi-react-query.auth.config.json`:**
 
 ```json
-{ "input_openapi": "spec/api.json", "output": "generated/", "stale_time": 0, "gc_time": 300000 }
-```
-
-After running `openapi-react-query`, `generated/hooks.ts` contains:
-
-- `useListPets(params?, options?)`: a `useQuery` hook; `params` are optional so omitting them fetches all pets
-- `useGetPet(id, options?)`: a detail `useQuery` hook, widened to `string | undefined | null` and `enabled: false` when nullish
-- `useCreatePet(options?)`: a `useMutation` hook
-- `useDeletePet(options?)`: a `useMutation` hook
-- `petKeys`: a structured key factory: `petKeys.all()`, `petKeys.list(params)`, `petKeys.detail(id)`
-
-The generated `petKeys` factory makes cache invalidation predictable:
-
-```typescript
-// generated/hooks.ts (auto-generated, excerpt)
-export const petKeys = {
-  all: () => ['pets'] as const,
-  list: (params?: Parameters<typeof listPets>[0]) => ['pets', 'list', params] as const,
-  detail: (id: string) => ['pets', id] as const,
+{
+  "input_openapi": "spec/auth-lab.json",
+  "output": "generated-auth/",
+  "stale_time": 0,
+  "gc_time": 300000
 }
 ```
 
-## 7. Use the hooks in React
+After running, `generated-auth/hooks.ts` contains:
 
-`src/client/App.tsx` uses the generated hooks directly. It calls `useListPets` for the list, `useCreatePet` and `useDeletePet` for mutations, and `queryClient.invalidateQueries` with `petKeys.all()` to refresh the list after writes:
+- `useGetMe(options?)`: a `useQuery` hook for the authenticated user
+- `useLogin(options?)`: a `useMutation` hook that returns a token
+- `useContact(options?)`: a `useMutation` hook for the secured contact form
+- `meKeys`: a structured key factory (`meKeys.all()`, `meKeys.list()`) for cache invalidation
+
+Each hook is typed against the generated client, so `useContact` already knows its variables are a `ContactRequest` and its error is an `ApiError`.
+
+## 6. Use the hooks in React: login, then the round-trip
+
+`src/client/App.tsx` logs in with `useLogin`, stores the token in a small module (`token.ts`) that the client reads on every request, then renders the secured contact form with `useContact`. The frontend reads `issue.path[0]` from a thrown `ZodError` and places the message on the matching field:
 
 ```tsx
 // src/client/App.tsx (you write this, excerpt)
-import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
-import { ApiError } from '../../generated/client.js'
-import { petKeys, useCreatePet, useDeletePet, useListPets } from '../../generated/hooks.js'
+import { useState, type FormEvent } from 'react'
+import { useContact, useLogin } from '../../generated-auth/hooks.js'
+import { setToken } from './token.js'
 
+type FieldErrors = { email?: string; phone?: string }
 type ZodIssue = { path: (string | number)[]; message: string }
 
-function parseValidationErrors(error: unknown): { name?: string; species?: string } {
-  // Handle 422 from the server: Zod issues in the response body
-  if (error instanceof ApiError && error.status === 422) {
-    const body = error.body as { issues?: ZodIssue[] }
-    if (Array.isArray(body?.issues)) {
-      const errors: { name?: string; species?: string } = {}
-      for (const issue of body.issues) {
-        const field = issue.path[0]
-        if (field === 'name') errors.name = issue.message
-        if (field === 'species') errors.species = issue.message
-      }
-      return errors
-    }
-  }
-  return {}
+// Place a message on the email or phone slot; ignore any other field.
+function assignField(errors: FieldErrors, field: unknown, message: string): FieldErrors {
+  if (field === 'email') return { ...errors, email: message }
+  if (field === 'phone') return { ...errors, phone: message }
+  return errors
 }
 
-export function App() {
-  const [name, setName] = useState('')
-  const [species, setSpecies] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; species?: string }>({})
+function isZodLike(error: unknown): error is { issues: ZodIssue[] } {
+  return (
+    error != null &&
+    typeof error === 'object' &&
+    'issues' in error &&
+    Array.isArray((error as { issues: unknown }).issues)
+  )
+}
 
-  const queryClient = useQueryClient()
-  const { data: pets = [], isLoading } = useListPets()
+// The generated client runs ContactRequestSchema.parse(body) before the request, so a
+// cross-field failure throws a ZodError with path-tagged issues client-side.
+function parseContactErrors(error: unknown): FieldErrors {
+  if (!isZodLike(error)) return {}
+  return error.issues.reduce((acc, issue) => assignField(acc, issue.path[0], issue.message), {})
+}
 
-  const createPet = useCreatePet({
+function ContactView() {
+  const [method, setMethod] = useState<'email' | 'phone'>('email')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [message, setMessage] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [success, setSuccess] = useState(false)
+
+  const contact = useContact({
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: petKeys.all() })
-      setName('')
-      setSpecies('')
+      setSuccess(true)
       setFieldErrors({})
     },
-    onError: (error) => {
-      setFieldErrors(parseValidationErrors(error))
-    },
+    onError: (error) => setFieldErrors(parseContactErrors(error)),
   })
 
-  const deletePet = useDeletePet({
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: petKeys.all() })
-    },
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    createPet.mutate({ name: name.trim(), species: species.trim() })
+    setFieldErrors({})
+    setSuccess(false)
+    contact.mutate({
+      method,
+      email: email.trim() || undefined,
+      phone: phone.trim() || undefined,
+      message: message.trim(),
+    })
   }
-
-  return (
-    <main>
-      <h1>Petstore</h1>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <input
-            data-testid="pet-name"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          {fieldErrors.name && <span data-testid="pet-name-error">{fieldErrors.name}</span>}
-        </div>
-        <div>
-          <input
-            data-testid="pet-species"
-            placeholder="Species"
-            value={species}
-            onChange={(e) => setSpecies(e.target.value)}
-          />
-          {fieldErrors.species && (
-            <span data-testid="pet-species-error">{fieldErrors.species}</span>
-          )}
-        </div>
-        <button data-testid="add-pet" type="submit">
-          Add Pet
-        </button>
-      </form>
-
-      {!isLoading && pets.length === 0 && (
-        <p data-testid="empty-state">No pets yet. Add your first pet above!</p>
-      )}
-
-      <ul>
-        {pets.map((pet) => (
-          <li key={pet.id} data-testid="pet-row">
-            <span data-testid="pet-name-display">{pet.name}</span>
-            {' - '}
-            <span data-testid="pet-species-display">{pet.species}</span>
-            <button data-testid="delete-pet" onClick={() => deletePet.mutate(pet.id)}>
-              Delete
-            </button>
-          </li>
-        ))}
-      </ul>
-    </main>
-  )
+  // ...form with email/phone/message fields, each rendering fieldErrors[field]...
 }
 ```
 
-The `ApiError` class is generated by `openapi-zod-ts` and thrown on every non-2xx response. It carries `status` (the HTTP status code) and `body` (the parsed JSON response). The `onError` callback in `useCreatePet` receives this error and extracts the Zod issue list from the `422` response body to drive per-field error display.
+The login token is held in `token.ts` and read by the client on every request, so secured calls carry `Authorization: Bearer <token>` without the components touching headers:
+
+```tsx
+// src/client/main.tsx (you write this, excerpt)
+import { configureClient } from '../../generated-auth/client-config.js'
+import { getToken } from './token.js'
+
+// Every request carries the current bearer token (empty until login).
+configureClient({ baseUrl: '/api', token: getToken })
+```
+
+When the user submits `method: 'email'` with an empty email, `useContact`'s `mutate` calls the generated `contact` client function, which runs `ContactRequestSchema.parse(body)`. The `superRefine` adds an issue at `path: ['email']`, `parse` throws a `ZodError`, `useContact`'s `onError` receives it, `parseContactErrors` reads `issue.path[0]`, and the message renders on the email field. The cross-field error has round-tripped onto the exact field that failed, before a single byte hit the network.
 
 <Aside type="tip">
-  The petstore handles error mapping inline. If you use React Hook Form and want a library that
-  normalizes many error formats automatically, `@codewithagents/api-errors` provides
-  `mapApiErrors(error, setError)` as a one-call drop-in. See the [api-errors guide](/api-errors) for
-  details.
+  This demo maps the error inline because the shape is its own. When you want a library that
+  normalizes many backend error formats and wires them to React Hook Form in one call, reach for
+  `@codewithagents/api-errors` and its `mapApiErrors` adapter. See the [api-errors
+  guide](/api-errors).
 </Aside>
 
-## 8. Regenerating from spec
+## 7. Regenerating from spec
 
-The `package.json` generate script runs all three generators in the correct order:
+`package.json` runs five generator CLI invocations across the two specs and three generators, in dependency order:
 
 ```json
 {
   "scripts": {
-    "generate": "openapi-zod-ts && openapi-server && openapi-react-query"
+    "generate": "openapi-zod-ts && openapi-zod-ts --config openapi-zod-ts.auth.config.json && openapi-server && openapi-server --config openapi-server.auth.config.json && openapi-react-query --config openapi-react-query.auth.config.json"
   }
 }
 ```
 
-Run it whenever you change `spec/api.json`:
+Read top to bottom: `openapi-zod-ts` on the pet spec, then on the auth-lab spec; `openapi-server` on each; then `openapi-react-query` on the auth-lab spec. Run it whenever you change a spec or `src/auth-schemas.ts`:
 
 ```bash
 pnpm generate
 ```
 
-`generated/schemas.ts` is never overwritten. All other files in `generated/` are safe to delete and regenerate at any time.
+`src/auth-schemas.ts` is never overwritten, so the cross-field rule survives. Everything else in `generated/` and `generated-auth/` is safe to delete and regenerate.
 
-## 9. Run the Playwright tests
+<Aside type="note">
+  A fourth generator, `@codewithagents/openapi-msw`, reads the same spec and emits MSW v2 HTTP
+  handlers with seeded Faker mock data (CLI: `openapi-msw`). This reference app does not run it; MSW
+  handler generation is exercised in the `integration` package. Add a step like `openapi-msw
+  --config openapi-msw.config.json` to a generate script when you want browser or test mocks driven
+  from the same contract. See the [openapi-msw guide](/openapi-msw).
+</Aside>
 
-The Playwright suite covers the full browser-to-server round-trip:
+## 8. Run the tests
 
-```bash
-pnpm test:e2e
-```
+Two layers cover the round-trip. Vitest inject tests hit the Fastify app in-process, including the server-side guard; a Playwright suite drives a real browser through login and the cross-field round-trip.
 
-This runs `vite build` first, then starts the Hono server and runs six tests in Chromium. Each test resets server state via `DELETE /api/pets` before running, so tests are fully isolated:
+The inject test proves the shared schema rejects a missing field server-side, before any service code runs:
 
 ```typescript
-// e2e/pets.spec.ts (you write this)
-import { expect, test } from '@playwright/test'
-
-test.beforeEach(async ({ page, request }) => {
-  await request.delete('/api/pets')
-  await page.goto('/')
-})
-
-test('shows empty state on first load', async ({ page }) => {
-  await expect(page.getByTestId('empty-state')).toBeVisible()
-})
-
-test('can add a pet and see it in the list', async ({ page }) => {
-  await page.getByTestId('pet-name').fill('Buddy')
-  await page.getByTestId('pet-species').fill('Dog')
-  await page.getByTestId('add-pet').click()
-  await expect(page.getByTestId('pet-row')).toBeVisible()
-  await expect(page.getByTestId('pet-name-display').first()).toHaveText('Buddy')
-})
-
-test('can delete a pet', async ({ page }) => {
-  await page.getByTestId('pet-name').fill('Whiskers')
-  await page.getByTestId('pet-species').fill('Cat')
-  await page.getByTestId('add-pet').click()
-  await page.getByTestId('delete-pet').first().click()
-  await expect(page.getByTestId('empty-state')).toBeVisible()
-})
-
-test('shows validation errors when submitting empty fields', async ({ page }) => {
-  await page.getByTestId('add-pet').click()
-  await expect(page.getByTestId('pet-name-error')).toHaveText('Name is required')
-  await expect(page.getByTestId('pet-species-error')).toHaveText('Species is required')
+// src/__tests__/auth-routes.test.ts (excerpt)
+it('rejects a missing email when method is email (400)', async () => {
+  const app = buildAuthApp()
+  const res = await app.inject({
+    method: 'POST',
+    url: '/api/contact',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer x' },
+    payload: JSON.stringify({ method: 'email', message: 'hi' }),
+  })
+  expect(res.statusCode).toBe(400)
+  await app.close()
 })
 ```
 
-The validation error test is the full round-trip in action: the React form submits empty strings, the Hono router's `CreatePetRequestSchema.safeParse` rejects them and returns `422` with the Zod issue list, the generated client throws an `ApiError` (status 422, body `{ issues: [...] }`), the `onError` callback in `useCreatePet` runs `parseValidationErrors`, and the component renders the field-level error messages.
+The browser e2e logs in, submits `method: 'email'` with no email, asserts the error lands on the email field, then provides a valid email and asserts success:
 
-These tests also run in CI as a separate parallel `E2E (Petstore)` job alongside the standard `Build, Lint & Test` job.
+```typescript
+// e2e-auth/auth.spec.ts (excerpt)
+test('login, cross-field validation error round-trip, then success', async ({ page }) => {
+  await page.goto('/')
+
+  await page.getByTestId('login-username').fill('alice')
+  await page.getByTestId('login-password').fill('pw')
+  await page.getByTestId('login-submit').click()
+
+  // method=email but no email: the cross-field rule fails and the error lands on the email field.
+  await page.getByTestId('contact-method').selectOption('email')
+  await page.getByTestId('contact-message').fill('hello there')
+  await page.getByTestId('contact-submit').click()
+
+  const emailError = page.getByTestId('contact-email-error')
+  await expect(emailError).toBeVisible()
+  await expect(emailError).toContainText('email')
+
+  // Provide a valid email and resubmit: accepted.
+  await page.getByTestId('contact-email').fill('alice@example.com')
+  await page.getByTestId('contact-submit').click()
+  await expect(page.getByTestId('contact-success')).toBeVisible()
+})
+```
+
+Run them:
+
+```bash
+pnpm test            # Vitest inject tests (in-process Fastify, including the 400 guard)
+pnpm test:e2e:auth   # build, then Playwright on port 3004: login, round-trip, success
+```
+
+`pnpm test:e2e:auth` runs `pnpm build` first so `./dist` exists, then boots `fullstackServer.ts` on port 3004 and drives Chromium against it. These Playwright suites run in CI as jobs within the standard pipeline, not as a separate top-level workflow. There is no dedicated "E2E" workflow file.
 
 ---
 
@@ -583,32 +544,39 @@ These tests also run in CI as a separate parallel `E2E (Petstore)` job alongside
 
 ```
 spec/
-  api.json                       OpenAPI 3.1 spec: single source of truth
+  auth-lab.json                  Auth Lab spec: login, secured /me and /contact
 
-generated/                       Auto-generated, safe to delete and re-run
-  models.ts                      TypeScript types (Pet, CreatePetRequest)
-  client.ts                      Typed fetch functions, ApiError class
-  client-config.ts               configureClient(): base URL and auth setup
-  index.ts                       Barrel re-export
-  service.ts                     PetstoreService interface
-  router.ts                      createRouter(service): Hono routes + Zod validation
-  hooks.ts                       useListPets, useGetPet, useCreatePet, useDeletePet
-  test-utils.ts                  createTestQueryClient(), createWrapper() for testing
-  schemas.ts                     User-owned: bootstrapped once, never overwritten
+../petstore-shared/              Shared Pet API contract (spec + hand-written Zod), reused by every petstore app
+  spec/api.json
+  schemas.ts
 
 src/
+  auth-schemas.ts                User-owned Zod: the cross-field superRefine lives here, never overwritten
   server/
-    petService.ts                Implements PetstoreService (in-memory Map)
-    index.ts                     Hono app: mounts router, serves React build
+    authApp.ts                   buildAuthApp: createContext auth seam + AuthLabService impl
+    fullstackServer.ts           Serves the built frontend plus the auth API on port 3004
+    index.ts                     Pet API server only, on port 3003
+    petService.ts                Implements the Pet API service
   client/
-    App.tsx                      React UI: uses generated hooks
+    App.tsx                      React UI: login then the secured contact form
+    main.tsx                     configureClient + QueryClientProvider
+    token.ts                     Module-level bearer token holder
 
-e2e/
-  pets.spec.ts                   Playwright tests (browser to Hono to Zod to React)
+generated/                       Pet API output (gitignored, regenerated)
+generated-auth/                  Auth Lab output (gitignored, regenerated)
+  schema-types.ts                TypeScript types
+  client.ts                      Typed fetch functions, ApiError class
+  client-config.ts               configureClient(): base URL and token setup
+  service.ts                     AuthLabService<Ctx> interface
+  router.ts                      createRouter(service, { createContext }): Fastify plugin
+  hooks.ts                       useGetMe, useLogin, useContact, meKeys
 
-openapi-zod-ts.config.json          Generator config (client-side files + schemas bootstrap)
-openapi-server.config.json       Generator config (server interface + Hono router + Zod)
-openapi-react-query.config.json  Generator config (React Query hooks)
+e2e-auth/
+  auth.spec.ts                   Playwright: login, cross-field round-trip, success
+
+openapi-zod-ts.auth.config.json     Generator config (auth client + reads auth-schemas)
+openapi-server.auth.config.json     Generator config (Fastify router, context_type: AuthContext)
+openapi-react-query.auth.config.json Generator config (React Query hooks)
 ```
 
 ---
@@ -623,7 +591,7 @@ openapi-react-query.config.json  Generator config (React Query hooks)
 
   </Card>
   <Card title="Server interface" icon="laptop">
-    Full reference for `@codewithagents/openapi-server`: Express and Fastify support, framework-agnostic mode, and Zod validation details.
+    Full reference for `@codewithagents/openapi-server`: the `hono | express | fastify | none` targets, createContext, and Zod validation.
 
     [openapi-server guide](/openapi-server)
 
@@ -634,8 +602,14 @@ openapi-react-query.config.json  Generator config (React Query hooks)
     [openapi-react-query guide](/openapi-react-query)
 
   </Card>
+  <Card title="MSW mock handlers" icon="random">
+    `@codewithagents/openapi-msw` generates MSW v2 handlers with seeded Faker data from the same spec.
+
+    [openapi-msw guide](/openapi-msw)
+
+  </Card>
   <Card title="Form error mapping" icon="warning">
-    `@codewithagents/api-errors` normalizes every common server error format and wires it to React Hook Form in one call.
+    `@codewithagents/api-errors` normalizes common server error formats and wires them to React Hook Form in one call.
 
     [api-errors guide](/api-errors)
 

@@ -13,7 +13,7 @@ Generate a typed service interface from your OpenAPI 3.x spec. Framework-agnosti
 - **Optional router scaffolding**: set `"framework"` to `"hono"`, `"express"`, or `"fastify"` and get a ready-to-mount router as a starting point. Set `"framework": "none"` (the default) and wire the interface yourself. The generated code only ever imports what you already have.
 - **Type-safe contract**: the compiler tells you if your implementation drifts from the spec. Add an endpoint in the spec and forget to implement it. TypeScript fails the build.
 - **Prettier-clean output**: every generated file passes `prettier --check` out of the box.
-- **OpenAPI 3.x**: 3.1.x primary target, 3.0.x best-effort. Full support for `$ref`, `allOf`, `anyOf`, `oneOf`, `nullable`.
+- **OpenAPI 3.x**: 3.1.x is the primary target; 3.0.x is supported in practice (8 of the 13 showcase specs are 3.0.x and all compile under `tsc --strict`). Full support for `$ref`, `allOf`, `anyOf`, `oneOf`, `nullable`.
 - **TypeScript strict mode**: all output passes `strict: true`.
 
 ---
@@ -27,6 +27,8 @@ npm install -D @codewithagents/openapi-server
 ```
 
 Requires [`openapi-zod-ts`](../openapi-zod-ts). Run both generators together.
+
+> **v2**: the Fastify router now ships as a `FastifyPluginAsyncZod` factory. `createRouter(service)` returns a plugin you mount with `fastify.register(createRouter(service), { prefix })`, with native `fastify-type-provider-zod` validation. See the [CHANGELOG](./CHANGELOG.md) for the full v2 surface.
 
 ---
 
@@ -53,7 +55,7 @@ npx openapi-server
 | File | What it contains |
 |---|---|
 | `service.ts` | TypeScript interface, one method per API operation |
-| `router.ts` | `createRouter(service)` factory, mounts every route on a Hono app |
+| `router.ts` | `createRouter(service)` factory for your chosen framework (`hono`, `express`, or `fastify`). The Quick start below uses Hono as one example. |
 | `_shared/errors.ts` | Shared `HttpError` class (see below) |
 
 Run `openapi-zod-ts` first (or together) so `models.ts` exists before `service.ts` imports from it:
@@ -508,7 +510,7 @@ The same pattern applies to Express error middleware (`app.use((err, req, res, n
 
 ## Shared runtime (`_shared/`) and multi-spec mounting
 
-Every generation run writes one `_shared/errors.ts` file that all generated routers import from. This design ensures that `err instanceof HttpError` works correctly when multiple generated routers are mounted in the same server process — a check that would silently fail if each router defined its own copy of the class.
+Every generation run writes one `_shared/errors.ts` file that all generated routers import from. This design ensures that `err instanceof HttpError` works correctly when multiple generated routers are mounted in the same server process, a check that would silently fail if each router defined its own copy of the class.
 
 ### Where `_shared/` is written
 
@@ -546,9 +548,9 @@ A real-world pattern: two API specs (public and admin) generate into sibling dir
 ```
 
 This writes:
-- `gen/public/router.ts` — imports `HttpError` from `../_shared/errors.js`
-- `gen/admin/router.ts` — imports `HttpError` from `../_shared/errors.js`
-- `gen/_shared/errors.ts` — the single shared `HttpError` class
+- `gen/public/router.ts`: imports `HttpError` from `../_shared/errors.js`
+- `gen/admin/router.ts`: imports `HttpError` from `../_shared/errors.js`
+- `gen/_shared/errors.ts`: the single shared `HttpError` class
 
 **Mounting both routers:**
 
@@ -755,6 +757,8 @@ app.get('/pets', async (c) => {
 
 ### Fastify: the `createContext` auth seam
 
+The canonical full-stack reference app, [`petstore-fastify`](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-fastify), is a live demonstration of this seam: Fastify with `createContext` auth, a cross-field validation rule, and a React/react-query frontend that round-trips a cross-field error onto a form field.
+
 For Fastify, `context_type` is a runtime auth boundary, not just a type. When `context_type` is set, `createRouter` is generic over `Ctx` and **requires** an options object with a `createContext` hook. The concrete principal type is inferred at the call site from your service implementation and `createContext`, so no context type name is baked into the generated file:
 
 ```ts
@@ -848,7 +852,7 @@ When your spec has form-urlencoded request bodies, the generated router auto-reg
 pnpm add @fastify/formbody
 ```
 
-No manual registration needed — `fastify.register(createRouter(service))` handles it.
+No manual registration needed. `fastify.register(createRouter(service))` handles it.
 
 ### multipart/form-data
 
@@ -913,3 +917,19 @@ Set `emit_response_validation: true` in your config to instruct the Fastify emit
 **Limitations.** The synthesizer is intentionally minimal and honest. It does not chase `$ref` pointers or handle composition keywords. Complex schemas fall back to `z.unknown()`, which passes through any value. If your spec uses `$ref` or composition heavily, wire `input_schema` instead for full coverage.
 
 **Recommendation.** Use `input_schema` (point it at the `schemas.ts` from `openapi-zod-ts`) for complete, type-safe response validation. `emit_response_validation` is a lightweight alternative for specs with simple flat inline response schemas where adding a full Zod schema file is not yet practical.
+
+---
+
+## Ecosystem
+
+`@codewithagents/openapi-server` is one of five published packages, all driven from the same OpenAPI 3.x spec. Four are generators that emit files; `api-errors` is a runtime helper used in app code:
+
+| Package | What it does |
+|---|---|
+| [`openapi-zod-ts`](https://www.npmjs.com/package/openapi-zod-ts) | Core generator: TypeScript models + native fetch client + Zod schemas. Required by `openapi-server`. |
+| **`@codewithagents/openapi-server`** | Framework-agnostic service interface + optional `hono` / `express` / `fastify` / `none` (default `none`) router |
+| [`@codewithagents/openapi-react-query`](https://www.npmjs.com/package/@codewithagents/openapi-react-query) | Typed React Query v5 hooks (`useQuery`, `useMutation`, key factories) |
+| [`@codewithagents/openapi-msw`](https://www.npmjs.com/package/@codewithagents/openapi-msw) | MSW v2 HTTP handlers with seeded Faker mock data |
+| [`@codewithagents/api-errors`](https://www.npmjs.com/package/@codewithagents/api-errors) | Maps backend API error responses to form-field errors (runtime helper, not a codegen step) |
+
+See the [`petstore-fastify` demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-fastify) for the canonical full-stack example: Fastify with `createContext` auth, a cross-field validation rule, and a React/react-query frontend, with these packages working together.

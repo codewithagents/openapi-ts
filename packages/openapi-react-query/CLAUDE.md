@@ -1,19 +1,21 @@
 # openapi-react-query
 
-Generate typed React Query v5 hooks from OpenAPI 3.x specs (3.1 primary target, 3.0.x best-effort).
+Published as `@codewithagents/openapi-react-query` (v3.12.1).
+
+Generate typed React Query v5 hooks (`useQuery`, `useMutation`, key factories) from OpenAPI 3.x specs. 3.1.x is the primary target (including 3.1.1); 3.0.x is supported in practice (8 of the 13 showcase specs are 3.0.x and all compile under `tsc --strict`).
 
 ## What it generates (`hooks.ts`)
 - **Key factories** per primary resource: `all()`, `list(params)`, `detail(id)`
 - **`useQuery` hooks** for GET operations
 - **`useMutation` hooks** for POST/PUT/PATCH/DELETE
-- Types fully derived from generated client — no duplication:
+- Types fully derived from the generated client, no duplication:
   - `Awaited<ReturnType<typeof fn>>` for data type
   - `Parameters<typeof fn>[N]` for variables type
 
 ## Dependencies
-- **Runtime dep**: `openapi-zod-ts` (uses `parseSpec`)
+- **Runtime dep**: `openapi-zod-ts` (uses `parseSpec`); these hooks consume the client output that `openapi-zod-ts` emits
 - **Peer dep**: `@tanstack/react-query ^5`
-- Build openapi-zod-ts first: `pnpm --filter openapi-zod-ts build`
+- Build order matters: build `openapi-zod-ts` first, then this package: `pnpm --filter openapi-zod-ts build`
 
 ## Config
 Default: `openapi-react-query.config.json` in CWD. Fields:
@@ -28,11 +30,13 @@ Default: `openapi-react-query.config.json` in CWD. Fields:
 `--config <path>` resolves relative paths from config file's directory (same pattern as openapi-zod-ts).
 
 ## Key non-obvious decisions
-- **Multiple detail ops → operation-name key segment** — when a resource has >1 GET with path params (e.g. `/items/{id}` and `/items/{id}/usage`), each key includes the operation name to prevent cache collisions: `['items', 'getItemById', id]` vs `['items', 'getItemUsage', id]`. Single detail ops keep the canonical `['resource', id]` shape.
-- **`...options` spread before `onSuccess` in auto-invalidate hooks** — so the generated `onSuccess` (which calls `queryClient.invalidateQueries`) always wins; caller's `onSuccess` is composed inside via `options?.onSuccess?.(...args)`.
+- **Multiple detail ops produce an operation-name key segment**: when a resource has >1 GET with path params (e.g. `/items/{id}` and `/items/{id}/usage`), each key includes the operation name to prevent cache collisions: `['items', 'getItemById', id]` vs `['items', 'getItemUsage', id]`. Single detail ops keep the canonical `['resource', id]` shape.
+- **`...options` spread before `onSuccess` in auto-invalidate hooks**, so the generated `onSuccess` (which calls `queryClient.invalidateQueries`) always wins; the caller's `onSuccess` is composed inside via `options?.onSuccess?.(...args)`.
 
 ## Test / build
 ```
-pnpm test    # vitest (47 tests)
+pnpm test    # vitest (~286 it/test blocks across 10 files)
 pnpm build   # tsc + chmod +x dist/cli.js
 ```
+
+Stryker mutation testing runs locally on this package (config: `stryker.config.json`), alongside `openapi-zod-ts`.

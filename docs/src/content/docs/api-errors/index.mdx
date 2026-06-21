@@ -12,14 +12,14 @@ import { PackageManagers } from 'starlight-package-managers'
 
 Three public functions cover all use cases:
 
-| Function                                              | What it does                                                                                                                                   |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `extractErrors(error, options?)`                      | Parses any error shape. Returns `{ fieldErrors, formErrors, format }`. Includes form-level errors and the matched format. Recommended for new code. |
-| `extractFieldErrors(error, options?)`                 | Parses any error shape. Returns normalized `FieldError[]`. Form-level errors fall back to `fallbackField`. Framework-agnostic.                  |
-| `mapApiErrors(error, setError, options?)`             | Calls `extractFieldErrors` internally, then calls RHF `setError` once per field. React Hook Form adapter.                                       |
-| `mapApiErrorsToRecord(error, options?)`               | Returns a `Record<string, string>` mapping field names to their first error message. Vanilla / framework-agnostic adapter.                       |
-| `mapApiErrorsFormik(error, setErrors, options?)`      | Calls Formik's `setErrors` with the record produced by `mapApiErrorsToRecord`. Formik adapter.                                                  |
-| `mapApiErrorsTanstack(error, form, options?)`         | Calls `form.setFieldMeta` for each field to inject server-side errors. TanStack Form v1 adapter.                                                |
+| Function                                         | What it does                                                                                                                                        |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `extractErrors(error, options?)`                 | Parses any error shape. Returns `{ fieldErrors, formErrors, format }`. Includes form-level errors and the matched format. Recommended for new code. |
+| `extractFieldErrors(error, options?)`            | Parses any error shape. Returns normalized `FieldError[]`. Form-level errors fall back to `fallbackField`. Framework-agnostic.                      |
+| `mapApiErrors(error, setError, options?)`        | Calls `extractFieldErrors` internally, then calls RHF `setError` once per field. React Hook Form adapter.                                           |
+| `mapApiErrorsToRecord(error, options?)`          | Returns a `Record<string, string>` mapping field names to their first error message. Vanilla / framework-agnostic adapter.                          |
+| `mapApiErrorsFormik(error, setErrors, options?)` | Calls Formik's `setErrors` with the record produced by `mapApiErrorsToRecord`. Formik adapter.                                                      |
+| `mapApiErrorsTanstack(error, form, options?)`    | Calls `form.setFieldMeta` for each field to inject server-side errors. TanStack Form v1 adapter.                                                    |
 
 Key guarantees:
 
@@ -111,10 +111,10 @@ interface ExtractResult {
 Use `format` to drive conditional rendering: a `null` format means the body shape was not recognized at all, whereas a non-null format with empty arrays means the backend reported no errors.
 
 <Aside type="note">
-  `extractErrors` is the recommended entry point for new code. `extractFieldErrors` remains available
-  for backwards compatibility. The only behavioural difference is that `extractErrors` returns
-  form-level errors in a dedicated `formErrors` channel, while `extractFieldErrors` folds them into
-  `fieldErrors` under `fallbackField`.
+  `extractErrors` is the recommended entry point for new code. `extractFieldErrors` remains
+  available for backwards compatibility. The only behavioural difference is that `extractErrors`
+  returns form-level errors in a dedicated `formErrors` channel, while `extractFieldErrors` folds
+  them into `fieldErrors` under `fallbackField`.
 </Aside>
 
 ### `extractFieldErrors`
@@ -227,16 +227,16 @@ The format is detected automatically. No configuration is required.
 
 Parsers are applied in this order: **custom parsers** (if any) run first; if the body is an array, only the flat-array parser runs; if the body is an object, the following parsers are tried in sequence until the first match:
 
-1. `violations` — RFC 9457 `violations` array
-2. `invalid-params` — RFC 9457 `invalid-params` array
-3. `json-api` — JSON:API `errors` array with `source.pointer`
-4. `rfc7807-map` — RFC 7807 / RFC 9457 `errors` object map
-5. `graphql-extensions` — GraphQL `errors` array with `extensions`
-6. `spring-array` — Spring Boot default validation array
-7. `laravel-drf` — Laravel / DRF top-level field map
-8. `flat-object` — simple `{ field, message }` object
-9. `zod-flatten` — Zod `.flatten()` output shape
-10. `rfc9457-detail` — RFC 9457 top-level `detail` string (last-resort fallback)
+1. `violations`: RFC 9457 `violations` array
+2. `invalid-params`: RFC 9457 `invalid-params` array
+3. `json-api`: JSON:API `errors` array with `source.pointer`
+4. `rfc7807-map`: RFC 7807 / RFC 9457 `errors` object map
+5. `graphql-extensions`: GraphQL `errors` array with `extensions`
+6. `spring-array`: Spring Boot default validation array
+7. `laravel-drf`: Laravel / DRF top-level field map
+8. `flat-object`: simple `{ field, message }` object
+9. `zod-flatten`: Zod `.flatten()` output shape
+10. `rfc9457-detail`: RFC 9457 top-level `detail` string (last-resort fallback)
 
 The first parser that returns a non-null result wins. The exact ordering is implementation-defined and may change between minor versions if disambiguation requires it; do not write code that depends on one parser being preferred over another for ambiguous shapes.
 
@@ -401,7 +401,7 @@ Before parsing, the following wrappers are stripped:
 
 | Wrapper shape                       | Detected by                                                                                                       |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `{ status: number, body: unknown }` | `ApiError` from `openapi-zod-ts`                                                                     |
+| `{ status: number, body: unknown }` | `ApiError` from `openapi-zod-ts`                                                                                  |
 | `{ response: { data: ... } }`       | Axios-style error objects                                                                                         |
 | `{ data: ... }`                     | Generic response wrappers (only when `data` is a plain object and `field` / `errors` are absent at the top level) |
 
@@ -430,7 +430,12 @@ import { mapApiErrors } from '@codewithagents/api-errors'
 type FormValues = { email: string; name: string }
 
 function SignupForm() {
-  const { register, handleSubmit, setError, formState: { errors } } = useForm<FormValues>()
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<FormValues>()
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -457,10 +462,7 @@ function SignupForm() {
 Returns a `Record<string, string>` mapping each field to its first error message. Useful for any custom form library or imperative error handling. Only field errors are included; for form-level errors use `extractErrors`.
 
 ```typescript
-function mapApiErrorsToRecord(
-  error: unknown,
-  options?: MapApiErrorsOptions
-): Record<string, string>
+function mapApiErrorsToRecord(error: unknown, options?: MapApiErrorsOptions): Record<string, string>
 ```
 
 ```typescript
@@ -544,12 +546,19 @@ function SignupForm() {
   })
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit() }}>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        form.handleSubmit()
+      }}
+    >
       <form.Field name="email">
         {(field) => (
           <>
             <input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} />
-            {field.state.meta.errors.map((e) => <p key={e}>{e}</p>)}
+            {field.state.meta.errors.map((e) => (
+              <p key={e}>{e}</p>
+            ))}
           </>
         )}
       </form.Field>
@@ -832,7 +841,7 @@ function SignupForm() {
 
   </Card>
   <Card title="Server interface" icon="laptop">
-    `@codewithagents/openapi-server` generates typed Express and Fastify routers. The server emits the RFC 7807 / RFC 9457 error shapes that `api-errors` parses on the client.
+    `@codewithagents/openapi-server` generates a framework-agnostic service interface plus an optional router for Fastify, Hono, or Express (`none` by default). The server emits the RFC 7807 / RFC 9457 error shapes that `api-errors` parses on the client.
 
     [Learn more](/openapi-server)
 

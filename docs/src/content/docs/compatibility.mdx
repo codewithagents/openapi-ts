@@ -9,13 +9,13 @@ The generator is tested against 128 real-world public API specs on every relevan
 
 ## OpenAPI version support
 
-| Version                         | Support level                                                                                                                                                                                                   |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| OpenAPI 3.1.x (including 3.1.1) | Primary target. Full support.                                                                                                                                                                                   |
+| Version                         | Support level                                                                                                                                                                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OpenAPI 3.1.x (including 3.1.1) | Primary target. Full support.                                                                                                                                                                                                                           |
 | OpenAPI 3.0.x                   | Supported in practice. 8 of the 13 showcase specs are 3.0.x and all compile under `tsc --strict`. Most 3.0-only constructs (including `nullable: true`) are normalized to their 3.1 equivalents; a few remaining 3.0 edge cases are still being closed. |
-| OpenAPI 2.0 (Swagger)           | Not supported.                                                                                                                                                                                                  |
+| OpenAPI 2.0 (Swagger)           | Not supported.                                                                                                                                                                                                                                          |
 
-OpenAPI 3.1 is the primary target across all packages in the suite.
+OpenAPI 3.1 is the primary target across all packages in the suite. The same spec corpus and the same 3.1-primary support underpin the sibling generators that consume these specs: `openapi-server`, `openapi-react-query`, and `openapi-msw`.
 
 ## The compatibility matrix
 
@@ -61,7 +61,7 @@ The two tiers provide different guarantees.
 - Output is committed to `examples/generated/` and tracked in git.
 - The Showcase workflow regenerates them and runs `git diff --exit-code`. Any behavior change that affects output fails CI immediately.
 - All generated files pass `tsc --noEmit --strict` (TypeScript strict mode, no emit).
-- Runs on every PR that touches `packages/openapi-zod-ts/**`, `packages/openapi-react-query/**`, `packages/openapi-server/**`, or `examples/**`, plus a weekly run on Monday at 6am UTC to catch upstream spec drift.
+- Runs on every PR that touches `packages/openapi-zod-ts/**`, `packages/openapi-react-query/**`, `packages/openapi-server/**`, `packages/openapi-msw/**`, or `examples/**`, plus a weekly run on Monday at 6am UTC to catch upstream spec drift.
 
 **Compatibility matrix specs (115):**
 

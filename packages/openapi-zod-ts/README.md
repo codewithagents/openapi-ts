@@ -9,11 +9,11 @@
 
 Generate TypeScript types, a typed native `fetch` client, and Zod validation from your OpenAPI spec. Zero runtime footprint. Part of a full-pipeline suite tested against 128 real-world specs.
 
-- **Tested against 128 real-world specs**: Stripe, GitHub, Spotify, OpenAI, Adyen, Twilio, Slack, Vercel, and more generate without errors on every PR. See the [`examples/`](../../examples/) directory.
+- **Tested against 128 real-world specs**: Stripe, GitHub, Spotify, OpenAI, Adyen, Twilio, Slack, Vercel, and more generate without errors on every PR. 13 of the 128 are showcase specs whose generated output is committed, drift-checked, and typechecked under `tsc --strict`. See the [`examples/`](../../examples/) directory.
 - **Zero runtime footprint**: generated code uses only `fetch`. No axios, no wrapper libraries.
 - **Prettier-clean output**: every generated file passes `prettier --check` out of the box. Commit it, lint it, ship it.
 - **SSR-ready**: every generated function accepts a per-request config override. No global singleton mutation.
-- **OpenAPI 3.x**: 3.1.x primary target (3.1.1 supported), 3.0.x best-effort. Full support for `$ref`, `allOf`, `anyOf`, `oneOf`, `nullable`.
+- **OpenAPI 3.x**: 3.1.x is the primary target (including 3.1.1); 3.0.x is supported in practice, with a few 3.0-only constructs still being normalized to 3.1 semantics. Full support for `$ref`, `allOf`, `anyOf`, `oneOf`, `nullable`.
 - **TypeScript strict mode**: all output passes `strict: true`.
 
 ---
@@ -22,16 +22,17 @@ Generate TypeScript types, a typed native `fetch` client, and Zod validation fro
 
 Most OpenAPI generators either produce types only (you still need to write the fetch calls yourself) or add framework weight such as axios adapters and runtime wrappers. `openapi-zod-ts` generates a complete, ready-to-use typed `fetch` client alongside the types, with nothing added to your runtime bundle.
 
-It is also the foundation of a full pipeline. Combine it with [`@codewithagents/openapi-react-query`](https://npmjs.com/package/@codewithagents/openapi-react-query) for React Query hooks and [`@codewithagents/openapi-server`](https://npmjs.com/package/@codewithagents/openapi-server) for a typed server interface. All three share one spec and one output directory.
+It is also the foundation of a full pipeline. It sits at the head of four generators that all read one spec and write to one output directory: this package, [`@codewithagents/openapi-server`](https://npmjs.com/package/@codewithagents/openapi-server) for a typed server interface, [`@codewithagents/openapi-react-query`](https://npmjs.com/package/@codewithagents/openapi-react-query) for React Query hooks, and [`@codewithagents/openapi-msw`](https://npmjs.com/package/@codewithagents/openapi-msw) for MSW mock handlers.
 
 | Package | What it generates |
 |---|---|
 | **`openapi-zod-ts`** | TypeScript types + native `fetch` client + Zod validation |
 | [`@codewithagents/openapi-react-query`](https://npmjs.com/package/@codewithagents/openapi-react-query) | React Query v5 hooks (`useQuery`, `useMutation`, key factories) |
-| [`@codewithagents/openapi-server`](https://npmjs.com/package/@codewithagents/openapi-server) | Framework-agnostic service interface + optional Hono router |
+| [`@codewithagents/openapi-server`](https://npmjs.com/package/@codewithagents/openapi-server) | Framework-agnostic service interface + optional router (`hono` \| `express` \| `fastify` \| `none`, default `none`) |
+| [`@codewithagents/openapi-msw`](https://www.npmjs.com/package/@codewithagents/openapi-msw) | MSW v2 HTTP handlers with seeded Faker mock data |
 | [`@codewithagents/api-errors`](https://npmjs.com/package/@codewithagents/api-errors) | Maps API error responses to form field errors |
 
-See the [petstore demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-hono) for a full-stack example using all four packages.
+See the [petstore-fastify demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-fastify) for a full-stack example with the generators working together.
 
 ---
 
@@ -239,6 +240,12 @@ Options:
   --input <path>    Path to OpenAPI spec file (overrides config input_openapi)
   --output <dir>    Output directory (overrides config output)
   --watch           Re-run generation on spec file changes (Ctrl-C to exit)
+  --check           Read-only drift gate: write nothing, treat any drift as an
+                    error, exit non-zero if regeneration would change committed
+                    output (cannot be combined with --watch or --reset-schema)
+  --reset-schema    Re-bootstrap the user-owned Zod schema file (input_schema)
+                    from the spec, overwriting it (cannot be combined with
+                    --check or --watch)
   --help, -h        Show this help message
   --version, -v     Show version number
 ```
@@ -260,6 +267,19 @@ npx openapi-zod-ts --config ./openapi-zod-ts.config.json --input ./v2/openapi.ya
 ```bash
 npx openapi-zod-ts --watch
 npx openapi-zod-ts --input ./openapi.yaml --output ./src/api --watch
+```
+
+**`--check`** is a read-only drift gate for CI. It runs generation in memory, writes nothing, and exits non-zero if regenerating would change the committed output (for example, the spec changed but the generated files were not regenerated, or `input_schema` drifted from the spec). Use it as a PR gate so contract drift fails the build instead of landing silently. It cannot be combined with `--watch` (read-only one-shot, not a continuous mode) or with `--reset-schema` (which writes):
+
+```bash
+npx openapi-zod-ts --check
+npx openapi-zod-ts --config ./openapi-zod-ts.config.json --check
+```
+
+**`--reset-schema`** re-bootstraps the user-owned `input_schema` file from the spec, overwriting it with a fresh bootstrap. This is the destructive remedy that drift messages point to: it replaces any customizations in the schema file, so reach for it only when you want to start the schema over from the current spec. It is one-shot, so it cannot be combined with `--watch`, and it cannot be combined with `--check` (which is read-only):
+
+```bash
+npx openapi-zod-ts --reset-schema
 ```
 
 ---
@@ -442,13 +462,14 @@ export const CreatePetFormSchema = CreatePetRequestSchema.extend({
 
 ## Ecosystem
 
-These packages work together, all driven from the same OpenAPI 3.x spec:
+These packages work together, all driven from the same OpenAPI 3.x spec. Four of them are generators that emit files from the spec; `api-errors` is a runtime helper you call in app code:
 
 | Package | What it generates |
 |---|---|
 | **`openapi-zod-ts`** | TypeScript models + native fetch client + Zod schemas |
 | [`@codewithagents/openapi-react-query`](https://www.npmjs.com/package/@codewithagents/openapi-react-query) | React Query v5 hooks (`useQuery`, `useMutation`, key factories) |
-| [`@codewithagents/openapi-server`](https://www.npmjs.com/package/@codewithagents/openapi-server) | Framework-agnostic service interface + optional Hono router |
+| [`@codewithagents/openapi-server`](https://www.npmjs.com/package/@codewithagents/openapi-server) | Framework-agnostic service interface + optional router (`hono` \| `express` \| `fastify` \| `none`, default `none`) |
+| [`@codewithagents/openapi-msw`](https://www.npmjs.com/package/@codewithagents/openapi-msw) | MSW v2 HTTP handlers with seeded Faker mock data |
 | [`@codewithagents/api-errors`](https://www.npmjs.com/package/@codewithagents/api-errors) | Maps API error responses to form field errors |
 
-See the [petstore demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-hono) for a full-stack example using all four packages together.
+See the [petstore-fastify demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-fastify) for a full-stack example with the generators working together.
