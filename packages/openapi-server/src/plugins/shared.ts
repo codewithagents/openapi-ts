@@ -249,6 +249,18 @@ function applyDeepObjectStyle(
   param.tsType = `{ ${propFields} }`
 }
 
+/**
+ * Map an array item's tsType to the service-facing element type, mirroring the Fastify
+ * router's z.array(<itemExpr>) item coercion in queryParamItemExpr (number -> number,
+ * boolean -> boolean, everything else validates as z.string() -> string). Keeps the
+ * service query type in lockstep with req.query so the router can forward it without TS2322.
+ */
+function queryArrayItemTsType(itemsTsType: string | undefined): string {
+  if (itemsTsType === 'number') return 'number'
+  if (itemsTsType === 'boolean') return 'boolean'
+  return 'string'
+}
+
 /** Apply delimiter or plain-array classification to a query param, mutating it in place. */
 function applyArrayStyle(
   param: QueryParam,
@@ -269,6 +281,9 @@ function applyArrayStyle(
       // style:form with explode:false = CSV (default for arrays when explode:false).
       param.delimiterStyle = 'csv'
     }
+    // Delimited arrays arrive as a single string and are split + validated as z.array(z.string())
+    // regardless of item type. The service type must match.
+    param.tsType = 'string[]'
     return
   }
 
@@ -277,6 +292,12 @@ function applyArrayStyle(
   const arraySchema = schema as OpenAPIV3_1.ArraySchemaObject
   const items = arraySchema.items
   param.itemsTsType = !isRef(items) ? schemaToTsType(items as OpenAPIV3_1.SchemaObject) : 'string'
+  // Align the service query type with the Fastify router's z.array(<itemExpr>) inference (#375):
+  // number/integer items -> number[], boolean -> boolean[], everything else -> string[]. NOTE:
+  // the hono/express routers do not yet emit array querystring handling for explode:true params
+  // (they extract a single string), a pre-existing gap tracked in #377, so this element type
+  // only round-trips cleanly on the Fastify target.
+  param.tsType = `${queryArrayItemTsType(param.itemsTsType)}[]`
 }
 
 /**
@@ -334,6 +355,56 @@ export function getQueryParams(
     result.push(param)
   }
   return result
+}
+
+// ── Path-item validation ──────────────────────────────────────────────────────
+
+/**
+ * True when a path-item is a usable Path Item Object: a non-null, non-array object. Arrays,
+ * primitives, and null are malformed and cause every operation collector to skip the whole path
+ * (pathItem[method] is undefined, or throws for null). objectPathItemEntries filters on this, and
+ * warnOnNonObjectPathItems surfaces the drop (#375). A $ref path item is an object and passes
+ * here (it is simply unsupported by the collectors, out of scope), as is an operation-less {}.
+ */
+function isPathItemObject(pathItem: unknown): boolean {
+  return pathItem !== null && typeof pathItem === 'object' && !Array.isArray(pathItem)
+}
+
+/**
+ * Entries of spec.paths whose path-item is a usable Path Item Object, in declaration order.
+ * Malformed entries (array/null/primitive) are filtered out here so every operation collector
+ * iterates only valid path items without repeating a guard, and pathItem[method] never throws.
+ * warnOnNonObjectPathItems separately surfaces the dropped entries as a diagnostic (#375).
+ */
+export function objectPathItemEntries(
+  spec: OpenAPIV3_1.Document
+): Array<[string, Record<string, unknown>]> {
+  const paths = spec.paths as Record<string, unknown> | undefined
+  if (paths === undefined) return []
+  return Object.entries(paths).filter((entry): entry is [string, Record<string, unknown>] =>
+    isPathItemObject(entry[1])
+  )
+}
+
+/**
+ * Warn for each path-item that is not a valid Path Item Object (e.g. a JSON array, primitive,
+ * or null). Such entries are silently skipped by every operation collector because
+ * pathItem[method] is undefined, dropping ALL of that path's operations with no diagnostic.
+ * Emitting a named warning surfaces the drop instead of losing it silently (#375). A valid
+ * but operation-less path item ({} or { parameters, description }) is a legitimate object and
+ * does not warn; a $ref path item is also an object and is left alone (out of scope).
+ */
+export function warnOnNonObjectPathItems(spec: OpenAPIV3_1.Document): void {
+  const paths = spec.paths as Record<string, unknown> | undefined
+  if (paths === undefined) return
+  for (const [path, pathItem] of Object.entries(paths)) {
+    if (isPathItemObject(pathItem)) continue
+    const kind = pathItem === null ? 'null' : Array.isArray(pathItem) ? 'array' : typeof pathItem
+    console.warn(
+      `Path "${path}" is not a valid Path Item Object (got ${kind}); all of its operations ` +
+        'were skipped. Check the spec for a malformed path entry.'
+    )
+  }
 }
 
 // ── Body info ─────────────────────────────────────────────────────────────────

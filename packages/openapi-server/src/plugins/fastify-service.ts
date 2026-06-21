@@ -23,6 +23,7 @@ import {
   getQueryParams,
   type BodyInfo,
   getBodyInfo,
+  objectPathItemEntries,
 } from './shared.js'
 import { escapeJsDocString, deriveEffectiveSecurity } from './security-meta.js'
 
@@ -241,12 +242,9 @@ interface OperationInfo {
 // Parallel operation collector to service.ts; each emitter owns its own collection pass.
 function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
   // fallow-ignore-next-line code-duplication
-  const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
-  if (paths === undefined) return []
-
   const operations: OperationInfo[] = []
 
-  for (const [path, pathItem] of Object.entries(paths)) {
+  for (const [path, pathItem] of objectPathItemEntries(spec)) {
     for (const method of SUPPORTED_METHODS) {
       const operation = pathItem[method] as OperationObject | undefined
       if (operation === undefined) continue

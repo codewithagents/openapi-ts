@@ -32,6 +32,7 @@ import {
   getQueryParams,
   type BodyInfo,
   getBodyInfo,
+  objectPathItemEntries,
 } from './shared.js'
 import { deriveEffectiveSecurity } from './security-meta.js'
 import {
@@ -216,12 +217,10 @@ function getResponseTypeName(
 // ── Operation collection ──────────────────────────────────────────────────────
 
 function collectOperations(spec: OpenAPIV3_1.Document, schemaNames?: Set<string>): RouteOperation[] {
-  const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
-  if (paths === undefined) return []
-
+  // fallow-ignore-next-line code-duplication
   const operations: RouteOperation[] = []
 
-  for (const [path, pathItem] of Object.entries(paths)) {
+  for (const [path, pathItem] of objectPathItemEntries(spec)) {
     for (const method of SUPPORTED_METHODS) {
       const operation = pathItem[method] as OperationObject | undefined
       if (operation === undefined) continue
