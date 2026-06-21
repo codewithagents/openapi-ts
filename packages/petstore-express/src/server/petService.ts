@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { PetstoreService } from '../../generated/service.js'
 import type { Pet } from '../../generated/models.js'
+import { HttpError } from '../../generated/router.js'
 
 const pets = new Map<string, Pet>()
 
@@ -19,7 +20,9 @@ export const petService: PetstoreService = {
   },
   async getPet(id) {
     const pet = pets.get(id)
-    if (!pet) throw new Error(`Pet ${id} not found`)
+    // HttpError is recognised by the generated router and mapped to its status as JSON,
+    // so a missing pet returns 404 (not a 500 from a plain Error), matching fastify and hono.
+    if (!pet) throw new HttpError(404, `Pet ${id} not found`)
     return pet
   },
   async deletePet(id) {
