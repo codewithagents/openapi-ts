@@ -127,7 +127,7 @@ describe('generateFastifyRouter: array query params (#348)', () => {
     expect(content).toContain('ids: z.array(z.string()).optional()')
   })
 
-  it('handler forwards req.query to the service call', () => {
+  it('handler forwards req.query to the service call inside the input object', () => {
     const spec = makeSpec({
       '/items': {
         get: {
@@ -145,8 +145,9 @@ describe('generateFastifyRouter: array query params (#348)', () => {
       },
     })
     const { content } = generateFastifyRouter(spec)
-    // The service call must receive req.query (not individual extracted fields)
-    expect(content).toContain('service.getItems(req.query)')
+    // The service call receives req.query as the query facet of the input object.
+    // ZodTypeProvider narrows req.query from schema.querystring so arrays are typed T[].
+    expect(content).toContain('service.getItems({ query: req.query })')
   })
 
   it('array param does not produce a preValidation hook (no reshaping needed)', () => {

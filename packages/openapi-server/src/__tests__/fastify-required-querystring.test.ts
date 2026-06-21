@@ -87,12 +87,12 @@ describe('Fastify type-provider: required querystring params are narrowed (#344)
 
   it('handler forwards req.query (narrowed by ZodTypeProvider) to the service call', () => {
     const { content } = generateFastifyRouter(spec)
-    // The handler must pass req.query directly; ZodTypeProvider infers the narrowed type
-    // from schema.querystring, so required fields are non-undefined in the service arg.
-    expect(content).toContain('service.searchItems(req.query)')
-    // Must NOT use a reconstructed object with individual field accesses (which could
-    // re-introduce the X | undefined leak if fields were pulled from the raw query).
-    expect(content).not.toContain('searchItems({')
+    // The handler wraps the narrowed req.query inside the single input object.
+    // ZodTypeProvider infers the narrowed type from schema.querystring so required
+    // fields are non-undefined in the service arg.
+    expect(content).toContain('service.searchItems({ query: req.query })')
+    // The old positional shape (passing req.query as a bare first arg) must not appear.
+    expect(content).not.toContain('service.searchItems(req.query)')
   })
 
   it('querystring schema block wraps all query params in z.object({ ... })', () => {
@@ -133,6 +133,6 @@ describe('Fastify: mixed required + optional query params in one operation', () 
 
   it('handler forwards the narrowed req.query to the service', () => {
     const { content } = generateFastifyRouter(mixedSpec)
-    expect(content).toContain('service.listItems(req.query)')
+    expect(content).toContain('service.listItems({ query: req.query })')
   })
 })

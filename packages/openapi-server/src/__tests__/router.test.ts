@@ -1097,7 +1097,7 @@ describe('generateFastifyRouter', () => {
     expect(result.content).toContain('"/pets/:id"')
   })
 
-  it('path param extracted via req.params dot notation', () => {
+  it('path param forwarded as { params: req.params } in the service call', () => {
     const spec = makeSpec({
       '/pets/{id}': {
         get: {
@@ -1108,7 +1108,8 @@ describe('generateFastifyRouter', () => {
       },
     })
     const result = generateFastifyRouter(spec)
-    expect(result.content).toContain('req.params.id')
+    // New input-object shape: path params bundled as { params: req.params }.
+    expect(result.content).toContain('service.getPet({ params: req.params })')
   })
 
   it('path param adds a params schema (z.string())', () => {
@@ -1453,7 +1454,8 @@ describe('generateFastifyRouter with schemaNames (Zod validation)', () => {
     })
     // req.body is validated by the validatorCompiler and typed by the ZodTypeProvider; we cast
     // to the declared model type for the service call (specific and safe, since validation ran).
-    expect(result.content).toContain('service.createPet(req.body as CreatePetRequest)')
+    // New input-object shape bundles body as a facet.
+    expect(result.content).toContain('service.createPet({ body: req.body as CreatePetRequest })')
   })
 
   it('uses native validation (no hand-rolled 422 envelope for the body)', () => {
@@ -1482,13 +1484,15 @@ describe('generateFastifyRouter with schemaNames (Zod validation)', () => {
       schemaImportPath: './schemas.js',
     })
     expect(result.content).not.toContain('safeParse')
-    expect(result.content).toContain('service.createPet(req.body')
+    // New input-object shape: body facet is present even when schema falls back.
+    expect(result.content).toContain('service.createPet({ body: req.body')
   })
 
   it('falls back to req.body when options is undefined', () => {
     const result = generateFastifyRouter(postSpec)
     expect(result.content).not.toContain('safeParse')
-    expect(result.content).toContain('service.createPet(req.body')
+    // New input-object shape: body facet is present even when no options are passed.
+    expect(result.content).toContain('service.createPet({ body: req.body')
   })
 })
 
@@ -2218,10 +2222,10 @@ describe('context type option (issue #310)', () => {
       expect(content).toContain('service.listPets(ctx)')
     })
 
-    it('path-param route passes path param then ctx: service.getPet(req.params.id, ctx)', () => {
+    it('path-param route passes path params inside input object, ctx follows: service.getPet({ params: req.params }, ctx)', () => {
       const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
-      // Fastify uses dot notation for path params; ctx (from createContext) is appended last
-      expect(content).toContain('service.getPet(req.params.id, ctx)')
+      // New input-object shape: params bundled inside input; ctx (from createContext) follows separately.
+      expect(content).toContain('service.getPet({ params: req.params }, ctx)')
     })
   })
 
@@ -2261,10 +2265,11 @@ describe('context type option (issue #310)', () => {
       expect(content).toContain("service.updatePet((req.params['id'] as string), body, params, req)")
     })
 
-    it('Fastify: arg order is path, body, query params, ctx (from createContext)', () => {
+    it('Fastify: all request dimensions bundled inside single input object, ctx follows', () => {
       const { content } = generateFastifyRouter(fullArgSpec, { contextType: 'RequestContext' })
-      // Fastify dot notation for path param; body is req.body (cast to model); query is req.query; ctx from createContext
-      expect(content).toContain('service.updatePet(req.params.id, req.body as UpdatePetRequest, req.query, ctx)')
+      // New input-object shape: params, body, query are facets of a single required input;
+      // ctx (from createContext) is a separate trailing arg. Eliminates TS1016.
+      expect(content).toContain('service.updatePet({ params: req.params, body: req.body as UpdatePetRequest, query: req.query }, ctx)')
     })
   })
 })
@@ -2866,7 +2871,8 @@ describe('generateFastifyRouter zero-cast path (zeroCast: true)', () => {
   it('passes req.body without a cast to the service call', () => {
     const result = generateFastifyRouter(postSpec, zeroOpts)
     // Zero-cast: no `as CreatePetRequest`, no `as any`.
-    expect(result.content).toContain('service.createPet(req.body)')
+    // New input-object shape bundles body as a facet.
+    expect(result.content).toContain('service.createPet({ body: req.body })')
     expect(result.content).not.toContain('req.body as CreatePetRequest')
     expect(result.content).not.toContain('req.body as any')
   })
