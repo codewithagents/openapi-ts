@@ -2190,22 +2190,31 @@ describe('context type option (issue #310)', () => {
   })
 
   describe('Fastify — with contextType', () => {
-    it('createRouter signature uses the generic service reference and returns FastifyPluginAsyncZod', () => {
+    it('createRouter signature uses the generic service reference and required options: CreateRouterOptions<Ctx>', () => {
       const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
+      // options is required (no ?) when contextType is set because createContext is required
       expect(content).toContain(
-        'createRouter(service: PetStoreService<RequestContext>, options?: CreateRouterOptions): FastifyPluginAsyncZod'
+        'createRouter(service: PetStoreService<RequestContext>, options: CreateRouterOptions<RequestContext>): FastifyPluginAsyncZod'
       )
     })
 
-    it('service calls pass req as the final argument (only arg for GET /pets)', () => {
+    it('emits CreateRouterOptions<Ctx = never> generic interface with createContext field when contextType set', () => {
       const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
-      expect(content).toContain('service.listPets(req)')
+      expect(content).toContain('export interface CreateRouterOptions<Ctx = never> {')
+      expect(content).toContain('createContext: (req: FastifyRequest) => Ctx | Promise<Ctx>')
     })
 
-    it('path-param route passes path param then req: service.getPet(req.params.id, req)', () => {
+    it('service calls pass ctx (from createContext) as the final argument (only arg for GET /pets)', () => {
       const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
-      // Fastify uses dot notation for path params; ctx (req) is appended last
-      expect(content).toContain('service.getPet(req.params.id, req)')
+      // createContext is called first, result is ctx; service receives ctx not raw req
+      expect(content).toContain('const ctx = await options.createContext(req)')
+      expect(content).toContain('service.listPets(ctx)')
+    })
+
+    it('path-param route passes path param then ctx: service.getPet(req.params.id, ctx)', () => {
+      const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
+      // Fastify uses dot notation for path params; ctx (from createContext) is appended last
+      expect(content).toContain('service.getPet(req.params.id, ctx)')
     })
   })
 
@@ -2245,10 +2254,10 @@ describe('context type option (issue #310)', () => {
       expect(content).toContain("service.updatePet((req.params['id'] as string), body, params, req)")
     })
 
-    it('Fastify: arg order is path, body, query params, req', () => {
+    it('Fastify: arg order is path, body, query params, ctx (from createContext)', () => {
       const { content } = generateFastifyRouter(fullArgSpec, { contextType: 'RequestContext' })
-      // Fastify dot notation for path param; body is req.body (cast to model); query is req.query; ctx is req
-      expect(content).toContain('service.updatePet(req.params.id, req.body as UpdatePetRequest, req.query, req)')
+      // Fastify dot notation for path param; body is req.body (cast to model); query is req.query; ctx from createContext
+      expect(content).toContain('service.updatePet(req.params.id, req.body as UpdatePetRequest, req.query, ctx)')
     })
   })
 })

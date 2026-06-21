@@ -86,6 +86,12 @@ interface RouteOperation {
   responseIsArray?: boolean
   /** Raw OpenAPI operation object for schema.params resolution. */
   rawOperation: OperationObject
+  /**
+   * Effective security requirements for this operation, derived from
+   * operation.security if present, otherwise from the global spec.security.
+   * Each entry is a { scheme, scopes } pair. Empty array means no security.
+   */
+  effectiveSecurity: Array<{ scheme: string; scopes: string[] }>
 }
 
 interface RouterOptions {
@@ -362,6 +368,38 @@ function getResponseTypeName(
 
 // ── Operation collection ──────────────────────────────────────────────────────
 
+/**
+ * Escape a string for safe inclusion in a JSDoc comment block.
+ * The only sequence that can break out of a JSDoc block is the closing marker.
+ * Replace any occurrence of that sequence with a harmless stand-in.
+ */
+function escapeJsDocString(value: string): string {
+  return value.replace(/\*\//g, '*\\/').replace(/\r?\n/g, ' ')
+}
+
+/**
+ * Derive the effective security requirements for an operation.
+ * operation.security overrides the global spec.security when present.
+ * Each SecurityRequirementObject (Record<string, string[]>) is expanded into
+ * one { scheme, scopes } entry per key.
+ */
+function deriveEffectiveSecurity(
+  operation: OperationObject,
+  spec: OpenAPIV3_1.Document
+): Array<{ scheme: string; scopes: string[] }> {
+  const rawSecurity =
+    (operation.security as Array<Record<string, string[]>> | undefined) ??
+    (spec.security as Array<Record<string, string[]>> | undefined)
+  if (rawSecurity === undefined || rawSecurity.length === 0) return []
+  const result: Array<{ scheme: string; scopes: string[] }> = []
+  for (const req of rawSecurity) {
+    for (const [scheme, scopes] of Object.entries(req)) {
+      result.push({ scheme, scopes: Array.isArray(scopes) ? scopes : [] })
+    }
+  }
+  return result
+}
+
 function collectOperations(spec: OpenAPIV3_1.Document, schemaNames?: Set<string>): RouteOperation[] {
   const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
   if (paths === undefined) return []
@@ -382,6 +420,7 @@ function collectOperations(spec: OpenAPIV3_1.Document, schemaNames?: Set<string>
       const responseStatus = getResponseStatus(operation, method)
       // Pass schemaNames so synthesized response schema names are recognised.
       const responseTypeInfo = getResponseTypeName(operation, schemaNames)
+      const effectiveSecurity = deriveEffectiveSecurity(operation, spec)
 
       operations.push({
         methodName,
@@ -397,6 +436,7 @@ function collectOperations(spec: OpenAPIV3_1.Document, schemaNames?: Set<string>
         responseTypeName: responseTypeInfo?.typeName,
         responseIsArray: responseTypeInfo?.isArray,
         rawOperation: operation,
+        effectiveSecurity,
       })
     }
   }
@@ -713,7 +753,8 @@ function buildPreValidationLines(queryParams: QueryParam[]): string[] | undefine
 function buildRouteOptions(
   schemaParts: string[],
   preValidationLines: string[] | undefined,
-  methodName: string
+  methodName: string,
+  effectiveSecurity: Array<{ scheme: string; scopes: string[] }>
 ): string {
   const parts: string[] = []
   if (schemaParts.length > 0) {
@@ -722,7 +763,14 @@ function buildRouteOptions(
   if (preValidationLines !== undefined) {
     parts.push(`preValidation: async (req) => {\n${preValidationLines.join('\n')}\n    }`)
   }
-  parts.push(`config: { operationId: '${methodName}' }`)
+  // config.security surfaces the effective security metadata at runtime via
+  // req.routeOptions.config.security so hooks and createContext can inspect it.
+  if (effectiveSecurity.length > 0) {
+    const securityJson = JSON.stringify(effectiveSecurity)
+    parts.push(`config: { operationId: '${methodName}', security: ${securityJson} }`)
+  } else {
+    parts.push(`config: { operationId: '${methodName}' }`)
+  }
   return `{ ${parts.join(', ')} }`
 }
 
@@ -856,10 +904,17 @@ function buildFastifyTypeProviderHandler(
     schemaParts.push(`response: { ${op.responseStatus.status}: ${responseSchemaExpr} }`)
   }
 
-  const routeOpts = buildRouteOptions(schemaParts, preValidationLines, op.methodName)
+  const routeOpts = buildRouteOptions(schemaParts, preValidationLines, op.methodName, op.effectiveSecurity)
   lines.push(
     `${indent}app.${op.httpMethod}(${JSON.stringify(op.honoPath)}, ${routeOpts}, async (req, reply) => {`
   )
+
+  // ── Context creation (createContext seam): when contextType is set, call
+  //    options.createContext(req) first so auth rejection short-circuits before
+  //    any other handler work. The result is passed as the last service arg.
+  if (contextType !== undefined) {
+    lines.push(`${inner}const ctx = await options.createContext(req)`)
+  }
 
   // ── Cookie validation (manual _ckv: Fastify 5's FastifySchema has no cookie slot,
   //    so cookie params cannot go through the type-provider path. Read via a guarded
@@ -962,9 +1017,10 @@ function buildFastifyTypeProviderHandler(
     serviceArgs.push('_ckv.data')
   }
 
-  // Context: pass Fastify Request object when contextType is set.
+  // Context: pass the createContext-derived ctx when contextType is set.
+  // ctx was produced above by `const ctx = await options.createContext(req)`.
   if (contextType !== undefined) {
-    serviceArgs.push('req')
+    serviceArgs.push('ctx')
   }
 
   const serviceCall = `service.${op.methodName}(${serviceArgs.join(', ')})`
@@ -1109,10 +1165,11 @@ export function generateFastifyRouter(
     lines.push(`import { ${sortedUsedSchemas.join(', ')} } from '${options.schemaImportPath}'`)
   }
   lines.push('')
-  // Augment FastifyContextConfig so that config: { operationId } on each route is type-safe (#309).
+  // Augment FastifyContextConfig so that config: { operationId, security } on each route is type-safe.
   lines.push("declare module 'fastify' {")
   lines.push('  interface FastifyContextConfig {')
   lines.push('    operationId?: string')
+  lines.push('    security?: Array<{ scheme: string; scopes: string[] }>')
   lines.push('  }')
   lines.push('}')
   const errorsImportPath = options?.errorsImportPath ?? './_shared/errors.js'
@@ -1122,7 +1179,23 @@ export function generateFastifyRouter(
   lines.push('')
   // Emit the CreateRouterOptions escape hatch so callers can override compilers/errorHandler
   // and control parser registration without having to re-implement the whole plugin.
-  lines.push('export interface CreateRouterOptions {')
+  // When context_type is set, the interface is generic and adds the required createContext field.
+  const optionsInterfaceDecl = ctx !== undefined
+    ? 'export interface CreateRouterOptions<Ctx = never> {'
+    : 'export interface CreateRouterOptions {'
+  lines.push(optionsInterfaceDecl)
+  if (ctx !== undefined) {
+    lines.push('  /**')
+    lines.push('   * Produce a typed request context from the raw Fastify request.')
+    lines.push('   * Called at the start of every route handler, before param extraction.')
+    lines.push('   * Throw an HttpError(401) (or any error) here to reject the request.')
+    lines.push('   * The returned value is passed as the final ctx argument to every service method.')
+    lines.push('   *')
+    lines.push('   * Operation security metadata is available on')
+    lines.push("   * req.routeOptions.config.security so you can inspect required scopes here.")
+    lines.push('   */')
+    lines.push('  createContext: (req: FastifyRequest) => Ctx | Promise<Ctx>')
+  }
   lines.push('  errorHandler?: (err: Error, req: FastifyRequest, reply: FastifyReply) => void')
   // fastify-type-provider-zod exports the compilers as values, not as named types; deriving the
   // option types via `typeof` keeps the generated file self-contained and always type-correct.
@@ -1157,7 +1230,12 @@ export function generateFastifyRouter(
   lines.push('  onError?: onErrorHookHandler | onErrorHookHandler[]')
   lines.push('}')
   lines.push('')
-  lines.push(`export function createRouter(service: ${serviceRef}, options?: CreateRouterOptions): FastifyPluginAsyncZod {`)
+  // When context_type is set, options is required (createContext is required inside it).
+  // When not set, options remains optional for backward compatibility.
+  const optionsParam = ctx !== undefined
+    ? `options: CreateRouterOptions<${ctx}>`
+    : 'options?: CreateRouterOptions'
+  lines.push(`export function createRouter(service: ${serviceRef}, ${optionsParam}): FastifyPluginAsyncZod {`)
   lines.push('  return async (app) => {')
 
   // FastifyPluginAsyncZod carries ZodTypeProvider: no withTypeProvider() call needed.

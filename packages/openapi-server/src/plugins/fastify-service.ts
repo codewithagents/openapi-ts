@@ -233,6 +233,39 @@ interface OperationInfo {
   // fallow-ignore-next-line code-duplication
   // Parallel interface field to service.ts OperationInfo; both emitters need these fields.
   returnInfo: ReturnInfo & { isSynthesizedResponse?: boolean }
+  /** Effective security requirements for this operation (operation.security ?? spec.security). */
+  effectiveSecurity: Array<{ scheme: string; scopes: string[] }>
+}
+
+/**
+ * Escape a string so it cannot break out of a JSDoc comment block.
+ * The closing sequence for JSDoc is the only dangerous escape; newlines are replaced
+ * with a space to keep the tag on a single line.
+ */
+function escapeJsDocString(value: string): string {
+  return value.replace(/\*\//g, '*\\/').replace(/\r?\n/g, ' ')
+}
+
+/**
+ * Derive the effective security requirements for an operation.
+ * operation.security overrides the global spec.security when present.
+ * Each SecurityRequirementObject is expanded into { scheme, scopes } pairs.
+ */
+function deriveEffectiveSecurityForService(
+  operation: OperationObject,
+  spec: OpenAPIV3_1.Document
+): Array<{ scheme: string; scopes: string[] }> {
+  const rawSecurity =
+    (operation.security as Array<Record<string, string[]>> | undefined) ??
+    (spec.security as Array<Record<string, string[]>> | undefined)
+  if (rawSecurity === undefined || rawSecurity.length === 0) return []
+  const result: Array<{ scheme: string; scopes: string[] }> = []
+  for (const req of rawSecurity) {
+    for (const [scheme, scopes] of Object.entries(req)) {
+      result.push({ scheme, scopes: Array.isArray(scopes) ? scopes : [] })
+    }
+  }
+  return result
 }
 
 // Parallel operation collector to service.ts; each emitter owns its own collection pass.
@@ -257,8 +290,9 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
       const returnInfo = getReturnInfo(operation) as ReturnInfo & {
         isSynthesizedResponse?: boolean
       }
+      const effectiveSecurity = deriveEffectiveSecurityForService(operation, spec)
 
-      operations.push({ methodName, httpMethod: method, path, pathParams, queryParams, headerParams, cookieParams, bodyInfo, returnInfo })
+      operations.push({ methodName, httpMethod: method, path, pathParams, queryParams, headerParams, cookieParams, bodyInfo, returnInfo, effectiveSecurity })
     }
   }
 
@@ -505,7 +539,20 @@ export function generateFastifyTypedService(
   lines.push(interfaceDecl)
 
   for (const op of operations) {
-    lines.push(`  /** ${op.httpMethod.toUpperCase()} ${op.path} */`)
+    if (op.effectiveSecurity.length > 0) {
+      // Emit a multi-line JSDoc with @security tags for each security requirement.
+      // Scheme and scope strings from the spec are escaped to prevent comment injection.
+      lines.push('  /**')
+      lines.push(`   * ${op.httpMethod.toUpperCase()} ${op.path}`)
+      for (const { scheme, scopes } of op.effectiveSecurity) {
+        const safeScheme = escapeJsDocString(scheme)
+        const safeScopesStr = scopes.map((s) => escapeJsDocString(s)).join(' ')
+        lines.push(`   * @security ${safeScheme}${safeScopesStr.length > 0 ? ' ' + safeScopesStr : ''}`)
+      }
+      lines.push('   */')
+    } else {
+      lines.push(`  /** ${op.httpMethod.toUpperCase()} ${op.path} */`)
+    }
     lines.push(`  ${buildMethodSignature(op, schemaNames, contextType)}`)
   }
 
