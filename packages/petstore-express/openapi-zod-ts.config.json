@@ -1,1 +1,1 @@
-{ "input_openapi": "../petstore-hono/spec/api.json", "output": "generated/" }
+{ "input_openapi": "../petstore-shared/spec/api.json", "output": "generated/" }

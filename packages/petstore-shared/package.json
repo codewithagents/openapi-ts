@@ -1,0 +1,16 @@
+{
+  "name": "@codewithagents/petstore-shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared pet OpenAPI spec and hand-written Zod schemas, consumed by the petstore-* example apps via relative config paths",
+  "scripts": {
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}

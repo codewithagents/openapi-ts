@@ -1,6 +1,6 @@
 {
-  "input_openapi": "../petstore-hono/spec/api.json",
+  "input_openapi": "../petstore-shared/spec/api.json",
   "output": "generated/",
   "framework": "fastify",
-  "input_schema": "../petstore-hono/src/schemas.ts"
+  "input_schema": "../petstore-shared/schemas.ts"
 }
