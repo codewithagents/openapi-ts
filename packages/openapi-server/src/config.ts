@@ -48,6 +48,13 @@ export interface ServerConfig {
   shared_output?: string
 }
 
+/** Validate that an optional config field is a non-empty string when present. */
+function assertOptionalString(raw: Record<string, unknown>, key: string, label: string): void {
+  if (raw[key] !== undefined && (typeof raw[key] !== 'string' || !raw[key])) {
+    throw new Error(`"${key}" must be a non-empty string ${label}`)
+  }
+}
+
 function parseServerConfig(
   raw: Record<string, unknown>,
   base: import('openapi-zod-ts/config-core').BaseConfig
@@ -62,29 +69,14 @@ function parseServerConfig(
   ) {
     throw new Error('"framework" must be one of: "hono", "express", "fastify", or "none"')
   }
-  if (
-    raw['input_schema'] !== undefined &&
-    (typeof raw['input_schema'] !== 'string' || !raw['input_schema'])
-  ) {
-    throw new Error('"input_schema" must be a non-empty string path to your Zod schema file')
-  }
-  if (
-    raw['context_type'] !== undefined &&
-    (typeof raw['context_type'] !== 'string' || !raw['context_type'])
-  ) {
-    throw new Error('"context_type" must be a non-empty string TypeScript type name')
-  }
+  assertOptionalString(raw, 'input_schema', 'path to your Zod schema file')
+  assertOptionalString(raw, 'context_type', 'TypeScript type name')
+  assertOptionalString(raw, 'shared_output', 'path to the shared output directory')
   if (
     raw['emit_response_validation'] !== undefined &&
     typeof raw['emit_response_validation'] !== 'boolean'
   ) {
     throw new Error('"emit_response_validation" must be a boolean (true or false)')
-  }
-  if (
-    raw['shared_output'] !== undefined &&
-    (typeof raw['shared_output'] !== 'string' || !raw['shared_output'])
-  ) {
-    throw new Error('"shared_output" must be a non-empty string path to the shared output directory')
   }
   return {
     ...base,
