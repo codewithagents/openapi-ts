@@ -1,0 +1,31 @@
+{
+  "name": "@codewithagents/petstore-contract",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate:deps": "pnpm --filter petstore-fastify --filter @codewithagents/petstore-hono --filter petstore-express run generate",
+    "test": "pnpm run generate:deps && vitest run",
+    "test:coverage": "pnpm run generate:deps && vitest run --coverage"
+  },
+  "dependencies": {
+    "petstore-fastify": "workspace:*",
+    "@codewithagents/petstore-hono": "workspace:*",
+    "petstore-express": "workspace:*",
+    "fastify": "^5.0.0",
+    "@fastify/formbody": "^8.0.0",
+    "@fastify/multipart": "^9.0.0",
+    "fastify-type-provider-zod": "^6.1.0",
+    "express": "^5.0.0",
+    "hono": "^4.0.0",
+    "@hono/node-server": "^2.0.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "catalog:",
+    "vitest": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:"
+  }
+}
