@@ -181,13 +181,16 @@ describe.each(['fastify', 'hono', 'express'] as const)('%s', (fw: Framework) => 
     expect(res.status).toBe(expected.status)
   })
 
-  // 8. Missing pet: all frameworks return >= 400 for an unknown id.
-  //    Observed: fastify=404 json, hono=404 json, express=500 html.
-  //    The express 500 is a real bug: petService.getPet throws a plain Error
-  //    instead of an HttpError(404), so express has no error handler to map it.
-  //    Tracked as a follow-up; NOT fixed here. We only assert status >= 400.
-  it('GET /api/pets/:id for a missing pet returns >= 400', async () => {
+  // 8. Missing pet: all frameworks map an unknown id to 404 JSON carrying the not-found
+  //    message. The body shape differs (fastify uses a structured envelope, hono and express
+  //    a flat { error }), so we assert status + content-type + the message, not the shape.
+  //    (Express previously returned 500 HTML because its getPet threw a plain Error; that was
+  //    a real bug the harness surfaced, now fixed to HttpError(404) to match fastify and hono.)
+  it('GET /api/pets/:id for a missing pet returns 404 JSON', async () => {
     const res = await req(handle.baseUrl, 'GET', '/api/pets/00000000-0000-0000-0000-000000000000')
-    expect(res.status).toBeGreaterThanOrEqual(400)
+    expect(res.status).toBe(404)
+    expect(res.contentType).toMatch(/json/)
+    const body = await res.json()
+    expect(String(body['error'])).toMatch(/not found/)
   })
 })
