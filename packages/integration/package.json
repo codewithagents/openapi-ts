@@ -17,7 +17,7 @@
     "openapi-zod-ts": "workspace:*"
   },
   "devDependencies": {
-    "@faker-js/faker": "^9.9.0",
+    "@faker-js/faker": "^10.5.0",
     "@tanstack/react-query": "catalog:",
     "@testing-library/react": "^16.3.2",
     "@types/node": "catalog:",
