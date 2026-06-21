@@ -12,8 +12,7 @@
       "release-type": "node",
       "package-name": "openapi-zod-ts",
       "component": "openapi-zod-ts",
-      "changelog-path": "CHANGELOG.md",
-      "release-as": "2.2.0"
+      "changelog-path": "CHANGELOG.md"
     },
     "packages/openapi-react-query": {
       "release-type": "node",
@@ -25,8 +24,7 @@
       "release-type": "node",
       "package-name": "@codewithagents/openapi-server",
       "component": "openapi-server",
-      "changelog-path": "CHANGELOG.md",
-      "release-as": "2.1.0"
+      "changelog-path": "CHANGELOG.md"
     },
     "packages/openapi-msw": {
       "release-type": "node",
