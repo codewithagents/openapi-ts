@@ -1,6 +1,12 @@
+import fastifyStatic from '@fastify/static'
 import Fastify from 'fastify'
 import { createRouter, HttpError } from '../../generated-auth/router.js'
 import type { AuthLabService } from '../../generated-auth/service.js'
+
+export interface BuildAuthAppOptions {
+  /** Absolute path to a built frontend directory to serve for non-API routes. */
+  serveStatic?: string
+}
 
 // The principal threaded through all secured service methods.
 export interface AuthContext {
@@ -26,7 +32,7 @@ export const authLabService: AuthLabService<AuthContext> = {
   },
 }
 
-export function buildAuthApp() {
+export function buildAuthApp(options: BuildAuthAppOptions = {}) {
   const app = Fastify()
 
   app.register(
@@ -49,6 +55,12 @@ export function buildAuthApp() {
     }),
     { prefix: '/api' }
   )
+
+  // Serve the built React app for every non-API route (the full-stack reference).
+  // The /api router is registered first so API routes take priority over static files.
+  if (options.serveStatic !== undefined) {
+    app.register(fastifyStatic, { root: options.serveStatic })
+  }
 
   return app
 }
