@@ -3964,7 +3964,7 @@ describe('generateFastifyRouter: registerCustomRoutes hook in CreateRouterOption
     expect(content).toContain('registerCustomRoutes?:')
   })
 
-  it('emits await options?.registerCustomRoutes?.(app) call inside plugin body', () => {
+  it('emits await options.registerCustomRoutes(app) call inside plugin body', () => {
     const { content } = generateFastifyRouter(spec)
     expect(content).toContain('await options.registerCustomRoutes(app)')
   })
@@ -3992,7 +3992,8 @@ describe('generateFastifyRouter: registerCustomRoutes hook in CreateRouterOption
       },
     })
     const { content } = generateFastifyRouter(withRouteSpec)
-    const customRoutesPos = content.indexOf('registerCustomRoutes')
+    // Probe the actual call site, not the interface field (which always precedes routes).
+    const customRoutesPos = content.indexOf('await options.registerCustomRoutes(app)')
     const firstRoutePos = content.indexOf('app.get("/pets/:id"')
     expect(customRoutesPos).toBeGreaterThan(0)
     expect(firstRoutePos).toBeGreaterThan(0)

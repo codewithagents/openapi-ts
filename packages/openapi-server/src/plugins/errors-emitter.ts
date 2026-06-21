@@ -98,12 +98,8 @@ export function findCommonParent(paths: string[]): string {
     }
   }
 
-  // The common segments represent a directory, not one of the outputs themselves.
-  // Remove the last segment only if it equals one of the output basenames
-  // (meaning all outputs are subdirs of the same parent).
-  // Actually we want the parent dir of the first point of divergence.
-  // Our loop stops at the first divergent segment, so `common` already IS the
-  // common prefix directory path. Join it back.
+  // The loop stops at the first divergent segment, so `common` already holds the
+  // common prefix directory path. Join it back into a path.
   const result = common.join(sep)
   // On Unix an absolute path starts with '/', so join gives '' for root; re-add '/'.
   return result === '' ? '/' : result
