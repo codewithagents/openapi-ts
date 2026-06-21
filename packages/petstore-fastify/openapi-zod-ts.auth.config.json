@@ -1,0 +1,4 @@
+{
+  "input_openapi": "spec/auth-lab.json",
+  "output": "generated-auth/"
+}

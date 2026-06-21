@@ -2190,12 +2190,16 @@ describe('context type option (issue #310)', () => {
   })
 
   describe('Fastify — with contextType', () => {
-    it('createRouter signature uses the generic service reference and required options: CreateRouterOptions<Ctx>', () => {
+    it('createRouter is generic over Ctx with required options; no bare context type name is baked in', () => {
       const { content } = generateFastifyRouter(petSpec, { contextType: 'RequestContext' })
-      // options is required (no ?) when contextType is set because createContext is required
+      // The router is generic over Ctx so the principal type is inferred at the call site.
+      // options is required (no ?) when contextType is set because createContext is required.
       expect(content).toContain(
-        'createRouter(service: PetStoreService<RequestContext>, options: CreateRouterOptions<RequestContext>): FastifyPluginAsyncZod'
+        'export function createRouter<Ctx = never>(service: PetStoreService<Ctx>, options: CreateRouterOptions<Ctx>): FastifyPluginAsyncZod'
       )
+      // The configured type name must NOT appear as an unresolved reference in the output.
+      expect(content).not.toContain('PetStoreService<RequestContext>')
+      expect(content).not.toContain('CreateRouterOptions<RequestContext>')
     })
 
     it('emits CreateRouterOptions<Ctx = never> generic interface with createContext field when contextType set', () => {

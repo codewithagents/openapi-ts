@@ -5,3 +5,6 @@ generated/
 # Test artifacts
 test-results/
 playwright-report/
+
+# Auth-lab generated output (context_type runtime test)
+generated-auth/

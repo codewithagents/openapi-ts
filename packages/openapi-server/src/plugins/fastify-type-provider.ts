@@ -1104,8 +1104,11 @@ export function generateFastifyRouter(
   )
   const hasAnyParserNeeded = hasOctetStreamRequestBody || hasFormUrlencodedBody || hasMultipartBody
 
+  // When context_type is configured the router becomes generic over Ctx. The concrete
+  // principal type is inferred at the call site (from the service implementation and
+  // createContext), so no unresolved context type name is baked into the generated file.
   const ctx = options?.contextType
-  const serviceRef = ctx !== undefined ? `${serviceName}<${ctx}>` : serviceName
+  const serviceRef = ctx !== undefined ? `${serviceName}<Ctx>` : serviceName
 
   const lines: string[] = []
   lines.push('// This file is auto-generated. Do not edit manually.')
@@ -1199,12 +1202,16 @@ export function generateFastifyRouter(
   lines.push('  onError?: onErrorHookHandler | onErrorHookHandler[]')
   lines.push('}')
   lines.push('')
-  // When context_type is set, options is required (createContext is required inside it).
-  // When not set, options remains optional for backward compatibility.
+  // When context_type is set, createRouter is generic over Ctx and options is required
+  // (createContext is required inside it). When not set, options stays optional for
+  // backward compatibility.
+  const typeParam = ctx !== undefined ? '<Ctx = never>' : ''
   const optionsParam = ctx !== undefined
-    ? `options: CreateRouterOptions<${ctx}>`
+    ? 'options: CreateRouterOptions<Ctx>'
     : 'options?: CreateRouterOptions'
-  lines.push(`export function createRouter(service: ${serviceRef}, ${optionsParam}): FastifyPluginAsyncZod {`)
+  lines.push(
+    `export function createRouter${typeParam}(service: ${serviceRef}, ${optionsParam}): FastifyPluginAsyncZod {`
+  )
   lines.push('  return async (app) => {')
 
   // FastifyPluginAsyncZod carries ZodTypeProvider: no withTypeProvider() call needed.

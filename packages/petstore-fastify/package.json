@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "node node_modules/openapi-zod-ts/dist/cli.cjs && node node_modules/@codewithagents/openapi-server/dist/cli.cjs",
+    "generate": "node node_modules/openapi-zod-ts/dist/cli.cjs && node node_modules/openapi-zod-ts/dist/cli.cjs --config openapi-zod-ts.auth.config.json && node node_modules/@codewithagents/openapi-server/dist/cli.cjs && node node_modules/@codewithagents/openapi-server/dist/cli.cjs --config openapi-server.auth.config.json",
     "start": "pnpm generate && tsx src/server/index.ts",
     "test": "pnpm generate && vitest run",
     "test:e2e": "pnpm generate && playwright test",
