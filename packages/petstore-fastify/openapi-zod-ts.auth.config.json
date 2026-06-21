@@ -1,4 +1,5 @@
 {
   "input_openapi": "spec/auth-lab.json",
-  "output": "generated-auth/"
+  "output": "generated-auth/",
+  "input_schema": "src/auth-schemas.ts"
 }
