@@ -6,11 +6,41 @@ on:
   push:
     branches: [main]
 
-# Minimal permissions — fork PRs have no secrets access by design with pull_request trigger
+# Minimal permissions: fork PRs have no secrets access by design with pull_request trigger
 permissions:
   contents: read
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Change detection: classify the PR as code-touching vs docs-only.
+  # Tier 2 (heavy / browser) jobs gate on the `code` output so docs-only PRs
+  # skip them entirely. Tier 1 (Build, Lint & Test) and the CI Gate always run.
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # dorny/paths-filter reads PR file list via the API on pull_request
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        id: filter
+        with:
+          # `code` is true when ANY changed path is NOT docs-only. The `!` predicates
+          # subtract the docs surface (docs/**, every *.md and *.mdx anywhere) so a PR
+          # that touches only documentation yields code=false and skips all Tier 2 jobs.
+          filters: |
+            code:
+              - '!docs/**'
+              - '!**/*.md'
+              - '!**/*.mdx'
+
+  # ===========================================================================
+  # TIER 1: always runs (the fast floor + primary required check).
+  # ===========================================================================
   ci:
     name: Build, Lint & Test
     runs-on: ubuntu-latest
@@ -30,8 +60,14 @@ jobs:
       # in the path-filtered Showcase workflow, off the required merge path.
       - run: pnpm test
 
+  # ===========================================================================
+  # TIER 2: heavy / browser jobs. Each needs the change detector and only runs
+  # when changes.outputs.code == 'true' (skipped on docs-only PRs).
+  # ===========================================================================
   coverage:
     name: Coverage
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -96,6 +132,8 @@ jobs:
 
   typecheck-generated:
     name: Typecheck Generated Output
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -117,6 +155,8 @@ jobs:
 
   server-examples:
     name: Server Examples (Fastify + Express)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -136,6 +176,8 @@ jobs:
 
   e2e:
     name: E2E (Petstore)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -156,6 +198,8 @@ jobs:
 
   e2e-fastify:
     name: E2E (Petstore Fastify)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -173,6 +217,8 @@ jobs:
 
   e2e-fastify-fullstack:
     name: E2E (Petstore Fastify Fullstack)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -194,6 +240,8 @@ jobs:
 
   e2e-contract:
     name: Contract (uniform real-HTTP across fastify/hono/express)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -208,3 +256,46 @@ jobs:
       # and hits it with raw global fetch. No browser binaries. `test` runs generate:deps first.
       - name: Run uniform contract suite
         run: pnpm --filter @codewithagents/petstore-contract run test
+
+  # ===========================================================================
+  # GATE AGGREGATOR: the single stable required status check for Tier 2.
+  # Always runs (if: always()) so it reports even when every Tier 2 job is
+  # skipped on a docs-only PR. Passes when every needed job is success OR
+  # skipped; fails if any is failure OR cancelled.
+  # ===========================================================================
+  gate:
+    name: CI Gate
+    needs:
+      - changes
+      - coverage
+      - typecheck-generated
+      - server-examples
+      - e2e
+      - e2e-fastify
+      - e2e-fastify-fullstack
+      - e2e-contract
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all Tier 2 jobs passed or were skipped
+        env:
+          # toJSON(needs) is a map of job-id to { "result": "...", "outputs": {...} }.
+          # result is one of: success, failure, cancelled, skipped.
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "Needed job results:"
+          echo "$RESULTS"
+          # Fail closed if the needs map is somehow empty or null.
+          if [ -z "$RESULTS" ] || [ "$RESULTS" = "null" ]; then
+            echo "::error::CI Gate failed: needs results were empty or null."
+            exit 1
+          fi
+          # Fail the gate if ANY needed job is failure or cancelled.
+          # success and skipped both pass (skipped = docs-only PR, gated off).
+          bad=$(echo "$RESULTS" | jq -r 'to_entries[] | select(.value.result != "success" and .value.result != "skipped") | "\(.key)=\(.value.result)"')
+          if [ -n "$bad" ]; then
+            echo "::error::CI Gate failed, the following needed jobs did not pass:"
+            echo "$bad"
+            exit 1
+          fi
+          echo "CI Gate passed: every needed job was success or skipped."
