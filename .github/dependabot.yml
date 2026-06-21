@@ -1,0 +1,68 @@
+# Dependabot configuration for the codewithagents/openapi-zod-ts monorepo.
+# Docs: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# Strategy (mirrors how we maintain deps by hand):
+#   - One grouped PR per week for all minor + patch bumps (low-noise).
+#   - Each MAJOR bump lands as its own PR so it gets isolated review and CI.
+#   - GitHub Actions pins are kept current in a single grouped PR.
+#
+# pnpm notes: Dependabot has GA support for pnpm workspaces and the pnpm
+# catalog (pnpm-workspace.yaml), so the catalog-centralized versions are
+# covered by the "npm" ecosystem below. We group by update-type rather than
+# dependency-type because Dependabot currently reports catalog dev-deps as
+# production (dependabot/dependabot-core#14824); update-type grouping is
+# unaffected by that. If a catalog update ever commits an inconsistent
+# lockfile (dependabot/dependabot-core#14339), CI's frozen install + drift
+# checks will fail the PR before merge.
+version: 2
+
+updates:
+  # ---------------------------------------------------------------------------
+  # npm / pnpm: root package.json, every workspace package, and the pnpm
+  # catalog. `directory: "/"` covers the whole pnpm workspace.
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 10
+    # Only widen a declared range when the new version falls outside it, so
+    # in-range minor/patch bumps stay lockfile-only and the diffs stay small.
+    versioning-strategy: "increase-if-necessary"
+    commit-message:
+      # Produces "chore(deps): ..." / "chore(deps-dev): ...", which keeps
+      # Release Please from cutting a version bump on dependency updates.
+      prefix: "chore"
+      include: "scope"
+    groups:
+      # Everything non-major in a single weekly PR.
+      npm-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    # Majors are deliberately NOT grouped: each opens its own PR for review.
+
+  # ---------------------------------------------------------------------------
+  # GitHub Actions referenced in .github/workflows/*. Actions are SHA-pinned;
+  # Dependabot keeps the pin and its "# vX" comment current.
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
