@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from '../plugins/router.js'
 import { generateFastifyTypes, generateFastifyTypedService } from '../plugins/fastify-service.js'
-import { emitFastifyErrorsFile } from '../plugins/fastify-type-provider.js'
+import { emitSharedErrorsFile, deriveSharedDir, sharedErrorsImportPath, findCommonParent } from '../plugins/errors-emitter.js'
 
 // ── Fixture helpers ────────────────────────────────────────────────────────────
 
@@ -1632,11 +1632,13 @@ describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps 
     },
   })
 
-  it('Hono: emits exported HttpError class', () => {
+  it('Hono: imports and re-exports HttpError from shared errors module', () => {
     const { content } = generateRouter(spec)
-    expect(content).toContain('export class HttpError extends Error')
-    expect(content).toContain('public readonly status: number')
-    expect(content).toContain("this.name = 'HttpError'")
+    // HttpError is imported from the shared module, not inlined
+    expect(content).toContain("import { HttpError } from './_shared/errors.js'")
+    expect(content).toContain("export { HttpError } from './_shared/errors.js'")
+    // Class must NOT be inlined in router.ts
+    expect(content).not.toContain('class HttpError extends Error')
   })
 
   it('Hono: GET service call wrapped in try/catch with HttpError mapping', () => {
@@ -1652,10 +1654,13 @@ describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps 
     expect(content).toContain('if (err instanceof HttpError)')
   })
 
-  it('Express: emits exported HttpError class', () => {
+  it('Express: imports and re-exports HttpError from shared errors module', () => {
     const { content } = generateExpressRouter(spec)
-    expect(content).toContain('export class HttpError extends Error')
-    expect(content).toContain('public readonly status: number')
+    // HttpError is imported from the shared module, not inlined
+    expect(content).toContain("import { HttpError } from './_shared/errors.js'")
+    expect(content).toContain("export { HttpError } from './_shared/errors.js'")
+    // Class must NOT be inlined in router.ts
+    expect(content).not.toContain('class HttpError extends Error')
   })
 
   it('Express: GET service call wrapped in try/catch with HttpError mapping', () => {
@@ -1665,9 +1670,11 @@ describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps 
     expect(content).toContain('throw err')
   })
 
-  it('Fastify: imports HttpError from ./errors.js (class moved to errors.ts)', () => {
+  it('Fastify: imports and re-exports HttpError from shared _shared/errors.js', () => {
     const { content } = generateFastifyRouter(spec)
-    expect(content).toContain("import { HttpError } from './errors.js'")
+    // Default path when no errorsImportPath is provided
+    expect(content).toContain("import { HttpError } from './_shared/errors.js'")
+    expect(content).toContain("export { HttpError } from './_shared/errors.js'")
     // HttpError class must NOT be inlined in router.ts
     expect(content).not.toContain('export class HttpError extends Error')
   })
@@ -2972,32 +2979,32 @@ describe('generateFastifyRouter synthesized response schema (C2)', () => {
   })
 })
 
-// ── Item 6: HttpError extracted to errors.ts ──────────────────────────────────
+// ── Item 6: HttpError shared runtime ──────────────────────────────────────────
 
-describe('emitFastifyErrorsFile: HttpError in generated errors.ts', () => {
-  it('returns filename errors.ts', () => {
-    const result = emitFastifyErrorsFile()
-    expect(result.filename).toBe('errors.ts')
+describe('emitSharedErrorsFile: HttpError in _shared/errors.ts', () => {
+  it('returns filename _shared/errors.ts', () => {
+    const result = emitSharedErrorsFile()
+    expect(result.filename).toBe('_shared/errors.ts')
   })
 
-  it('errors.ts starts with auto-generated header', () => {
-    const result = emitFastifyErrorsFile()
+  it('_shared/errors.ts starts with auto-generated header', () => {
+    const result = emitSharedErrorsFile()
     expect(result.content).toMatch(/^\/\/ This file is auto-generated/)
   })
 
-  it('errors.ts exports HttpError class', () => {
-    const result = emitFastifyErrorsFile()
+  it('_shared/errors.ts exports HttpError class', () => {
+    const result = emitSharedErrorsFile()
     expect(result.content).toContain('export class HttpError extends Error {')
   })
 
-  it('errors.ts HttpError class accepts status and message constructor params', () => {
-    const result = emitFastifyErrorsFile()
+  it('_shared/errors.ts HttpError class accepts status and message constructor params', () => {
+    const result = emitSharedErrorsFile()
     expect(result.content).toContain(
       'constructor(public readonly status: number, message: string)'
     )
   })
 
-  it('generateFastifyRouter imports HttpError from ./errors.js (not inline)', () => {
+  it('generateFastifyRouter imports HttpError from ./_shared/errors.js by default', () => {
     const spec = makeSpec({
       '/pets': {
         get: {
@@ -3007,7 +3014,7 @@ describe('emitFastifyErrorsFile: HttpError in generated errors.ts', () => {
       },
     })
     const { content } = generateFastifyRouter(spec)
-    expect(content).toContain("import { HttpError } from './errors.js'")
+    expect(content).toContain("import { HttpError } from './_shared/errors.js'")
     // HttpError class must NOT be inlined in router.ts
     expect(content).not.toContain('export class HttpError extends Error')
   })
@@ -3016,6 +3023,27 @@ describe('emitFastifyErrorsFile: HttpError in generated errors.ts', () => {
     const spec = makeSpec({})
     const { content } = generateFastifyRouter(spec)
     expect(content).not.toContain('class HttpError')
+  })
+
+  it('generateFastifyRouter uses custom errorsImportPath when provided', () => {
+    const spec = makeSpec({})
+    const { content } = generateFastifyRouter(spec, { errorsImportPath: '../_shared/errors.js' })
+    expect(content).toContain("import { HttpError } from '../_shared/errors.js'")
+    expect(content).toContain("export { HttpError } from '../_shared/errors.js'")
+  })
+
+  it('generateRouter (Hono) uses custom errorsImportPath when provided', () => {
+    const spec = makeSpec({})
+    const { content } = generateRouter(spec, { errorsImportPath: '../_shared/errors.js' })
+    expect(content).toContain("import { HttpError } from '../_shared/errors.js'")
+    expect(content).toContain("export { HttpError } from '../_shared/errors.js'")
+  })
+
+  it('generateExpressRouter uses custom errorsImportPath when provided', () => {
+    const spec = makeSpec({})
+    const { content } = generateExpressRouter(spec, { errorsImportPath: '../_shared/errors.js' })
+    expect(content).toContain("import { HttpError } from '../_shared/errors.js'")
+    expect(content).toContain("export { HttpError } from '../_shared/errors.js'")
   })
 })
 
@@ -3825,5 +3853,149 @@ describe('generateFastifyRouter emit_response_validation: synthesizer branch cov
     // s.type is not 'array'/'object' -> falls through to synthesizePropExpr(s) -> z.string()
     const content = genContent({ type: 'string' })
     expect(content).toContain('200: z.string()')
+  })
+})
+
+// ── Shared errors location helpers ────────────────────────────────────────────
+
+describe('findCommonParent: longest common directory prefix', () => {
+  it('single path: returns parent directory of the given path', () => {
+    expect(findCommonParent(['/gen/output'])).toBe('/gen')
+  })
+
+  it('two paths with shared parent: returns the shared parent', () => {
+    expect(findCommonParent(['/gen/public', '/gen/admin'])).toBe('/gen')
+  })
+
+  it('deeper common ancestor: returns the longest common prefix dir', () => {
+    expect(findCommonParent(['/a/b/c', '/a/b/d'])).toBe('/a/b')
+  })
+
+  it('no common ancestor beyond root: returns root', () => {
+    expect(findCommonParent(['/foo/x', '/bar/y'])).toBe('/')
+  })
+
+  it('three sibling outputs: returns their common parent', () => {
+    expect(findCommonParent(['/out/s1', '/out/s2', '/out/s3'])).toBe('/out')
+  })
+})
+
+describe('sharedErrorsImportPath: relative import from outputDir to shared errors module', () => {
+  it('single project: shared is inside output, so ./_shared/errors.js', () => {
+    const outputDir = '/pkg/generated'
+    const sharedDir = '/pkg/generated/_shared'
+    expect(sharedErrorsImportPath(outputDir, sharedDir)).toBe('./_shared/errors.js')
+  })
+
+  it('multi project: shared is one level up, so ../_shared/errors.js', () => {
+    const outputDir = '/gen/public'
+    const sharedDir = '/gen/_shared'
+    expect(sharedErrorsImportPath(outputDir, sharedDir)).toBe('../_shared/errors.js')
+  })
+})
+
+describe('deriveSharedDir: resolves shared directory from configs', () => {
+  const cwd = '/workspace'
+
+  it('single project without shared_output: shared inside output dir', () => {
+    const configs = [{ input_openapi: 'spec.json', output: 'generated' }]
+    const result = deriveSharedDir(cwd, configs)
+    expect(result).toBe('/workspace/generated/_shared')
+  })
+
+  it('multi project without shared_output: shared at common parent', () => {
+    const configs = [
+      { input_openapi: 'spec.json', output: 'gen/public' },
+      { input_openapi: 'spec2.json', output: 'gen/admin' },
+    ]
+    const result = deriveSharedDir(cwd, configs)
+    expect(result).toBe('/workspace/gen/_shared')
+  })
+
+  it('shared_output override wins over derivation', () => {
+    const configs = [
+      { input_openapi: 'spec.json', output: 'gen/public', shared_output: 'runtime/shared' },
+      { input_openapi: 'spec2.json', output: 'gen/admin' },
+    ]
+    const result = deriveSharedDir(cwd, configs)
+    expect(result).toBe('/workspace/runtime/shared')
+  })
+})
+
+// ── Cross-router HttpError shared reference ───────────────────────────────────
+
+describe('cross-router shared HttpError: both routers reference the same _shared/errors.js', () => {
+  const petSpec = makeSpec({
+    '/pets': {
+      get: { operationId: 'listPets', responses: { '200': { description: 'ok' } } },
+    },
+  })
+
+  it('two Hono routers with different errorsImportPath still resolve to same logical module', () => {
+    // Simulates public (output: gen/public) and admin (output: gen/admin) routers
+    // with shared dir at gen/_shared. Both import ../_shared/errors.js.
+    const publicContent = generateRouter(petSpec, { errorsImportPath: '../_shared/errors.js' }).content
+    const adminContent = generateRouter(petSpec, { errorsImportPath: '../_shared/errors.js' }).content
+    expect(publicContent).toContain("import { HttpError } from '../_shared/errors.js'")
+    expect(adminContent).toContain("import { HttpError } from '../_shared/errors.js'")
+    // Neither file contains an inline class (both share the same source)
+    expect(publicContent).not.toContain('class HttpError extends Error')
+    expect(adminContent).not.toContain('class HttpError extends Error')
+  })
+
+  it('Fastify router with multi-spec path: uses ../_shared/errors.js', () => {
+    const { content } = generateFastifyRouter(petSpec, { errorsImportPath: '../_shared/errors.js' })
+    expect(content).toContain("import { HttpError } from '../_shared/errors.js'")
+    expect(content).toContain("export { HttpError } from '../_shared/errors.js'")
+  })
+})
+
+// ── registerCustomRoutes hook ─────────────────────────────────────────────────
+
+describe('generateFastifyRouter: registerCustomRoutes hook in CreateRouterOptions', () => {
+  const spec = makeSpec({
+    '/pets': {
+      get: { operationId: 'listPets', responses: { '200': { description: 'ok' } } },
+    },
+  })
+
+  it('emits registerCustomRoutes field on CreateRouterOptions interface', () => {
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain('registerCustomRoutes?:')
+  })
+
+  it('emits await options?.registerCustomRoutes?.(app) call inside plugin body', () => {
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain('await options.registerCustomRoutes(app)')
+  })
+
+  it('registerCustomRoutes call appears after setErrorHandler setup', () => {
+    const { content } = generateFastifyRouter(spec)
+    // Search for the actual call in the plugin body, not the interface definition.
+    const callFragment = 'await options.registerCustomRoutes(app)'
+    const lastErrorHandlerPos = content.lastIndexOf('setErrorHandler')
+    const callPos = content.indexOf(callFragment)
+    expect(lastErrorHandlerPos).toBeGreaterThan(0)
+    expect(callPos).toBeGreaterThan(0)
+    // The call must appear after the last setErrorHandler statement
+    expect(callPos).toBeGreaterThan(lastErrorHandlerPos)
+  })
+
+  it('registerCustomRoutes call appears before the spec routes', () => {
+    const withRouteSpec = makeSpec({
+      '/pets/{id}': {
+        get: {
+          operationId: 'getPet',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(withRouteSpec)
+    const customRoutesPos = content.indexOf('registerCustomRoutes')
+    const firstRoutePos = content.indexOf('app.get("/pets/:id"')
+    expect(customRoutesPos).toBeGreaterThan(0)
+    expect(firstRoutePos).toBeGreaterThan(0)
+    expect(customRoutesPos).toBeLessThan(firstRoutePos)
   })
 })
