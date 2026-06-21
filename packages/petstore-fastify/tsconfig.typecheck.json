@@ -1,17 +1,24 @@
-// Scoped typecheck for the openapi-server generated output.
-// The openapi-zod-ts-generated client (client.ts, client-config.ts) is excluded because
-// it has a separate, pre-existing typing gap tracked outside the openapi-server scope.
+// Scoped typecheck for the openapi-server generated output, including the auth variant.
+// DOM is added to lib so the fetch client (client.ts, client-config.ts) compiles under
+// strict tsc: it uses fetch, URLSearchParams, FormData, AbortSignal, Blob, etc.
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"]
+  },
   "include": [
     "src",
     "generated/service.ts",
     "generated/router.ts",
-    "generated/models.ts"
-  ],
-  "exclude": [
+    "generated/models.ts",
     "generated/client.ts",
     "generated/client-config.ts",
-    "generated/index.ts"
+    "generated/index.ts",
+    "generated-auth/service.ts",
+    "generated-auth/router.ts",
+    "generated-auth/models.ts",
+    "generated-auth/client.ts",
+    "generated-auth/client-config.ts",
+    "generated-auth/index.ts"
   ]
 }
