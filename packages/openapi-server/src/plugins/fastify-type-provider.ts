@@ -1097,7 +1097,7 @@ export function generateFastifyRouter(
   lines.push(
     "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
   )
-  lines.push("import type { FastifyRequest, FastifyReply } from 'fastify'")
+  lines.push("import type { FastifyRequest, FastifyReply, onRequestHookHandler, preHandlerHookHandler, onSendHookHandler, onErrorHookHandler } from 'fastify'")
   if (sortedBodyTypes.length > 0) {
     lines.push(`import type { ${sortedBodyTypes.join(', ')} } from './models.js'`)
   }
@@ -1136,6 +1136,25 @@ export function generateFastifyRouter(
   lines.push('   * here inherit the ZodTypeProvider context and the HttpError error handler.')
   lines.push('   */')
   lines.push("  registerCustomRoutes?: (app: import('fastify').FastifyInstance) => void | Promise<void>")
+  // Global hook fields: single handler or array, plugin-scoped so they cover all routes.
+  lines.push('  /**')
+  lines.push('   * Lifecycle hooks registered via app.addHook inside the plugin scope.')
+  lines.push('   * Hooks are plugin-scoped: they apply to all generated routes and any routes')
+  lines.push('   * added via registerCustomRoutes, but NOT to the parent Fastify instance.')
+  lines.push('   *')
+  lines.push('   * Hook execution order per request:')
+  lines.push('   *   onRequest -> preHandler -> route handler -> onSend')
+  lines.push('   *')
+  lines.push('   * onError fires when a route handler or hook throws; it is an observability hook.')
+  lines.push('   * The errorHandler (setErrorHandler) is the single response-producer and coexists')
+  lines.push('   * with onError hooks: both fire, but only errorHandler writes the response.')
+  lines.push('   *')
+  lines.push('   * Pass a single handler or an array of handlers; both are accepted.')
+  lines.push('   */')
+  lines.push('  onRequest?: onRequestHookHandler | onRequestHookHandler[]')
+  lines.push('  preHandler?: preHandlerHookHandler | preHandlerHookHandler[]')
+  lines.push('  onSend?: onSendHookHandler | onSendHookHandler[]')
+  lines.push('  onError?: onErrorHookHandler | onErrorHookHandler[]')
   lines.push('}')
   lines.push('')
   lines.push(`export function createRouter(service: ${serviceRef}, options?: CreateRouterOptions): FastifyPluginAsyncZod {`)
@@ -1173,6 +1192,14 @@ export function generateFastifyRouter(
   lines.push('        throw err')
   lines.push('      })')
   lines.push('    }')
+
+  // Global lifecycle hooks: registered after setErrorHandler, before body parsers.
+  // _asHookArray normalizes single-handler and array forms into a plain array.
+  lines.push('    const _asHookArray = <T>(v: T | T[] | undefined): T[] => (v === undefined ? [] : Array.isArray(v) ? v : [v])')
+  lines.push('    for (const _h of _asHookArray(options?.onRequest)) app.addHook(\'onRequest\', _h)')
+  lines.push('    for (const _h of _asHookArray(options?.preHandler)) app.addHook(\'preHandler\', _h)')
+  lines.push('    for (const _h of _asHookArray(options?.onSend)) app.addHook(\'onSend\', _h)')
+  lines.push('    for (const _h of _asHookArray(options?.onError)) app.addHook(\'onError\', _h)')
 
   // Auto-register body parsers for content types the spec uses, gated on registerParsers !== false.
   // Callers who need custom options (e.g. upload size limits) should pass registerParsers: false

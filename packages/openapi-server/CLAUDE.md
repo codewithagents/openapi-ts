@@ -30,6 +30,12 @@ Default: `openapi-server.config.json` in CWD. Fields: `input_openapi`, `output`,
 
 - `registerParsers?: boolean` — set `false` to skip auto-registering `@fastify/formbody` / `@fastify/multipart`
 - `registerCustomRoutes?: (app: FastifyInstance) => void | Promise<void>` — callback called after ZodTypeProvider compilers, error handler, and body parsers are set up, but before spec-generated routes. Custom routes here inherit ZodTypeProvider and HttpError handling.
+- `onRequest?: onRequestHookHandler | onRequestHookHandler[]` — plugin-scoped onRequest hooks; ideal for auth, rate-limiting, request ID injection. Fire before validation.
+- `preHandler?: preHandlerHookHandler | preHandlerHookHandler[]` — plugin-scoped preHandler hooks; fire after validation, before the route handler. Ideal for authorization and context enrichment.
+- `onSend?: onSendHookHandler | onSendHookHandler[]` — plugin-scoped onSend hooks; fire after the handler, before the response is flushed. Ideal for response header injection.
+- `onError?: onErrorHookHandler | onErrorHookHandler[]` — plugin-scoped onError hooks; fire when any route handler or hook throws. For observability only: `errorHandler`/`setErrorHandler` is still the single response-producer. Both coexist safely.
+
+Hook execution order per request: `onRequest` -> `preHandler` -> handler -> `onSend`. Hooks are plugin-scoped: they cover generated routes and `registerCustomRoutes` routes, but not the parent Fastify instance.
 
 ## Key non-obvious decisions
 

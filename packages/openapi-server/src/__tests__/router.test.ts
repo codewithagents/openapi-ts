@@ -1033,8 +1033,10 @@ describe('generateFastifyRouter', () => {
     // since fastify-type-provider-zod does not export ValidatorCompiler/SerializerCompiler type names.
     expect(result.content).not.toContain('ValidatorCompiler }')
     expect(result.content).not.toContain('SerializerCompiler }')
-    // FastifyRequest and FastifyReply are type-only from fastify (for CreateRouterOptions).
-    expect(result.content).toContain("import type { FastifyRequest, FastifyReply } from 'fastify'")
+    // FastifyRequest, FastifyReply and hook handler types are type-only from fastify.
+    expect(result.content).toContain("from 'fastify'")
+    expect(result.content).toMatch(/import type \{[^}]*FastifyRequest[^}]*\} from 'fastify'/)
+    expect(result.content).toMatch(/import type \{[^}]*FastifyReply[^}]*\} from 'fastify'/)
   })
 
   it('exports createRouter function returning FastifyPluginAsyncZod', () => {
@@ -3998,5 +4000,100 @@ describe('generateFastifyRouter: registerCustomRoutes hook in CreateRouterOption
     expect(customRoutesPos).toBeGreaterThan(0)
     expect(firstRoutePos).toBeGreaterThan(0)
     expect(customRoutesPos).toBeLessThan(firstRoutePos)
+  })
+})
+
+// ── Issue #337: global runtime hooks on generated Fastify routes ──────────────
+
+describe('generateFastifyRouter: global hook fields in CreateRouterOptions (issue #337)', () => {
+  function simpleSpec() {
+    return makeSpec({
+      '/items': {
+        get: {
+          operationId: 'listItems',
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+  }
+
+  it('emits onRequest field on CreateRouterOptions interface', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('onRequest?: onRequestHookHandler | onRequestHookHandler[]')
+  })
+
+  it('emits preHandler field on CreateRouterOptions interface', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('preHandler?: preHandlerHookHandler | preHandlerHookHandler[]')
+  })
+
+  it('emits onSend field on CreateRouterOptions interface', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('onSend?: onSendHookHandler | onSendHookHandler[]')
+  })
+
+  it('emits onError field on CreateRouterOptions interface', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('onError?: onErrorHookHandler | onErrorHookHandler[]')
+  })
+
+  it('imports hook handler types as type-only from fastify', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('onRequestHookHandler')
+    expect(content).toContain('preHandlerHookHandler')
+    expect(content).toContain('onSendHookHandler')
+    expect(content).toContain('onErrorHookHandler')
+    // Must be part of a type-only import from fastify
+    expect(content).toMatch(/import type \{[^}]*onRequestHookHandler[^}]*\} from 'fastify'/)
+  })
+
+  it('emits app.addHook for all four hooks in the plugin body', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain("app.addHook('onRequest', _h)")
+    expect(content).toContain("app.addHook('preHandler', _h)")
+    expect(content).toContain("app.addHook('onSend', _h)")
+    expect(content).toContain("app.addHook('onError', _h)")
+  })
+
+  it('emits _asHookArray helper in the plugin body', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    expect(content).toContain('_asHookArray')
+    expect(content).toContain('Array.isArray(v)')
+  })
+
+  it('hook registration appears after setErrorHandler', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    const lastErrorHandlerPos = content.lastIndexOf('setErrorHandler')
+    const firstAddHookPos = content.indexOf('app.addHook(')
+    expect(lastErrorHandlerPos).toBeGreaterThan(0)
+    expect(firstAddHookPos).toBeGreaterThan(0)
+    expect(firstAddHookPos).toBeGreaterThan(lastErrorHandlerPos)
+  })
+
+  it('hook registration appears before registerCustomRoutes call', () => {
+    const { content } = generateFastifyRouter(simpleSpec())
+    const firstAddHookPos = content.indexOf('app.addHook(')
+    const customRoutesPos = content.indexOf('await options.registerCustomRoutes(app)')
+    expect(firstAddHookPos).toBeGreaterThan(0)
+    expect(customRoutesPos).toBeGreaterThan(0)
+    expect(firstAddHookPos).toBeLessThan(customRoutesPos)
+  })
+
+  it('hook registration appears before spec routes', () => {
+    const withRouteSpec = makeSpec({
+      '/pets/{id}': {
+        get: {
+          operationId: 'getPet',
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(withRouteSpec)
+    const firstAddHookPos = content.indexOf('app.addHook(')
+    const firstRoutePos = content.indexOf('app.get("/pets/:id"')
+    expect(firstAddHookPos).toBeGreaterThan(0)
+    expect(firstRoutePos).toBeGreaterThan(0)
+    expect(firstAddHookPos).toBeLessThan(firstRoutePos)
   })
 })

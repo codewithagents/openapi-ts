@@ -588,6 +588,47 @@ The sibling-plugin pattern is preferred when the custom routes do not need ZodTy
 
 ---
 
+## Global lifecycle hooks (Fastify only)
+
+The Fastify `createRouter` accepts four optional hook options in `CreateRouterOptions`. Each accepts a single handler or an array of handlers:
+
+| Option | Fastify lifecycle point | Typical use |
+|---|---|---|
+| `onRequest` | Very first hook, before validation | Authentication, rate-limiting, request ID injection |
+| `preHandler` | After validation, before handler | Authorization, context enrichment |
+| `onSend` | After handler, before response is sent | Response header injection, logging |
+| `onError` | When a handler or hook throws | Observability, error metrics |
+
+Hooks are **plugin-scoped**: they apply to all spec-generated routes and to any routes added via `registerCustomRoutes`, but they do NOT propagate to the parent Fastify instance (standard Fastify encapsulation).
+
+Hook execution order per request: `onRequest` -> `preHandler` -> route handler -> `onSend`.
+
+```ts
+import { createRouter } from './generated/router.js'
+import type { onRequestHookHandler } from 'fastify'
+
+// A reusable onRequest hook that validates a Bearer token.
+const authHook: onRequestHookHandler = async (req, reply) => {
+  const token = req.headers.authorization
+  if (!token?.startsWith('Bearer ')) {
+    return reply.status(401).send({ error: 'Unauthorized' })
+  }
+}
+
+fastify.register(
+  createRouter(petService, {
+    onRequest: authHook,
+    // Arrays are also accepted when you need multiple hooks.
+    onError: [metricsHook, loggingHook],
+  }),
+  { prefix: '/api' }
+)
+```
+
+**`onError` vs `errorHandler`:** `onError` hooks fire for observability (logging, metrics) but do NOT produce the response. The `errorHandler` option (or the built-in HttpError handler) is the single response-producer. Both can coexist safely: the error handler writes the response, then any `onError` hooks run.
+
+---
+
 ## Request-scoped context / caller principal (`context_type`)
 
 The `context_type` config option threads a typed caller context through every generated service method. Use it to pass an authentication principal, a tenant ID, or any per-request metadata without coupling service code to framework types.
