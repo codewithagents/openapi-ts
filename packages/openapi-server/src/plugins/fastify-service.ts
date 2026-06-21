@@ -23,6 +23,8 @@ import {
   getQueryParams,
   type BodyInfo,
   getBodyInfo,
+  escapeJsDocString,
+  deriveEffectiveSecurity,
 } from './shared.js'
 
 // ── Simple header/cookie param descriptors (service-interface generation only) ─
@@ -237,37 +239,6 @@ interface OperationInfo {
   effectiveSecurity: Array<{ scheme: string; scopes: string[] }>
 }
 
-/**
- * Escape a string so it cannot break out of a JSDoc comment block.
- * The closing sequence for JSDoc is the only dangerous escape; newlines are replaced
- * with a space to keep the tag on a single line.
- */
-function escapeJsDocString(value: string): string {
-  return value.replace(/\*\//g, '*\\/').replace(/\r?\n/g, ' ')
-}
-
-/**
- * Derive the effective security requirements for an operation.
- * operation.security overrides the global spec.security when present.
- * Each SecurityRequirementObject is expanded into { scheme, scopes } pairs.
- */
-function deriveEffectiveSecurityForService(
-  operation: OperationObject,
-  spec: OpenAPIV3_1.Document
-): Array<{ scheme: string; scopes: string[] }> {
-  const rawSecurity =
-    (operation.security as Array<Record<string, string[]>> | undefined) ??
-    (spec.security as Array<Record<string, string[]>> | undefined)
-  if (rawSecurity === undefined || rawSecurity.length === 0) return []
-  const result: Array<{ scheme: string; scopes: string[] }> = []
-  for (const req of rawSecurity) {
-    for (const [scheme, scopes] of Object.entries(req)) {
-      result.push({ scheme, scopes: Array.isArray(scopes) ? scopes : [] })
-    }
-  }
-  return result
-}
-
 // Parallel operation collector to service.ts; each emitter owns its own collection pass.
 function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
   // fallow-ignore-next-line code-duplication
@@ -290,7 +261,7 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
       const returnInfo = getReturnInfo(operation) as ReturnInfo & {
         isSynthesizedResponse?: boolean
       }
-      const effectiveSecurity = deriveEffectiveSecurityForService(operation, spec)
+      const effectiveSecurity = deriveEffectiveSecurity(operation, spec)
 
       operations.push({ methodName, httpMethod: method, path, pathParams, queryParams, headerParams, cookieParams, bodyInfo, returnInfo, effectiveSecurity })
     }

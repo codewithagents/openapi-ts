@@ -32,6 +32,7 @@ import {
   getQueryParams,
   type BodyInfo,
   getBodyInfo,
+  deriveEffectiveSecurity,
 } from './shared.js'
 
 type OperationObject = OpenAPIV3_1.OperationObject
@@ -367,38 +368,6 @@ function getResponseTypeName(
 }
 
 // ── Operation collection ──────────────────────────────────────────────────────
-
-/**
- * Escape a string for safe inclusion in a JSDoc comment block.
- * The only sequence that can break out of a JSDoc block is the closing marker.
- * Replace any occurrence of that sequence with a harmless stand-in.
- */
-function escapeJsDocString(value: string): string {
-  return value.replace(/\*\//g, '*\\/').replace(/\r?\n/g, ' ')
-}
-
-/**
- * Derive the effective security requirements for an operation.
- * operation.security overrides the global spec.security when present.
- * Each SecurityRequirementObject (Record<string, string[]>) is expanded into
- * one { scheme, scopes } entry per key.
- */
-function deriveEffectiveSecurity(
-  operation: OperationObject,
-  spec: OpenAPIV3_1.Document
-): Array<{ scheme: string; scopes: string[] }> {
-  const rawSecurity =
-    (operation.security as Array<Record<string, string[]>> | undefined) ??
-    (spec.security as Array<Record<string, string[]>> | undefined)
-  if (rawSecurity === undefined || rawSecurity.length === 0) return []
-  const result: Array<{ scheme: string; scopes: string[] }> = []
-  for (const req of rawSecurity) {
-    for (const [scheme, scopes] of Object.entries(req)) {
-      result.push({ scheme, scopes: Array.isArray(scopes) ? scopes : [] })
-    }
-  }
-  return result
-}
 
 function collectOperations(spec: OpenAPIV3_1.Document, schemaNames?: Set<string>): RouteOperation[] {
   const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
