@@ -148,7 +148,7 @@ describe('schema-enhanced mode — drift detection', () => {
 
 // ── Drift gate (#336): --check flag and config.drift === 'error' ───────────────
 
-describe('schema-enhanced mode — drift gate (#336)', () => {
+describe('schema-enhanced mode: drift gate (#336)', () => {
   // A schema file that omits TagSchema and CreateTaskRequestSchema, so the spec drifts.
   const partialSchema = [
     "import { z } from 'zod'",
