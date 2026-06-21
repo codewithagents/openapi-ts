@@ -25,6 +25,10 @@ if (parsed.action === 'help') {
       '  --input <path>    Path to OpenAPI spec file (overrides config input_openapi)',
       '  --output <dir>    Output directory (overrides config output)',
       '  --watch           Re-run generation on spec file changes (Ctrl-C to exit)',
+      '  --check           Read-only drift check: no files are written, exits non-zero on',
+      '                    any schema drift. Use as a CI gate alongside fallow:audit.',
+      '                    Drift detection applies only when input_schema is configured.',
+      '                    Cannot be combined with --watch.',
       '  --help, -h        Show this help message',
       '  --version, -v     Show version number',
     ].join('\n')
@@ -45,10 +49,10 @@ if (parsed.action === 'error') {
   process.exit(1)
 }
 
-const { cwd, configFile, inputOverride, outputOverride, watch: watchMode } = parsed
+const { cwd, configFile, inputOverride, outputOverride, watch: watchMode, check } = parsed
 
 async function runGenerate(): Promise<void> {
-  await generate(cwd, { configPath: configFile, inputOverride, outputOverride })
+  await generate(cwd, { configPath: configFile, inputOverride, outputOverride, check })
 }
 
 if (!watchMode) {

@@ -33,6 +33,13 @@ export interface Config {
    * Ignored when error_body_type is absent or 'laravel'.
    */
   error_body_type_import?: string
+  /**
+   * Controls how schema drift is handled when input_schema is configured.
+   * 'warn'  (default): log warnings to stderr and continue (exit 0).
+   * 'error': throw an error and exit non-zero when drift is detected.
+   * Omit this field to keep the default warn-only behavior.
+   */
+  drift?: 'error' | 'warn'
 }
 
 /**
@@ -77,6 +84,15 @@ function validateErrorBodyConfig(raw: Record<string, unknown>): void {
   }
 }
 
+/** Validate the optional drift field. */
+function validateDriftConfig(raw: Record<string, unknown>): void {
+  if (raw['drift'] !== undefined && raw['drift'] !== 'error' && raw['drift'] !== 'warn') {
+    throw new Error(
+      `"drift" must be 'error' or 'warn' when present, got: ${JSON.stringify(raw['drift'])}`
+    )
+  }
+}
+
 function parseConfig(raw: Record<string, unknown>, base: import('./config-core.js').BaseConfig): Config {
   if (
     raw['input_schema'] !== undefined &&
@@ -88,6 +104,7 @@ function parseConfig(raw: Record<string, unknown>, base: import('./config-core.j
     throw new Error('"server_client" must be a boolean')
   }
   validateErrorBodyConfig(raw)
+  validateDriftConfig(raw)
   return {
     ...base,
     input_schema: raw['input_schema'] as string | undefined,
@@ -95,6 +112,7 @@ function parseConfig(raw: Record<string, unknown>, base: import('./config-core.j
     server_client: raw['server_client'] as boolean | undefined,
     error_body_type: raw['error_body_type'] as string | undefined,
     error_body_type_import: raw['error_body_type_import'] as string | undefined,
+    drift: raw['drift'] as 'error' | 'warn' | undefined,
   }
 }
 

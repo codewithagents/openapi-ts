@@ -19,6 +19,12 @@ export interface GenerateOptions {
   inputOverride?: string
   /** Overrides config.output. Resolved from shell CWD before this call. */
   outputOverride?: string
+  /**
+   * When true, run in read-only check mode: no files are written and any schema
+   * drift is treated as an error (regardless of config.drift). Exits non-zero on drift.
+   * Incompatible with watch mode.
+   */
+  check?: boolean
 }
 
 async function formatTs(content: string, filePath: string): Promise<string> {
@@ -92,26 +98,32 @@ async function generateOne(
   )
   generatedFiles.push(generateIndexBarrel())
 
-  console.log(`${prefix}Writing output to: ${outputDir}`)
-  await mkdir(outputDir, { recursive: true })
+  const check = opts.check === true
 
-  for (const file of generatedFiles) {
-    const filePath = join(outputDir, file.filename)
-    await writeFile(filePath, await formatTs(file.content, filePath), 'utf-8')
-    console.log(`${prefix}  ✓ ${file.filename}`)
-  }
+  if (!check) {
+    console.log(`${prefix}Writing output to: ${outputDir}`)
+    await mkdir(outputDir, { recursive: true })
 
-  // Phase 3: optional server client factory
-  if (config.server_client === true) {
-    const serverFile = generateServer(spec)
-    const serverFilePath = join(outputDir, serverFile.filename)
-    await writeFile(serverFilePath, await formatTs(serverFile.content, serverFilePath), 'utf-8')
-    console.log(`${prefix}  ✓ ${serverFile.filename}`)
+    for (const file of generatedFiles) {
+      const filePath = join(outputDir, file.filename)
+      await writeFile(filePath, await formatTs(file.content, filePath), 'utf-8')
+      console.log(`${prefix}  ✓ ${file.filename}`)
+    }
+
+    // Phase 3: optional server client factory
+    if (config.server_client === true) {
+      const serverFile = generateServer(spec)
+      const serverFilePath = join(outputDir, serverFile.filename)
+      await writeFile(serverFilePath, await formatTs(serverFile.content, serverFilePath), 'utf-8')
+      console.log(`${prefix}  ✓ ${serverFile.filename}`)
+    }
+  } else {
+    console.log(`${prefix}Check mode: skipping all file writes.`)
   }
 
   // Phase 4: Zod schema bootstrap. Write once, never overwrite.
   if (config.input_schema !== undefined) {
-    await generateZodIntegration(cwd, config, spec, outputDir, prefix, writableVariantMap)
+    await generateZodIntegration(cwd, config, spec, outputDir, prefix, writableVariantMap, check)
   }
 
   console.log(`${prefix}Done! Generated ${generatedFiles.length} file(s).`)
@@ -124,7 +136,8 @@ async function generateZodIntegration(
   spec: Awaited<ReturnType<typeof parseSpec>>,
   outputDir: string,
   prefix: string,
-  writableVariantMap: ReturnType<typeof buildWritableVariantMap>
+  writableVariantMap: ReturnType<typeof buildWritableVariantMap>,
+  check: boolean
 ): Promise<void> {
   const schemaPath = resolve(cwd, config.input_schema!)
   let schemaExists = false
@@ -132,10 +145,27 @@ async function generateZodIntegration(
     await access(schemaPath)
     schemaExists = true
   } catch {
-    // file does not exist, bootstrap it
+    // file does not exist
   }
 
-  if (schemaExists) {
+  // Collect all drift signals before deciding whether to throw or warn.
+  const driftMessages: string[] = []
+
+  if (!schemaExists) {
+    if (check) {
+      // In check mode a missing schema file is itself a drift error.
+      driftMessages.push(
+        `input_schema file ${config.input_schema} does not exist; run generate to bootstrap it`
+      )
+    } else {
+      // Normal mode: bootstrap the schema file.
+      const zodFile = generateZodSchemas(spec)
+      await writeFile(schemaPath, zodFile.content, 'utf-8')
+      console.log(
+        `${prefix}  ✓ ${config.input_schema} (bootstrapped: edit freely, won't be overwritten)`
+      )
+    }
+  } else {
     console.log(
       `${prefix}Skipping ${config.input_schema}: already exists (edit freely, it's yours).`
     )
@@ -147,69 +177,79 @@ async function generateZodIntegration(
       exportedSchemas.add(match[1]!)
     }
 
-    // Drift detection: warn to stderr for missing component schemas.
+    // Drift detection: collect missing component schemas.
     const specSchemaNames = Object.keys(spec.components?.schemas ?? {})
     for (const name of specSchemaNames) {
       if (!exportedSchemas.has(`${name}Schema`)) {
-        console.warn(
-          `${prefix}Drift: ${name}Schema is in the OpenAPI spec but not found in ${config.input_schema}. Run with --reset-schema to re-bootstrap.`
-        )
+        const msg = `${prefix}Drift: ${name}Schema is in the OpenAPI spec but not found in ${config.input_schema}. Run with --reset-schema to re-bootstrap.`
+        console.warn(msg)
+        driftMessages.push(msg)
       }
     }
 
-    // Drift detection: warn for missing synthesized inline response schemas.
+    // Drift detection: collect missing synthesized inline response schemas.
     // These are bootstrapped by generateZodSchemas() but may be absent if the file
     // predates this feature or if the user removed them accidentally.
     const synthesizedNames = collectSynthesizedResponseSchemaNames(spec)
     for (const schemaName of synthesizedNames) {
       if (!exportedSchemas.has(schemaName)) {
-        console.warn(
-          `${prefix}Drift: ${schemaName} is synthesized from an inline response but not found in ${config.input_schema}. Run with --reset-schema to re-bootstrap, or add it manually.`
-        )
+        const msg = `${prefix}Drift: ${schemaName} is synthesized from an inline response but not found in ${config.input_schema}. Run with --reset-schema to re-bootstrap, or add it manually.`
+        console.warn(msg)
+        driftMessages.push(msg)
       }
     }
 
-    // Compute relative import path for use in generated imports
-    const relPath = relative(outputDir, schemaPath)
-    // 'schemas.ts' -> './schemas.js', '../schemas.ts' -> '../schemas.js'
-    const schemaImportPath =
-      (relPath.startsWith('.') ? '' : './') + relPath.replace(/\.ts$/, '.js')
+    // Gate: throw when check mode or config.drift === 'error' and drift was detected.
+    if (driftMessages.length > 0 && (check || config.drift === 'error')) {
+      throw new Error(
+        `Schema drift detected:\n${driftMessages.map((m) => `  - ${m}`).join('\n')}`
+      )
+    }
 
-    // Re-generate (overwrite) models.ts and client.ts with schema-enhanced versions
-    const enhancedTypes = generateTypes(
-      spec,
-      { schemaNames: exportedSchemas, schemaImportPath },
-      writableVariantMap
-    )
-    const enhancedClient = generateClient(
-      spec,
-      {
-        schemaNames: exportedSchemas,
-        schemaImportPath,
-        errorBodyType: config.error_body_type,
-        errorBodyTypeImport: config.error_body_type_import,
-      },
-      writableVariantMap
-    )
-    const enhancedTypesPath = join(outputDir, enhancedTypes.filename)
-    const enhancedClientPath = join(outputDir, enhancedClient.filename)
-    await writeFile(
-      enhancedTypesPath,
-      await formatTs(enhancedTypes.content, enhancedTypesPath),
-      'utf-8'
-    )
-    await writeFile(
-      enhancedClientPath,
-      await formatTs(enhancedClient.content, enhancedClientPath),
-      'utf-8'
-    )
-    console.log(`${prefix}  ✓ models.ts (schema-enhanced, types from z.infer)`)
-    console.log(`${prefix}  ✓ client.ts (schema-enhanced, Zod validation added)`)
-  } else {
-    const zodFile = generateZodSchemas(spec)
-    await writeFile(schemaPath, zodFile.content, 'utf-8')
-    console.log(
-      `${prefix}  ✓ ${config.input_schema} (bootstrapped: edit freely, won't be overwritten)`
+    if (!check) {
+      // Compute relative import path for use in generated imports
+      const relPath = relative(outputDir, schemaPath)
+      // 'schemas.ts' -> './schemas.js', '../schemas.ts' -> '../schemas.js'
+      const schemaImportPath =
+        (relPath.startsWith('.') ? '' : './') + relPath.replace(/\.ts$/, '.js')
+
+      // Re-generate (overwrite) models.ts and client.ts with schema-enhanced versions
+      const enhancedTypes = generateTypes(
+        spec,
+        { schemaNames: exportedSchemas, schemaImportPath },
+        writableVariantMap
+      )
+      const enhancedClient = generateClient(
+        spec,
+        {
+          schemaNames: exportedSchemas,
+          schemaImportPath,
+          errorBodyType: config.error_body_type,
+          errorBodyTypeImport: config.error_body_type_import,
+        },
+        writableVariantMap
+      )
+      const enhancedTypesPath = join(outputDir, enhancedTypes.filename)
+      const enhancedClientPath = join(outputDir, enhancedClient.filename)
+      await writeFile(
+        enhancedTypesPath,
+        await formatTs(enhancedTypes.content, enhancedTypesPath),
+        'utf-8'
+      )
+      await writeFile(
+        enhancedClientPath,
+        await formatTs(enhancedClient.content, enhancedClientPath),
+        'utf-8'
+      )
+      console.log(`${prefix}  ✓ models.ts (schema-enhanced, types from z.infer)`)
+      console.log(`${prefix}  ✓ client.ts (schema-enhanced, Zod validation added)`)
+    }
+  }
+
+  // Gate for check mode missing-file case (after the if/else above).
+  if (driftMessages.length > 0 && check) {
+    throw new Error(
+      `Schema drift detected:\n${driftMessages.map((m) => `  - ${m}`).join('\n')}`
     )
   }
 }

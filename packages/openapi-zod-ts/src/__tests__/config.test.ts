@@ -133,6 +133,34 @@ describe('loadConfig', () => {
     )
   })
 
+  it('loads drift: error', async () => {
+    writeConfig({ input_openapi: 'openapi.json', output: 'src/api', drift: 'error' })
+    const config = await loadConfig(tmpDir)
+    expect(config.drift).toBe('error')
+  })
+
+  it('loads drift: warn', async () => {
+    writeConfig({ input_openapi: 'openapi.json', output: 'src/api', drift: 'warn' })
+    const config = await loadConfig(tmpDir)
+    expect(config.drift).toBe('warn')
+  })
+
+  it('drift is undefined when absent', async () => {
+    writeConfig({ input_openapi: 'openapi.json', output: 'src/api' })
+    const config = await loadConfig(tmpDir)
+    expect(config.drift).toBeUndefined()
+  })
+
+  it('throws when drift is an invalid value', async () => {
+    writeConfig({ input_openapi: 'openapi.json', output: 'src/api', drift: 'throw' })
+    await expect(loadConfig(tmpDir)).rejects.toThrow('"drift" must be \'error\' or \'warn\'')
+  })
+
+  it('throws when drift is a boolean', async () => {
+    writeConfig({ input_openapi: 'openapi.json', output: 'src/api', drift: true })
+    await expect(loadConfig(tmpDir)).rejects.toThrow('"drift" must be \'error\' or \'warn\'')
+  })
+
   it('ignores unknown config fields', async () => {
     writeConfig({ input_openapi: 'openapi.json', output: 'src/api', unknown_field: 'ignored' })
     const config = await loadConfig(tmpDir)
@@ -453,6 +481,29 @@ describe('loadConfigs: projects array support', () => {
     expect(configs[0]!.baseUrl).toBe('https://users.example.com')
     expect(configs[0]!.server_client).toBe(true)
     expect(configs[1]!.baseUrl).toBeUndefined()
+  })
+
+  it('parses drift field in each project entry', async () => {
+    writeConfig({
+      projects: [
+        { input_openapi: 'services/users.json', output: 'src/users', drift: 'error' },
+        { input_openapi: 'services/orders.json', output: 'src/orders', drift: 'warn' },
+        { input_openapi: 'services/products.json', output: 'src/products' },
+      ],
+    })
+    const configs = await loadConfigs(tmpDir)
+    expect(configs[0]!.drift).toBe('error')
+    expect(configs[1]!.drift).toBe('warn')
+    expect(configs[2]!.drift).toBeUndefined()
+  })
+
+  it('throws when a project entry has an invalid drift value', async () => {
+    writeConfig({
+      projects: [
+        { input_openapi: 'services/users.json', output: 'src/users', drift: 'throw' },
+      ],
+    })
+    await expect(loadConfigs(tmpDir)).rejects.toThrow('projects[0]')
   })
 
   it('throws when both top-level input_openapi and projects are present', async () => {
