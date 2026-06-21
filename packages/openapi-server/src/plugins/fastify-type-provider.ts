@@ -106,6 +106,12 @@ interface RouterOptions {
    * For best coverage, use input_schema to wire your own Zod schemas instead.
    */
   emitResponseValidation?: boolean
+  /**
+   * Relative import path (from the generated router.ts) to the shared `_shared/errors.js`
+   * module. Defaults to `./_shared/errors.js` when not provided.
+   * The generator always passes the correct path based on the shared dir derivation logic.
+   */
+  errorsImportPath?: string
 }
 
 // ── Shared path conversion ────────────────────────────────────────────────────
@@ -720,19 +726,6 @@ function buildRouteOptions(
   return `{ ${parts.join(', ')} }`
 }
 
-// ── HttpError class lines ─────────────────────────────────────────────────────
-
-function httpErrorClassLines(): string[] {
-  return [
-    'export class HttpError extends Error {',
-    '  constructor(public readonly status: number, message: string) {',
-    '    super(message)',
-    "    this.name = 'HttpError'",
-    '  }',
-    '}',
-  ]
-}
-
 // ── Route handler builder ─────────────────────────────────────────────────────
 
 // fallow-ignore-next-line complexity
@@ -1122,8 +1115,10 @@ export function generateFastifyRouter(
   lines.push('    operationId?: string')
   lines.push('  }')
   lines.push('}')
+  const errorsImportPath = options?.errorsImportPath ?? './_shared/errors.js'
   lines.push('')
-  lines.push("import { HttpError } from './errors.js'")
+  lines.push(`import { HttpError } from '${errorsImportPath}'`)
+  lines.push(`export { HttpError } from '${errorsImportPath}'`)
   lines.push('')
   // Emit the CreateRouterOptions escape hatch so callers can override compilers/errorHandler
   // and control parser registration without having to re-implement the whole plugin.
@@ -1135,6 +1130,12 @@ export function generateFastifyRouter(
   lines.push('  serializerCompiler?: typeof serializerCompiler')
   lines.push('  /** Set to false to skip automatic parser registration (default: true). */')
   lines.push('  registerParsers?: boolean')
+  lines.push('  /**')
+  lines.push('   * Register additional routes on the Fastify instance after the ZodTypeProvider')
+  lines.push('   * compilers, error handler, and body parsers are set up. Custom routes registered')
+  lines.push('   * here inherit the ZodTypeProvider context and the HttpError error handler.')
+  lines.push('   */')
+  lines.push("  registerCustomRoutes?: (app: import('fastify').FastifyInstance) => void | Promise<void>")
   lines.push('}')
   lines.push('')
   lines.push(`export function createRouter(service: ${serviceRef}, options?: CreateRouterOptions): FastifyPluginAsyncZod {`)
@@ -1204,6 +1205,12 @@ export function generateFastifyRouter(
     lines.push('    }')
   }
 
+  // registerCustomRoutes: invoked after compilers, error handler, and parsers are set up
+  // so custom routes inherit the ZodTypeProvider context and HttpError handling.
+  lines.push('    if (options?.registerCustomRoutes !== undefined) {')
+  lines.push('      await options.registerCustomRoutes(app)')
+  lines.push('    }')
+
   for (const op of operations) {
     lines.push('')
     lines.push(buildFastifyTypeProviderHandler(op, '    ', spec, options?.schemaNames, ctx, zeroCast, options?.emitResponseValidation))
@@ -1215,31 +1222,6 @@ export function generateFastifyRouter(
 
   return {
     filename: 'router.ts',
-    content: lines.join('\n'),
-  }
-}
-
-// ── errors.ts emitter ─────────────────────────────────────────────────────────
-
-/**
- * Emit errors.ts: the generated module containing the HttpError class.
- * The generated router.ts imports HttpError from this file instead of defining it inline.
- * Emitted for all Fastify targets (both passes) so the import path is consistent
- * regardless of whether input_schema is configured.
- */
-export function emitFastifyErrorsFile(): GeneratedFile {
-  const lines: string[] = []
-  lines.push('// This file is auto-generated. Do not edit manually.')
-  lines.push('')
-  lines.push('export class HttpError extends Error {')
-  lines.push('  constructor(public readonly status: number, message: string) {')
-  lines.push('    super(message)')
-  lines.push("    this.name = 'HttpError'")
-  lines.push('  }')
-  lines.push('}')
-  lines.push('')
-  return {
-    filename: 'errors.ts',
     content: lines.join('\n'),
   }
 }

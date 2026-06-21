@@ -6,7 +6,7 @@ import { loadConfigs, type ServerConfig } from './config.js'
 import { generateService, type ServiceOptions } from './plugins/service.js'
 import { generateFastifyTypes, generateFastifyTypedService } from './plugins/fastify-service.js'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from './plugins/router.js'
-import { emitFastifyErrorsFile } from './plugins/fastify-type-provider.js'
+import { emitSharedErrorsFile, deriveSharedDir, sharedErrorsImportPath } from './plugins/errors-emitter.js'
 
 async function formatTs(content: string, filePath: string): Promise<string> {
   const { format, resolveConfig } = await import('prettier')
@@ -19,6 +19,8 @@ interface BaseRouterOptions {
   schemaNames?: Set<string>
   schemaImportPath?: string
   contextType?: string
+  /** Relative path from the generated router.ts to the shared _shared/errors.js module. */
+  errorsImportPath?: string
 }
 
 /** Extended options for the Fastify zero-cast path. */
@@ -40,7 +42,12 @@ function buildRouterFile(
 }
 
 // fallow-ignore-next-line complexity
-async function generateOne(cwd: string, config: ServerConfig, label?: string): Promise<void> {
+async function generateOne(
+  cwd: string,
+  config: ServerConfig,
+  sharedDir: string,
+  label?: string
+): Promise<void> {
   const inputPath = resolve(cwd, config.input_openapi)
   const outputDir = resolve(cwd, config.output)
   const framework = config.framework ?? 'none'
@@ -48,6 +55,9 @@ async function generateOne(cwd: string, config: ServerConfig, label?: string): P
 
   console.log(`${prefix}Parsing spec: ${inputPath}`)
   const spec = await parseSpec(inputPath)
+
+  // Compute the relative path from this router's outputDir to the shared errors module.
+  const errorsImportPath = sharedErrorsImportPath(outputDir, sharedDir)
 
   const serviceOptions: ServiceOptions | undefined =
     config.context_type !== undefined ? { contextType: config.context_type } : undefined
@@ -58,12 +68,9 @@ async function generateOne(cwd: string, config: ServerConfig, label?: string): P
       buildRouterFile(spec, framework, {
         contextType: config.context_type,
         emitResponseValidation: config.emit_response_validation === true,
+        errorsImportPath,
       })
     )
-    // For Fastify: emit errors.ts so the router.ts import is satisfied from the first pass.
-    if (framework === 'fastify') {
-      generatedFiles.push(emitFastifyErrorsFile())
-    }
   }
 
   console.log(`${prefix}Writing output to: ${outputDir}`)
@@ -77,7 +84,7 @@ async function generateOne(cwd: string, config: ServerConfig, label?: string): P
 
   // Second pass: if input_schema is configured and file exists, re-generate router with Zod validation
   if (framework !== 'none' && config.input_schema !== undefined) {
-    await generateSchemaEnhancedRouter(cwd, config, spec, framework, outputDir, prefix)
+    await generateSchemaEnhancedRouter(cwd, config, spec, framework, outputDir, sharedDir, prefix)
   }
 
   console.log(`${prefix}Done! Generated ${generatedFiles.length} file(s).`)
@@ -89,6 +96,7 @@ async function generateSchemaEnhancedRouter(
   spec: Awaited<ReturnType<typeof parseSpec>>,
   framework: 'hono' | 'express' | 'fastify',
   outputDir: string,
+  sharedDir: string,
   prefix: string
 ): Promise<void> {
   const schemaPath = resolve(cwd, config.input_schema!)
@@ -113,14 +121,12 @@ async function generateSchemaEnhancedRouter(
   const schemaImportPath = relPath.startsWith('.') ? relPath : `./${relPath}`
   const schemaImportPathJs = schemaImportPath.replace(/\.ts$/, '.js')
 
+  // Compute the relative path from this router's outputDir to the shared errors module.
+  const errorsImportPath = sharedErrorsImportPath(outputDir, sharedDir)
+
   // For Fastify: emit schema-types.ts (z.infer aliases) and re-emit service.ts using those
   // aliases. This enables the zero-cast router path where req.body and service params align.
   if (framework === 'fastify') {
-    const errorsFile = emitFastifyErrorsFile()
-    const errorsPath = join(outputDir, errorsFile.filename)
-    await writeFile(errorsPath, await formatTs(errorsFile.content, errorsPath), 'utf-8')
-    console.log(`${prefix}  ✓ errors.ts (HttpError class)`)
-
     const schemaTypesFile = generateFastifyTypes(exportedSchemas, schemaImportPathJs)
     const schemaTypesPath = join(outputDir, schemaTypesFile.filename)
     await writeFile(schemaTypesPath, await formatTs(schemaTypesFile.content, schemaTypesPath), 'utf-8')
@@ -141,6 +147,7 @@ async function generateSchemaEnhancedRouter(
       zeroCast: true,
       contextType: config.context_type,
       emitResponseValidation: config.emit_response_validation === true,
+      errorsImportPath,
     })
     const routerPath = join(outputDir, routerFile.filename)
     await writeFile(routerPath, await formatTs(routerFile.content, routerPath), 'utf-8')
@@ -152,6 +159,7 @@ async function generateSchemaEnhancedRouter(
     schemaNames: exportedSchemas,
     schemaImportPath: schemaImportPathJs,
     contextType: config.context_type,
+    errorsImportPath,
   })
   const routerPath = join(outputDir, routerFile.filename)
   await writeFile(routerPath, await formatTs(routerFile.content, routerPath), 'utf-8')
@@ -161,5 +169,16 @@ async function generateSchemaEnhancedRouter(
 export async function generate(cwd: string, configPath?: string): Promise<void> {
   console.log('Loading config...')
   const configs = await loadConfigs(cwd, configPath)
-  await runProjects(configs, (config, label) => generateOne(cwd, config, label))
+
+  // Derive the shared directory once for all projects in this run.
+  const sharedDir = deriveSharedDir(cwd, configs)
+
+  // Emit _shared/errors.ts once per generation run.
+  const sharedFile = emitSharedErrorsFile()
+  const sharedFilePath = join(sharedDir, 'errors.ts')
+  await mkdir(sharedDir, { recursive: true })
+  await writeFile(sharedFilePath, await formatTs(sharedFile.content, sharedFilePath), 'utf-8')
+  console.log(`  ✓ _shared/errors.ts (shared HttpError class)`)
+
+  await runProjects(configs, (config, label) => generateOne(cwd, config, sharedDir, label))
 }

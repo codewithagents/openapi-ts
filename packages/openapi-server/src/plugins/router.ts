@@ -790,6 +790,12 @@ interface RouterOptions {
    * Must match the value set in ServiceOptions so service call signatures align.
    */
   contextType?: string
+  /**
+   * Relative import path (from the generated router.ts) to the shared `_shared/errors.js`
+   * module. Defaults to `./_shared/errors.js` when not provided.
+   * The generator always passes the correct path based on the shared dir derivation logic.
+   */
+  errorsImportPath?: string
 }
 
 interface GeneratorSetup {
@@ -1324,24 +1330,6 @@ function buildExpressRouteHandler(
   return lines.join('\n')
 }
 
-// ── HttpError class ───────────────────────────────────────────────────────────
-
-/**
- * Lines that emit the exported HttpError class into a generated router file.
- * Services throw `new HttpError(404, 'Not found')` and the generated router
- * catches it, returning the matching HTTP status instead of a generic 500.
- */
-function httpErrorClassLines(): string[] {
-  return [
-    'export class HttpError extends Error {',
-    '  constructor(public readonly status: number, message: string) {',
-    '    super(message)',
-    "    this.name = 'HttpError'",
-    '  }',
-    '}',
-  ]
-}
-
 // ── Zod import helpers ────────────────────────────────────────────────────────
 
 /**
@@ -1392,8 +1380,10 @@ export function generateExpressRouter(
     const sortedUsedSchemas = Array.from(usedSchemaNames).sort()
     lines.push(`import { ${sortedUsedSchemas.join(', ')} } from '${options.schemaImportPath}'`)
   }
+  const expressErrorsPath = options?.errorsImportPath ?? './_shared/errors.js'
   lines.push('')
-  for (const l of httpErrorClassLines()) lines.push(l)
+  lines.push(`import { HttpError } from '${expressErrorsPath}'`)
+  lines.push(`export { HttpError } from '${expressErrorsPath}'`)
   lines.push('')
   lines.push(`export function createRouter(service: ${serviceRef}): Router {`)
   lines.push('  const router = Router()')
@@ -1444,8 +1434,10 @@ export function generateRouter(spec: OpenAPIV3_1.Document, options?: RouterOptio
     const sortedUsedSchemas = Array.from(usedSchemaNames).sort()
     lines.push(`import { ${sortedUsedSchemas.join(', ')} } from '${options.schemaImportPath}'`)
   }
+  const honoErrorsPath = options?.errorsImportPath ?? './_shared/errors.js'
   lines.push('')
-  for (const l of httpErrorClassLines()) lines.push(l)
+  lines.push(`import { HttpError } from '${honoErrorsPath}'`)
+  lines.push(`export { HttpError } from '${honoErrorsPath}'`)
   lines.push('')
   lines.push(`export function createRouter(service: ${serviceRef}): Hono {`)
   lines.push('  const app = new Hono()')
