@@ -1,6 +1,6 @@
 {
-  "input_openapi": "spec/api.json",
+  "input_openapi": "../petstore-shared/spec/api.json",
   "output": "generated/",
   "framework": "hono",
-  "input_schema": "src/schemas.ts"
+  "input_schema": "../petstore-shared/schemas.ts"
 }
