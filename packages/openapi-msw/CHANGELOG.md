@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-msw-v0.2.0...openapi-msw-v0.2.1) (2026-06-21)
+
+
+### Performance Improvements
+
+* **ci:** carve the 128-spec compat matrix off the required gate, parallelize coverage ([#352](https://github.com/codewithagents/openapi-zod-ts/issues/352)) ([939ea00](https://github.com/codewithagents/openapi-zod-ts/commit/939ea0025e190c42e45c05f3c298d68adc014a60))
+
 ## [0.2.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-msw-v0.1.0...openapi-msw-v0.2.0) (2026-06-10)
 
 

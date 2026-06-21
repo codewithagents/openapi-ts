@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.2.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.1.0...openapi-zod-ts-v2.2.0) (2026-06-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **openapi-zod-ts:** generated service interfaces and fetch clients now type request bodies as the XWritable variant for schemas with readOnly/writeOnly properties (directly or transitively). Service implementations and callers typed against the old base name must switch to the XWritable name.
+
+### Features
+
+* **openapi-zod-ts:** implement --reset-schema and align drift check with the bootstrapper ([#355](https://github.com/codewithagents/openapi-zod-ts/issues/355)) ([c86c335](https://github.com/codewithagents/openapi-zod-ts/commit/c86c335239e45b5ef32849dcf655335fe7971778))
+
+
+### Bug Fixes
+
+* **openapi-zod-ts:** derive read/write variants transitively so response types are the read shape ([#365](https://github.com/codewithagents/openapi-zod-ts/issues/365)) ([6337af1](https://github.com/codewithagents/openapi-zod-ts/commit/6337af17d47964e8e90393e594f1a5157d92fe26))
+
+
+### Performance Improvements
+
+* **ci:** carve the 128-spec compat matrix off the required gate, parallelize coverage ([#352](https://github.com/codewithagents/openapi-zod-ts/issues/352)) ([939ea00](https://github.com/codewithagents/openapi-zod-ts/commit/939ea0025e190c42e45c05f3c298d68adc014a60))
+
 ## [2.1.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.0.1...openapi-zod-ts-v2.1.0) (2026-06-21)
 
 
