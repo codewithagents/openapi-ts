@@ -164,6 +164,8 @@ function getCookieParams(operation: OperationObject, spec: OpenAPIV3_1.Document)
 
 // ── Response status helpers ───────────────────────────────────────────────────
 
+// Parallel response helpers to router.ts (same shapes, separate generation passes).
+// fallow-ignore-next-line code-duplication
 function response200IsVoid(resp: ResponseObject | ReferenceObject): boolean {
   if (isRef(resp)) return false
   const r = resp as ResponseObject
@@ -252,10 +254,9 @@ function getResponseStatus(
     : { status: 200, isVoid: false, responseContentType: 'application/json' }
 }
 
+// getResponseTypeName is a branchy codegen dispatcher (response-status priority + $ref/inline
+// fallback chain), parallel to router.ts; coupling the emitters would violate generation separation.
 // fallow-ignore-next-line complexity
-// fallow-ignore-next-line code-duplication
-// Parallel response-type resolver to router.ts getResponseTypeName; each emitter
-// needs its own independent lookup pass; coupling them would violate generation separation.
 function getResponseTypeName(
   operation: OperationObject,
   schemaNames?: Set<string>
@@ -265,9 +266,9 @@ function getResponseTypeName(
     | undefined
   if (responses === undefined) return undefined
 
-  // fallow-ignore-next-line code-duplication
   // Priority list mirrors the one in router.ts; both emitters scan the same response
   // priority ordering but for different purposes (type names vs. schema expressions).
+  // fallow-ignore-next-line code-duplication
   const priority = [
     '200',
     '201',
@@ -823,11 +824,11 @@ function buildFastifyTypeProviderHandler(
       | Record<string, ResponseObject | ReferenceObject>
       | undefined
     if (responses !== undefined) {
-      // fallow-ignore-next-line code-duplication
       // The priority-ordered 2xx response scan mirrors the one in fastify-service.ts
       // getReturnInfo. Both emitters must independently walk the same responses object:
       // fastify-service.ts resolves type names, this emitter synthesizes Zod expressions.
       // They cannot share a helper without coupling two separate generation passes.
+      // fallow-ignore-next-line code-duplication
       const priority = ['200', '201', ...Object.keys(responses).filter(
         (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
       )]

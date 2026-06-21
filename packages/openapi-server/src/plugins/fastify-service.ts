@@ -71,8 +71,8 @@ function getServiceCookieParams(
   return getServiceInParams(operation, spec, 'cookie')
 }
 
-// fallow-ignore-next-line code-duplication
 // Parallel type aliases to service.ts: both emitters need the same narrow local types.
+// fallow-ignore-next-line code-duplication
 type OperationObject = OpenAPIV3_1.OperationObject
 type ReferenceObject = OpenAPIV3_1.ReferenceObject
 type ResponseObject = OpenAPIV3_1.ResponseObject
@@ -235,9 +235,9 @@ interface OperationInfo {
   returnInfo: ReturnInfo & { isSynthesizedResponse?: boolean }
 }
 
-// fallow-ignore-next-line code-duplication
 // Parallel operation collector to service.ts; each emitter owns its own collection pass.
 function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
+  // fallow-ignore-next-line code-duplication
   const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
   if (paths === undefined) return []
 
@@ -330,9 +330,9 @@ function buildMethodSignature(
     // Zod body schema: the router passes req.body as unknown/Buffer for those content types.
     // A same-named schema (e.g. LabGallerySchema) may exist for the RESPONSE, not the body,
     // so we must not adopt it as the body param type here.
-    // fallow-ignore-next-line code-duplication
     // Parallel body-type resolver to service.ts buildMethodSignature; each emitter
     // owns its own signature-assembly pass with different type resolution logic.
+    // fallow-ignore-next-line code-duplication
     let bodyType: string
     if (op.bodyInfo.contentType === 'multipart/form-data') {
       bodyType = 'unknown'
@@ -343,6 +343,7 @@ function buildMethodSignature(
     } else {
       bodyType = 'unknown'
     }
+    // fallow-ignore-next-line code-duplication
     args.push(`body: ${bodyType}`)
   }
 
