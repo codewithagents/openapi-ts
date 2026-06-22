@@ -35,6 +35,7 @@ Set Height 760
 Set Padding 24
 Set Theme "Catppuccin Mocha"
 Set TypingSpeed 30ms
+Set Framerate 24
 
 Hide
 Type "export PS1='$ '"
