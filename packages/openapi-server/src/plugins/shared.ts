@@ -292,7 +292,7 @@ function applyArrayStyle(
   const arraySchema = schema as OpenAPIV3_1.ArraySchemaObject
   const items = arraySchema.items
   param.itemsTsType = !isRef(items) ? schemaToTsType(items as OpenAPIV3_1.SchemaObject) : 'string'
-  // Align the service query type with the Fastify router's z.array(<itemExpr>) inference (#375):
+  // Align the service query type with the Fastify router's z.array(<itemExpr>) inference (#375, #378):
   // number/integer items -> number[], boolean -> boolean[], everything else -> string[]. NOTE:
   // the hono/express routers do not yet emit array querystring handling for explode:true params
   // (they extract a single string), a pre-existing gap tracked in #377, so this element type
@@ -363,7 +363,7 @@ export function getQueryParams(
  * True when a path-item is a usable Path Item Object: a non-null, non-array object. Arrays,
  * primitives, and null are malformed and cause every operation collector to skip the whole path
  * (pathItem[method] is undefined, or throws for null). objectPathItemEntries filters on this, and
- * warnOnNonObjectPathItems surfaces the drop (#375). A $ref path item is an object and passes
+ * warnOnNonObjectPathItems surfaces the drop (#375, #378). A $ref path item is an object and passes
  * here (it is simply unsupported by the collectors, out of scope), as is an operation-less {}.
  */
 function isPathItemObject(pathItem: unknown): boolean {
@@ -374,7 +374,7 @@ function isPathItemObject(pathItem: unknown): boolean {
  * Entries of spec.paths whose path-item is a usable Path Item Object, in declaration order.
  * Malformed entries (array/null/primitive) are filtered out here so every operation collector
  * iterates only valid path items without repeating a guard, and pathItem[method] never throws.
- * warnOnNonObjectPathItems separately surfaces the dropped entries as a diagnostic (#375).
+ * warnOnNonObjectPathItems separately surfaces the dropped entries as a diagnostic (#375, #378).
  */
 export function objectPathItemEntries(
   spec: OpenAPIV3_1.Document
@@ -390,7 +390,7 @@ export function objectPathItemEntries(
  * Warn for each path-item that is not a valid Path Item Object (e.g. a JSON array, primitive,
  * or null). Such entries are silently skipped by every operation collector because
  * pathItem[method] is undefined, dropping ALL of that path's operations with no diagnostic.
- * Emitting a named warning surfaces the drop instead of losing it silently (#375). A valid
+ * Emitting a named warning surfaces the drop instead of losing it silently (#375, #378). A valid
  * but operation-less path item ({} or { parameters, description }) is a legitimate object and
  * does not warn; a $ref path item is also an object and is left alone (out of scope).
  */
