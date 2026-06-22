@@ -29,9 +29,9 @@ Output "docs/public/media/openapi-zod-ts-demo.gif"
 Require bat
 
 Set Shell "bash"
-Set FontSize 24
-Set Width 1200
-Set Height 720
+Set FontSize 28
+Set Width 1180
+Set Height 760
 Set Padding 24
 Set Theme "Catppuccin Mocha"
 Set TypingSpeed 30ms
@@ -108,7 +108,7 @@ Sleep 300ms
 Type "bat -p generated/service.ts"
 Enter
 Sleep 3200ms
-Type "bat -p -r 12:18 generated/hooks.ts"
+Type "bat -p -r 72:88 generated/hooks.ts"
 Enter
 Sleep 3000ms
 
@@ -122,7 +122,7 @@ Sleep 400ms
 Type "# 5. MSW mock handlers, seeded from the spec"
 Enter
 Sleep 300ms
-Type "bat -p generated/handlers.ts"
+Type "bat -p -r 7:37 generated/handlers.ts"
 Enter
 Sleep 3500ms
 Type "# One spec. Types, client, server interface, hooks, mocks."
