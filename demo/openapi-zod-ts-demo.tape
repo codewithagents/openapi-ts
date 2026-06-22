@@ -30,15 +30,17 @@ Require bat
 
 Set Shell "bash"
 Set FontSize 28
-Set Width 1180
-Set Height 760
-Set Padding 24
+Set Width 1300
+Set Height 940
+Set Padding 12
 Set Theme "Catppuccin Mocha"
 Set TypingSpeed 30ms
-Set Framerate 24
+Set Framerate 10
 
 Hide
 Type "export PS1='$ '"
+Enter
+Type "export BAT_PAGING=never"
 Enter
 Type "cd demo"
 Enter
