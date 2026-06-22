@@ -14,8 +14,8 @@
 #   demo/openapi-react-query.config.json -> generated/
 #   demo/openapi-msw.config.json       -> generated/
 #
-#   RESET BEFORE EVERY TAKE:
-#     cd /path/to/demo && rm -rf generated && mkdir generated
+#   RUN FROM the repository root:
+#     vhs demo/openapi-zod-ts-demo.tape
 #
 # COMMANDS USED (from demo/ directory):
 #   node ../packages/openapi-zod-ts/dist/cli.cjs
@@ -24,7 +24,7 @@
 #   node ../packages/openapi-msw/dist/cli.cjs
 # ============================================================================
 
-Output "/Users/benjamin.eckstein/IdeaProjects/private/openapi-zod-ts/.claude/worktrees/agent-ad2973c0fb19b1ebd/docs/public/media/openapi-zod-ts-demo.gif"
+Output "docs/public/media/openapi-zod-ts-demo.gif"
 
 Require bat
 
@@ -39,7 +39,7 @@ Set TypingSpeed 30ms
 Hide
 Type "export PS1='$ '"
 Enter
-Type "cd /Users/benjamin.eckstein/IdeaProjects/private/openapi-zod-ts/.claude/worktrees/agent-ad2973c0fb19b1ebd/demo"
+Type "cd demo"
 Enter
 Type "rm -rf generated && mkdir generated"
 Enter
