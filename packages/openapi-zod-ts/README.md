@@ -7,7 +7,7 @@
 
 📖 **[Full documentation](https://openapi.codewithagents.de)**
 
-Generate TypeScript types, a typed native `fetch` client, and Zod validation from your OpenAPI spec. Zero runtime footprint. Part of a full-pipeline suite tested against 128 real-world specs.
+`openapi-zod-ts` is an OpenAPI TypeScript codegen tool that generates type-safe TypeScript models, a native `fetch` client, and Zod v4 schemas from a single OpenAPI 3.1 spec, with zero runtime dependencies and 128 real-world specs tested on every PR.
 
 - **Tested against 128 real-world specs**: Stripe, GitHub, Spotify, OpenAI, Adyen, Twilio, Slack, Vercel, and more generate without errors on every PR. 13 of the 128 are showcase specs whose generated output is committed, drift-checked, and typechecked under `tsc --strict`. See the [`examples/`](../../examples/) directory.
 - **Zero runtime footprint**: generated code uses only `fetch`. No axios, no wrapper libraries.

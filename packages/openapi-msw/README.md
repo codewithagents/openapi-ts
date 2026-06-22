@@ -7,7 +7,7 @@
 
 📖 **[Full documentation](https://openapi.codewithagents.de/openapi-msw)**
 
-Generate [MSW](https://mswjs.io) v2 HTTP handlers, populated with seeded [Faker](https://fakerjs.dev) mock data, from your OpenAPI 3.x spec. Point it at a spec, get a `handlers.ts` you can drop into a browser worker or a Node test server.
+`@codewithagents/openapi-msw` generates MSW v2 mock handlers with seeded Faker data from your OpenAPI 3.1 spec: point it at a spec, get a type-safe `handlers.ts` you can drop into a browser worker or a Node mock server instantly.
 
 - **One handler per operation**: every `get`, `post`, `put`, `patch`, and `delete` operation becomes an `http.<method>(path, resolver)` entry in an exported `handlers` array.
 - **Seeded, deterministic mocks**: `faker.seed(<seed>)` (default `42`) is written into the generated file, so every run with the same spec and seed produces identical mock values. Change the seed, re-generate, get a new but still stable dataset.
