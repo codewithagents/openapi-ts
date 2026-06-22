@@ -7,7 +7,7 @@
 
 **[Full documentation](https://openapi.codewithagents.de/api-errors)**
 
-Backend API errors don't automatically map to form field errors. Every project writes the same boilerplate from scratch: catch the error, inspect its shape, figure out which field each message belongs to, then call your form library's error setter. This package does that for you. It normalizes every common server error envelope into a flat `{ field, message }[]` list and wires it to your form library in one call. No codegen step, no config file.
+`@codewithagents/api-errors` maps backend API error responses to form field errors in one call: it auto-detects RFC 9457 Problem Details, Spring Boot, Laravel, Zod, JSON:API, and ten other error shapes, then wires the result to React Hook Form, Formik, or TanStack Form with zero runtime dependencies.
 
 It is the runtime helper in the [openapi-zod-ts toolchain](#ecosystem): the four generators emit your types, client, hooks, and mocks, and `api-errors` maps the error responses those servers return back onto your form fields at runtime.
 

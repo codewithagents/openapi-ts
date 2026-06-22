@@ -1,6 +1,7 @@
 import { defineConfig } from 'astro/config'
 import starlight from '@astrojs/starlight'
 import remarkGfm from 'remark-gfm'
+import starlightLlmsTxt from 'starlight-llms-txt'
 
 // starlight-package-managers is a component library (not a Starlight plugin).
 // Import PackageManagers directly in .mdx files when needed:
@@ -16,6 +17,11 @@ export default defineConfig({
   },
   integrations: [
     starlight({
+      plugins: [
+        starlightLlmsTxt({
+          promote: ['comparison*', 'getting-started/quickstart*', 'getting-started*'],
+        }),
+      ],
       title: 'CodeWithAgents OpenAPI',
       description:
         'Generate types, a fetch client, React Query hooks, and Zod schemas from your OpenAPI spec, then map API errors straight to form fields.',

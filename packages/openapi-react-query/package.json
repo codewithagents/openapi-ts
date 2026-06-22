@@ -43,6 +43,7 @@
     "openapi-3.1",
     "react-query",
     "tanstack-query",
+    "react-query-codegen",
     "codegen",
     "typescript",
     "hooks",
@@ -50,6 +51,7 @@
     "useMutation",
     "code-generator"
   ],
+  "funding": "https://github.com/sponsors/codewithagents",
   "license": "MIT",
   "repository": {
     "type": "git",

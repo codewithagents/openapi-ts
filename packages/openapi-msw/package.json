@@ -47,8 +47,10 @@
     "codegen",
     "typescript",
     "mock",
+    "mock-server",
     "code-generator"
   ],
+  "funding": "https://github.com/sponsors/codewithagents",
   "license": "MIT",
   "repository": {
     "type": "git",

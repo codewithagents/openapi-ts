@@ -31,6 +31,7 @@
     "zod",
     "field-errors"
   ],
+  "funding": "https://github.com/sponsors/codewithagents",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -41,6 +42,9 @@
     "url": "https://github.com/codewithagents/openapi-zod-ts/issues"
   },
   "author": "CodeWithAgents (https://codewithagents.de)",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@stryker-mutator/core": "catalog:",
     "@stryker-mutator/vitest-runner": "catalog:",

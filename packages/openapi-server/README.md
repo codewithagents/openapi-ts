@@ -7,7 +7,7 @@
 
 📖 **[Full documentation](https://openapi.codewithagents.de/openapi-server)**
 
-Generate a typed service interface from your OpenAPI 3.x spec. Framework-agnostic by design: wire it to Hono, Express, Fastify, or any router you already use.
+`@codewithagents/openapi-server` generates a type-safe TypeScript service interface from your OpenAPI 3.1 spec, plus an optional router for Hono, Express, or Fastify, so your server implementation stays in sync with your API contract automatically.
 
 - **Framework-agnostic service interface**: `service.ts` is a plain TypeScript interface with no framework imports. Implement it however you want: Hono, Express, Fastify, Koa, plain `http`, Bun, Deno, or anything else.
 - **Optional router scaffolding**: set `"framework"` to `"hono"`, `"express"`, or `"fastify"` and get a ready-to-mount router as a starting point. Set `"framework": "none"` (the default) and wire the interface yourself. The generated code only ever imports what you already have.

@@ -4,8 +4,15 @@
 [![CodeQL](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/codeql.yml/badge.svg)](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/codeql.yml)
 [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./packages/openapi-zod-ts/LICENSE)
+[![npm downloads](https://img.shields.io/npm/dm/openapi-zod-ts.svg)](https://npmjs.com/package/openapi-zod-ts)
+[![Bundle size](https://img.shields.io/bundlephobia/minzip/openapi-zod-ts)](https://bundlephobia.com/package/openapi-zod-ts)
+[![GitHub stars](https://img.shields.io/github/stars/codewithagents/openapi-zod-ts)](https://github.com/codewithagents/openapi-zod-ts/stargazers)
 
 > OpenAPI to TypeScript you actually own. Native `fetch` client, React Query hooks, and Zod schemas you can extend, from one OpenAPI 3.1 spec. Zero runtime dependencies.
+
+**Documentation:** https://openapi.codewithagents.de
+
+Sibling project: [openapi-laravel](https://github.com/codewithagents/openapi-laravel) does the same for PHP/Laravel.
 
 You consume a REST API. You need TypeScript types, a fetch client, form error mapping, and React Query hooks. Instead of hand-writing all of this (and keeping it in sync every time the spec changes), you run one command. Everything here is a `devDependency` or generates code that only depends on what your project already has.
 

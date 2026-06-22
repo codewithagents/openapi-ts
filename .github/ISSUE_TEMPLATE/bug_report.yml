@@ -1,0 +1,78 @@
+name: Bug report
+description: Something is not working as expected
+labels: [bug]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Which package is affected?
+      options:
+        - openapi-zod-ts (core generator)
+        - "@codewithagents/openapi-server"
+        - "@codewithagents/openapi-react-query"
+        - "@codewithagents/openapi-msw"
+        - "@codewithagents/api-errors"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: openapi-version
+    attributes:
+      label: OpenAPI spec version
+      description: Which OpenAPI version does your spec use?
+      options:
+        - "3.1.1"
+        - "3.1.0"
+        - "3.0.x"
+        - Not applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: A minimal OpenAPI snippet or code example that triggers the bug. Paste inline or link to a repo/gist.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened? Include any error messages or generated output.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      placeholder: "e.g. 2.2.0"
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      placeholder: "e.g. 22.0.0"
+    validations:
+      required: false

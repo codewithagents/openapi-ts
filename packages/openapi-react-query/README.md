@@ -7,7 +7,7 @@
 
 📖 **[Full documentation](https://openapi.codewithagents.de/openapi-react-query)**
 
-Generate typed [React Query v5](https://tanstack.com/query/v5) hooks from an OpenAPI 3.1 spec. Run once, get a fully typed `useQuery` hook per GET endpoint and a `useMutation` hook per write operation. No hand-written boilerplate.
+`@codewithagents/openapi-react-query` is an OpenAPI React Query codegen tool that generates typed TanStack Query v5 hooks (`useQuery`, `useMutation`, key factories) directly from your OpenAPI 3.1 spec, with no hand-written boilerplate and full TypeScript strict-mode compliance.
 
 - **One hook per operation**: a `useQuery` variant for every GET and a `useMutation` for every write. Types are derived directly from the generated client, no duplication.
 - **`queryOptions()` factories**: a plain `xxxQueryOptions()` factory alongside every `useQuery` hook, enabling `queryClient.prefetchQuery()` in Next.js App Router server components and `<HydrationBoundary>` SSR patterns.
