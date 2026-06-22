@@ -5,11 +5,11 @@ description: End-to-end walkthrough of the petstore-fastify demo. One OpenAPI sp
 
 import { Aside, Card, CardGrid } from '@astrojs/starlight/components'
 
-{/_ TODO (sibling PR): add a demo GIF at docs/public/media/openapi-zod-ts-demo.gif showing the
+{/* TODO (sibling PR): add a demo GIF at docs/public/media/openapi-zod-ts-demo.gif showing the
 generate command running and the contact form rejecting an invalid payload. Reference here as:
 ![Demo: one generate command, full-stack types](/media/openapi-zod-ts-demo.gif)
 Do NOT add the img tag until the GIF exists -- the build does not fail on missing alt-only refs
-but a broken image is worse than a placeholder comment. _/}
+but a broken image is worse than a placeholder comment. */}
 
 One `pnpm generate` command reads an OpenAPI spec and writes a typed fetch client, Zod v4 schemas,
 React Query v5 hooks, AND a Fastify router. Every file in `generated/` and `generated-auth/` comes
