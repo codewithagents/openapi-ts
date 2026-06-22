@@ -1,17 +1,15 @@
 ---
-title: How it compares
-description: An honest comparison of openapi-zod-ts with hey-api, orval, kubb, and openapi-fetch, including where the alternatives are ahead.
+title: openapi-typescript alternative with Zod v4 validation
+description: Honest comparison of openapi-zod-ts with hey-api, orval, kubb, and openapi-fetch. Why choose this openapi-fetch alternative with Zod, how it differs from hey-api vs orval vs kubb, and where each tool genuinely wins.
 ---
 
 import { Aside, CardGrid, Card, LinkButton } from '@astrojs/starlight/components'
 
 The TypeScript OpenAPI space is crowded and mature. [hey-api](https://heyapi.dev/),
 [orval](https://orval.dev/), [kubb](https://kubb.dev/), and
-[openapi-fetch](https://openapi-ts.dev/openapi-fetch/) are all good tools, actively maintained, and
-in some areas more featureful than this one. If you want the broadest plugin ecosystem, the widest
-mock-generation tooling, or hooks for every framework, one of them is probably the better pick, and
-that is fine. This toolchain does ship MSW v2 + Faker mocks via `@codewithagents/openapi-msw`, so
-mocking is covered, just not as deeply as the most mock-focused alternatives.
+[openapi-typescript / openapi-fetch](https://openapi-ts.dev/) are all good tools and in some areas
+more featureful than this one. If you want the broadest plugin ecosystem, the widest mock-generation
+tooling, or hooks for every framework, one of them is probably the better pick, and that is fine.
 
 This page exists so you can decide quickly and fairly. It is kept deliberately honest: where the
 alternatives are ahead, that is stated plainly. A comparison that only flatters itself is not worth
@@ -21,6 +19,13 @@ reading.
   Accurate as of June 2026. These projects move fast, hey-api especially. Always confirm against
   each project's own docs before making a decision. If anything here is out of date or wrong, please
   [open an issue](https://github.com/codewithagents/openapi-zod-ts/issues) and we will fix it.
+</Aside>
+
+<Aside type="caution" title="openapi-fetch and openapi-react-query are in maintenance mode">
+  In mid-2025 the openapi-typescript project placed both `openapi-fetch` and `openapi-react-query`
+  into maintenance mode (GitHub Discussion #2559). No new features; bug fixes for critical issues
+  only. If you are currently on openapi-fetch, see the [migration
+  guide](/migrating-from-openapi-fetch).
 </Aside>
 
 ## The one-line difference
@@ -35,21 +40,25 @@ and stability.
 
 ## Feature matrix
 
-|                                            | `openapi-zod-ts`                                                           | hey-api               | orval                | kubb                  | openapi-fetch       |
-| ------------------------------------------ | -------------------------------------------------------------------------- | --------------------- | -------------------- | --------------------- | ------------------- |
-| TypeScript types                           | Yes                                                                        | Yes                   | Yes                  | Yes                   | Yes                 |
-| Fetch client                               | Yes                                                                        | Yes                   | Yes                  | Yes                   | Yes (is the client) |
-| Runtime library added to your app          | None (native `fetch`)                                                      | None (client bundled) | Mutator, often axios | Client of choice      | ~6 kb required      |
-| Zod schemas generated                      | Yes (opt-in)                                                               | Yes (plugin)          | Yes                  | Yes                   | No                  |
-| Runtime request + response validation      | Yes                                                                        | Yes (Zod plugin)      | Yes (Zod)            | Yes (Zod)             | No                  |
-| **Schema file you own, never overwritten** | **Yes**                                                                    | No                    | No                   | No                    | n/a                 |
-| React Query / TanStack hooks               | Yes (React)                                                                | Yes (multi)           | Yes (multi)          | Yes (React, Vue, SWR) | Companion pkg       |
-| Hooks for Vue / Svelte / Angular / Solid   | No                                                                         | Yes                   | Yes                  | Vue                   | Via ecosystem       |
-| **Server-side service interface + router** | **Yes (framework-agnostic by default; Fastify / Hono / Express adapters)** | No                    | No                   | No                    | No                  |
-| Mocks (MSW / faker)                        | Yes (openapi-msw, MSW v2 + Faker)                                          | Yes (plugin)          | Yes                  | Yes                   | No                  |
-| OpenAPI 3.1                                | Yes                                                                        | Yes                   | Yes                  | Yes                   | Yes                 |
-| Swagger 2.0                                | No                                                                         | No                    | Yes                  | Yes                   | No                  |
-| Stable release with semver                 | Yes (core generator 2.x, semver)                                           | No (0.x)              | Yes                  | Yes                   | Yes                 |
+|                                            | `openapi-zod-ts`                                                           | hey-api               | orval                | kubb                  | openapi-fetch (maintenance mode) |
+| ------------------------------------------ | -------------------------------------------------------------------------- | --------------------- | -------------------- | --------------------- | -------------------------------- |
+| TypeScript types                           | Yes                                                                        | Yes                   | Yes                  | Yes                   | Yes                              |
+| Fetch client                               | Yes                                                                        | Yes                   | Yes                  | Yes                   | Yes (is the client)              |
+| Runtime library added to your app          | None (native `fetch`)                                                      | None (client bundled) | Mutator, often axios | Client of choice      | ~6 kb required                   |
+| Zod schemas generated                      | Yes (opt-in)                                                               | Yes (plugin)          | Yes                  | Yes                   | No                               |
+| **Zod version**                            | **v4**                                                                     | v3 (plugin)           | v3                   | v3                    | n/a                              |
+| Runtime request + response validation      | Yes                                                                        | Yes (Zod plugin)      | Yes (Zod)            | Yes (Zod)             | No                               |
+| **Schema file you own, never overwritten** | **Yes**                                                                    | No                    | No                   | No                    | n/a                              |
+| React Query / TanStack hooks               | Yes (React)                                                                | Yes (multi)           | Yes (multi)          | Yes (React, Vue, SWR) | Companion pkg (maintenance mode) |
+| Hooks for Vue / Svelte / Angular / Solid   | No                                                                         | Yes                   | Yes                  | Vue                   | Via ecosystem                    |
+| **Server-side service interface + router** | **Yes (framework-agnostic by default; Fastify / Hono / Express adapters)** | No                    | No                   | No                    | No                               |
+| Mocks (MSW / faker)                        | Yes (openapi-msw, MSW v2 + Faker)                                          | Yes (plugin)          | Yes                  | Yes                   | No                               |
+| **128-spec compatibility matrix in CI**    | **Yes (Stripe, GitHub, OpenAI, Spotify, and more)**                        | No                    | No                   | No                    | No                               |
+| **Mutation testing (Stryker)**             | **Yes (openapi-zod-ts, openapi-react-query)**                              | No                    | No                   | No                    | No                               |
+| OpenAPI 3.1                                | Yes                                                                        | Yes                   | Yes                  | Yes                   | Yes                              |
+| Swagger 2.0                                | No                                                                         | No                    | Yes                  | Yes                   | No                               |
+| Stable release with semver                 | Yes (core generator 2.x, semver)                                           | No (0.x)              | Yes                  | Yes                   | Yes (no longer actively bumped)  |
+| Actively maintained                        | Yes                                                                        | Yes                   | Yes                  | Yes                   | No (maintenance mode)            |
 
 ## Where this toolchain genuinely differs
 
@@ -83,30 +92,57 @@ and stability.
 
 Being honest about this is the point.
 
-- **Breadth of frameworks.** We generate React Query hooks only. hey-api, orval, and kubb generate
-  hooks for Vue, Svelte, Angular, Solid, and more. If your frontend is not React, they win outright.
-- **Mocks and test fixtures.** orval and kubb generate MSW handlers and faker mocks; hey-api has a
-  plugin for it. This toolchain ships `@codewithagents/openapi-msw` (MSW v2 handlers + seeded Faker
-  data), so basic mock generation is covered. The alternatives may still lead on faker breadth,
-  plugins, and ecosystem maturity around mocking.
-- **Plugin ecosystems.** hey-api has 20+ plugins and is used by Vercel, OpenCode, and PayPal. kubb is
-  a plugin meta-framework. If you want to bolt on MSW, Cypress, MCP, or a custom transformer, they are
-  built for that. We are deliberately small and opinionated.
-- **Swagger 2.0.** orval and kubb read Swagger 2.0 specs. We support OpenAPI 3.x only: 3.1 is the
-  primary target and 3.0.x works in practice, with a few 3.0-only constructs still being normalized to
-  3.1 semantics.
-- **Adoption.** These projects have years of users and battle-testing behind them. We are new. That is
-  a real factor, and you should weigh it.
+### openapi-typescript / openapi-fetch: where it wins
+
+**Lightness and TypeScript-first design.** `openapi-typescript` generates a `paths` type from your
+spec with zero runtime output. `openapi-fetch` wraps that with a ~6 kb client that keeps all
+type information at the TypeScript layer. If you want the absolute minimum surface area and do not
+need runtime validation or server generation, the combination is hard to beat for sheer lightness.
+There is no codegen step for the client itself; you install the packages and point them at a
+generated type file.
+
+The important caveat: both packages entered maintenance mode in mid-2025 (Discussion #2559). For a
+new project today, that is a meaningful factor.
+
+### hey-api: where it wins
+
+**Adoption, ecosystem, and plugin breadth.** hey-api is used by Vercel, OpenCode, and PayPal. It
+has 20+ plugins covering MSW, Cypress, MCP adapters, custom transformers, and hooks for React,
+Vue, Svelte, Angular, and Solid. The community around it is large and active. If your team values
+picking the project with the most momentum and the widest ecosystem, hey-api is the clear leader.
+
+**Multi-framework hook generation.** If your frontend is not React, hey-api is likely the better
+pick. We generate React Query v5 hooks only.
+
+### orval: where it wins
+
+**Swagger 2.0 and multi-framework.** orval reads Swagger 2.0 specs and generates clients and
+hooks for multiple frameworks. If you are stuck on a Swagger 2.0 spec or need Vue, Svelte, or
+Angular hooks, orval handles cases this toolchain explicitly excludes.
+
+**Mock generation depth.** orval has a mature Faker and MSW mock story with more configurability
+than `@codewithagents/openapi-msw` today. If rich mock generation is the primary driver, orval
+leads on ecosystem maturity in that area.
+
+### kubb: where it wins
+
+**Plugin meta-framework and multi-framework targets.** kubb is built as an extensible plugin
+platform. It supports React, Vue, and SWR hooks, Swagger 2.0 input, and a plugin API designed for
+teams that want to bolt on custom transformers, Cypress fixtures, or other code generation steps.
+If you want to treat OpenAPI generation as a programmable pipeline with many output targets, kubb
+is built for that use case.
 
 ## When to pick which
 
 <Aside type="tip" title="Pick openapi-zod-ts when">
 
-- You build in **React + TypeScript** and want the client, hooks, and Zod validation as one coherent set.
+- You build in **React + TypeScript** and want the client, hooks, and Zod v4 validation as one coherent set.
 - You want to **add your own validation rules to the schemas** and keep them across regenerations.
-- You also own the **backend** and want one spec to drive both ends.
+- You also own the **backend** and want one spec to drive both ends, typed at both ends.
 - You want **zero runtime footprint** and code you can read, review, and commit.
 - You value a **semver-stable 2.x** for a generator that touches every API call in your app.
+- You want runtime validation proven against **128 real-world specs** and Stryker mutation testing in CI.
+- You are **migrating from openapi-fetch** which has entered maintenance mode.
 
 </Aside>
 
@@ -116,12 +152,16 @@ Being honest about this is the point.
 - You need **advanced mock generation** with rich faker plugins or framework-specific mock tooling: orval or kubb lead here despite `openapi-msw` covering the basics.
 - You have a **Swagger 2.0** spec: orval or kubb.
 - You want the **largest ecosystem and adoption**: hey-api.
-- You only need **types plus a tiny client**, no validation: openapi-fetch is the lightest option.
+- You only need **types plus a tiny lightweight client**, no validation: openapi-typescript plus a minimal path-typed wrapper is the lightest combination (note: openapi-fetch itself is in maintenance mode).
 
 </Aside>
 
-## Coming from one of these?
+## Coming from openapi-fetch or one of these?
+
+<LinkButton href="/migrating-from-openapi-fetch" icon="right-arrow">
+  Migrating from openapi-fetch
+</LinkButton>
 
 <LinkButton href="/migrating" icon="right-arrow">
-  Read the migration guide
+  Migrating from hey-api or orval
 </LinkButton>
