@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v2.1.0...openapi-server-v2.1.1) (2026-06-22)
+
+
+### Bug Fixes
+
+* **openapi-server:** record array query service type and non-object path-item warning ([4796e5e](https://github.com/codewithagents/openapi-zod-ts/commit/4796e5ed253565b8408bc9361f323a98be9170aa))
+
 ## [2.1.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v2.0.0...openapi-server-v2.1.0) (2026-06-21)
 
 
