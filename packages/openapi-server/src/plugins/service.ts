@@ -15,6 +15,8 @@ import {
   getQueryParams,
   type BodyInfo,
   getBodyInfo,
+  warnOnNonObjectPathItems,
+  objectPathItemEntries,
 } from './shared.js'
 
 type OperationObject = OpenAPIV3_1.OperationObject
@@ -161,12 +163,10 @@ function collectOperations(
   spec: OpenAPIV3_1.Document,
   writableVariantMap?: Map<string, string>
 ): OperationInfo[] {
-  const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
-  if (paths === undefined) return []
-
+  // fallow-ignore-next-line code-duplication
   const operations: OperationInfo[] = []
 
-  for (const [path, pathItem] of Object.entries(paths)) {
+  for (const [path, pathItem] of objectPathItemEntries(spec)) {
     for (const method of SUPPORTED_METHODS) {
       const operation = pathItem[method] as OperationObject | undefined
       if (operation === undefined) continue
@@ -273,6 +273,7 @@ export function generateService(
   spec: OpenAPIV3_1.Document,
   options?: ServiceOptions
 ): GeneratedFile {
+  warnOnNonObjectPathItems(spec)
   const serviceName = deriveServiceName(spec)
   const writableVariantMap = buildWritableVariantMap(spec)
   const operations = collectOperations(spec, writableVariantMap)

@@ -17,6 +17,7 @@ import {
   getQueryParams,
   type BodyInfo,
   getBodyInfo,
+  objectPathItemEntries,
 } from './shared.js'
 import {
   type HeaderParam,
@@ -532,13 +533,11 @@ interface RouteOperation {
 }
 
 function collectOperations(spec: OpenAPIV3_1.Document): RouteOperation[] {
-  const paths = spec.paths as Record<string, Record<string, OperationObject>> | undefined
-  if (paths === undefined) return []
-
   const writableVariantMap = buildWritableVariantMap(spec)
+  // fallow-ignore-next-line code-duplication
   const operations: RouteOperation[] = []
 
-  for (const [path, pathItem] of Object.entries(paths)) {
+  for (const [path, pathItem] of objectPathItemEntries(spec)) {
     for (const method of SUPPORTED_METHODS) {
       const operation = pathItem[method] as OperationObject | undefined
       if (operation === undefined) continue
