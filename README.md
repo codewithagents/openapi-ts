@@ -1,5 +1,9 @@
 # CodeWithAgents OpenAPI
 
+<p align="center">
+  <img src="docs/public/media/openapi-zod-ts-demo.gif" alt="One OpenAPI 3.1 spec generates a typed fetch client, Zod schemas, React Query hooks, MSW mocks, and a server interface" width="800">
+</p>
+
 [![CI](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/codeql.yml/badge.svg)](https://github.com/codewithagents/openapi-zod-ts/actions/workflows/codeql.yml)
 [![codecov](https://codecov.io/gh/codewithagents/openapi-zod-ts/graph/badge.svg?branch=main)](https://codecov.io/gh/codewithagents/openapi-zod-ts)
