@@ -103,6 +103,7 @@ export default defineConfig({
             { label: 'Quickstart', slug: 'getting-started/quickstart' },
             { label: 'How it compares', slug: 'comparison' },
             { label: 'Migrating from hey-api or orval', slug: 'migrating' },
+            { label: 'Migrating from openapi-fetch', slug: 'migrating-from-openapi-fetch' },
           ],
         },
         {

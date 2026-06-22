@@ -1,9 +1,20 @@
 ---
-title: Full-stack tutorial
-description: End-to-end walkthrough of the petstore-fastify demo, showing the four generators plus api-errors composing into one typed full-stack application.
+title: 'Full-stack tutorial: OpenAPI spec to typed full-stack app in one command'
+description: End-to-end walkthrough of the petstore-fastify demo. One OpenAPI spec generates a typed fetch client, Zod v4 schemas, React Query v5 hooks, and a Fastify router. Run pnpm generate and get a full-stack typed app with cross-field validation.
 ---
 
 import { Aside, Card, CardGrid } from '@astrojs/starlight/components'
+
+{/* TODO (sibling PR): add a demo GIF at docs/public/media/openapi-zod-ts-demo.gif showing the
+generate command running and the contact form rejecting an invalid payload. Reference here as:
+![Demo: one generate command, full-stack types](/media/openapi-zod-ts-demo.gif)
+Do NOT add the img tag until the GIF exists -- the build does not fail on missing alt-only refs
+but a broken image is worse than a placeholder comment. */}
+
+One `pnpm generate` command reads an OpenAPI spec and writes a typed fetch client, Zod v4 schemas,
+React Query v5 hooks, AND a Fastify router. Every file in `generated/` and `generated-auth/` comes
+from codegen. The only TypeScript you write by hand is the part the spec cannot express: business
+logic, auth, and the one cross-field validation rule.
 
 This tutorial walks through the [`petstore-fastify` demo](https://github.com/codewithagents/openapi-zod-ts/tree/main/packages/petstore-fastify), the one canonical full-stack reference app for the toolchain. One OpenAPI spec drives TypeScript types, a native fetch client, a Fastify service interface and router with Zod validation, and React Query v5 hooks. A React frontend logs in for a bearer token, then submits a secured form whose cross-field validation rule round-trips its error onto the exact field that failed. Nothing in `generated/` or `generated-auth/` is written by hand.
 
