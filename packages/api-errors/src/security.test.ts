@@ -53,7 +53,7 @@ describe('SECURITY: prototype-pollution field names are rejected', () => {
     const calledFields = setError.mock.calls.map((c) => c[0] as string)
     expect(calledFields).not.toContain('__proto__.polluted')
     expect(calledFields).toContain('email')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     expect(({} as any).polluted).toBeUndefined()
   })
 })

@@ -26,8 +26,6 @@ import {
   resolveParam,
   deriveServiceName,
   deriveMethodName,
-  normalizeParamName,
-  schemaToTsType,
   type QueryParam,
   getQueryParams,
   type BodyInfo,
@@ -53,11 +51,6 @@ type ParameterObject = OpenAPIV3_1.ParameterObject
 type ResponseObject = OpenAPIV3_1.ResponseObject
 
 // ── Local types (not shared with router.ts to avoid circular deps) ─────────────
-
-interface PathParamValidation {
-  rawName: string
-  zodExpr: string
-}
 
 interface RouteOperation {
   methodName: string

@@ -587,21 +587,19 @@ describe('number validation constraints', () => {
 
   it('exclusiveMinimum (numeric, OpenAPI 3.0 style) → .min(n)', () => {
     // Covers the `typeof schema.exclusiveMinimum === 'number'` branch
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     expect(genSingle('A', { type: 'number', exclusiveMinimum: 0 } as any)).toContain(
       'z.number().min(0)'
     )
   })
 
   it('exclusiveMaximum (numeric, OpenAPI 3.0 style) → .max(n)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(genSingle('A', { type: 'integer', exclusiveMaximum: 100 } as any)).toContain(
       'z.number().max(100)'
     )
   })
 
   it('exclusiveMinimum + exclusiveMaximum both numeric → chained .min().max()', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(
       genSingle('A', { type: 'number', exclusiveMinimum: 1, exclusiveMaximum: 99 } as any)
     ).toContain('z.number().min(1).max(99)')
@@ -611,7 +609,7 @@ describe('number validation constraints', () => {
 describe('coverage: array type with single non-null element (no null)', () => {
   it("type: ['string'] → z.string() (false branch of isNullable check)", () => {
     // Covers the `return isNullable ? ... : base` false branch — isNullable is false
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const out = genSingle('A', { type: ['string'] } as any)
     expect(out).toContain('z.string()')
     expect(out).not.toContain('.nullable()')
@@ -625,7 +623,7 @@ describe('coverage: hasSelfRef — additionalProperties self-reference', () => {
     const out = gen({
       Foo: {
         type: 'object',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         additionalProperties: { $ref: '#/components/schemas/Foo' } as any,
       },
     })
@@ -665,7 +663,7 @@ describe('coverage: multi-type array with null member (zod.ts line 118 TRUE bran
   it("type: ['string', 'number', 'null'] produces z.union with z.null() (t === 'null' TRUE)", () => {
     // nonNull = ['string', 'number'] (length > 1) → reaches const parts = types.map(...)
     // For 'null' in the original types array: t === 'null' → TRUE → 'z.null()'
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const out = genSingle('A', { type: ['string', 'number', 'null'] } as any)
     expect(out).toContain('z.union(')
     expect(out).toContain('z.null()')
@@ -683,7 +681,6 @@ describe('int64 format -> z.number()', () => {
   })
 
   it('integer with format int32 -> z.number()', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('Id', { type: 'integer', format: 'int32' } as any)
     expect(out).toContain('IdSchema = z.number()')
     expect(out).not.toContain('z.bigint()')
@@ -706,7 +703,6 @@ describe('int64 format -> z.number()', () => {
   })
 
   it('nullable int64 array type: [integer, null] with int64 format -> z.number().nullable()', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('Id', { type: ['integer', 'null'], format: 'int64' } as any)
     expect(out).toContain('z.number().nullable()')
     expect(out).not.toContain('z.bigint()')
@@ -715,19 +711,16 @@ describe('int64 format -> z.number()', () => {
 
 describe('default keyword', () => {
   it('string with default -> .default("value")', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('A', { type: 'string', default: 'hello' } as any)
     expect(out).toContain('z.string().default("hello")')
   })
 
   it('number with default -> .default(n)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('A', { type: 'number', default: 0 } as any)
     expect(out).toContain('z.number().default(0)')
   })
 
   it('boolean with default false -> .default(false)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('A', { type: 'boolean', default: false } as any)
     expect(out).toContain('z.boolean().default(false)')
   })
@@ -736,7 +729,6 @@ describe('default keyword', () => {
     const out = genSingle('Config', {
       type: 'object',
       properties: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         enabled: { type: 'boolean', default: true } as any,
       },
     })
@@ -751,25 +743,21 @@ describe('default keyword', () => {
 
 describe('const keyword -> z.literal()', () => {
   it('const string -> z.literal("value")', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('A', { const: 'fixed' } as any)
     expect(out).toContain('z.literal("fixed")')
   })
 
   it('const number -> z.literal(42)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('A', { const: 42 } as any)
     expect(out).toContain('z.literal(42)')
   })
 
   it('const null -> z.literal(null)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('A', { const: null } as any)
     expect(out).toContain('z.literal(null)')
   })
 
   it('const boolean -> z.literal(true)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('A', { const: true } as any)
     expect(out).toContain('z.literal(true)')
   })
@@ -777,7 +765,7 @@ describe('const keyword -> z.literal()', () => {
   it('const property in object schema', () => {
     const out = genSingle('Obj', {
       type: 'object',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       properties: { kind: { const: 'circle' } as any },
     })
     expect(out).toContain('z.literal("circle")')
@@ -808,7 +796,6 @@ describe('multipleOf constraint', () => {
 
 describe('uniqueItems constraint', () => {
   it('array with uniqueItems: true -> .refine() for uniqueness', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('A', {
       type: 'array',
       items: { type: 'string' },
@@ -853,7 +840,7 @@ describe('prefixItems -> z.tuple()', () => {
   it('array with prefixItems -> z.tuple([...])', () => {
     const out = genSingle('A', {
       type: 'array',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       prefixItems: [{ type: 'string' }, { type: 'number' }],
     } as any)
     expect(out).toContain('z.tuple([z.string(), z.number()])')
@@ -862,7 +849,7 @@ describe('prefixItems -> z.tuple()', () => {
   it('tuple with rest items -> z.tuple([...]).rest(...)', () => {
     const out = genSingle('A', {
       type: 'array',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       prefixItems: [{ type: 'string' }],
       items: { type: 'number' },
     } as any)
@@ -874,7 +861,7 @@ describe('prefixItems -> z.tuple()', () => {
       Point: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } } },
       Pair: {
         type: 'array',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         prefixItems: [
           { $ref: '#/components/schemas/Point' },
           { $ref: '#/components/schemas/Point' },
@@ -921,7 +908,6 @@ describe('additionalProperties handling in zod', () => {
   })
 
   it('additionalProperties: true -> z.record(z.string(), z.unknown())', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = genSingle('Loose', { type: 'object', additionalProperties: true } as any)
     expect(out).toContain('z.record(z.string(), z.unknown())')
   })
@@ -929,7 +915,7 @@ describe('additionalProperties handling in zod', () => {
   it('additionalProperties: false -> .strict() on object schema', () => {
     const out = genSingle('Strict', {
       type: 'object',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       additionalProperties: false as any,
       properties: { id: { type: 'string' } },
     })
@@ -946,10 +932,10 @@ describe('additionalProperties handling in zod', () => {
   it('inline additionalProperties with object-enum values -> z.record containing z.unknown not [object Object]', () => {
     // Reproduces the docker ContainerConfig.ExposedPorts bug:
     // additionalProperties has enum: [{}] (empty object). String({}) was emitting [object Object].
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const out = genSingle('ExposedPorts', {
       type: 'object',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       additionalProperties: { type: 'object', enum: [{}] } as any,
     })
     expect(out).not.toContain('[object Object]')

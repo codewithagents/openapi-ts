@@ -7,7 +7,6 @@ import {
   isRef,
   refToName,
   extractPathParamsFromPath,
-  resolveParam,
   deriveServiceName,
   sanitizeOperationId,
   deriveMethodName,
@@ -67,9 +66,13 @@ function getReturnInfo(operation: OperationObject): ReturnInfo {
 
   // Check 2xx responses in priority order: 200, 201, then any other 2xx with content.
   // 204 (void) and multi-2xx cases are handled below.
-  const twoxxCodes = ['200', '201', ...Object.keys(responses).filter(
-    (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
-  )]
+  const twoxxCodes = [
+    '200',
+    '201',
+    ...Object.keys(responses).filter(
+      (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
+    ),
+  ]
   for (const code of twoxxCodes) {
     const response = responses[code]
     if (response === undefined) continue

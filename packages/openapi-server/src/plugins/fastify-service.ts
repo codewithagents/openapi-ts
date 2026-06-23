@@ -17,7 +17,6 @@ import {
   extractPathParamsFromPath,
   resolveParam,
   deriveServiceName,
-  sanitizeOperationId,
   deriveMethodName,
   type QueryParam,
   getQueryParams,
@@ -48,7 +47,9 @@ function getServiceInParams(
   spec: OpenAPIV3_1.Document,
   inKind: 'header' | 'cookie'
 ): { rawName: string; required: boolean }[] {
-  const parameters = operation.parameters as (OpenAPIV3_1.ParameterObject | OpenAPIV3_1.ReferenceObject)[] | undefined
+  const parameters = operation.parameters as
+    | (OpenAPIV3_1.ParameterObject | OpenAPIV3_1.ReferenceObject)[]
+    | undefined
   if (parameters === undefined) return []
   const result: { rawName: string; required: boolean }[] = []
   for (const p of parameters) {
@@ -260,7 +261,18 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
       }
       const effectiveSecurity = deriveEffectiveSecurity(operation, spec)
 
-      operations.push({ methodName, httpMethod: method, path, pathParams, queryParams, headerParams, cookieParams, bodyInfo, returnInfo, effectiveSecurity })
+      operations.push({
+        methodName,
+        httpMethod: method,
+        path,
+        pathParams,
+        queryParams,
+        headerParams,
+        cookieParams,
+        bodyInfo,
+        returnInfo,
+        effectiveSecurity,
+      })
     }
   }
 
@@ -274,10 +286,7 @@ function collectOperations(spec: OpenAPIV3_1.Document): OperationInfo[] {
  * Fastify-typed service. If a matching schema exists in schemaNames, return the
  * alias name (which maps to z.infer in schema-types.ts); otherwise return 'unknown'.
  */
-function resolveAliasType(
-  typeName: string | undefined,
-  schemaNames: Set<string>
-): string {
+function resolveAliasType(typeName: string | undefined, schemaNames: Set<string>): string {
   if (typeName === undefined) return 'unknown'
   if (schemaNames.has(`${typeName}Schema`)) return typeName
   return 'unknown'
@@ -364,7 +373,9 @@ function buildMethodSignature(
 
   // query facet: preserve per-field optionality; the outer facet key is always required.
   if (op.queryParams.length > 0) {
-    const fields = op.queryParams.map((q) => `${q.name}${q.required ? '' : '?'}: ${q.tsType}`).join('; ')
+    const fields = op.queryParams
+      .map((q) => `${q.name}${q.required ? '' : '?'}: ${q.tsType}`)
+      .join('; ')
     facets.push(`query: { ${fields} }`)
   }
 
@@ -444,8 +455,12 @@ export function generateFastifyTypes(
   lines.push('// This file is auto-generated. Do not edit manually.')
   lines.push('// Fastify-aligned type aliases derived from Zod schemas via z.infer (= z.output).')
   lines.push('// These are post-validation, post-transform types: they reflect the shape after Zod')
-  lines.push('// has parsed and transformed the value, which can differ from models.ts when a schema')
-  lines.push('// uses .transform(), .default(), or coercion. Import from here in your Fastify service.')
+  lines.push(
+    '// has parsed and transformed the value, which can differ from models.ts when a schema'
+  )
+  lines.push(
+    '// uses .transform(), .default(), or coercion. Import from here in your Fastify service.'
+  )
   lines.push('')
   lines.push("import { z } from 'zod'")
 
@@ -529,7 +544,9 @@ export function generateFastifyTypedService(
       for (const { scheme, scopes } of op.effectiveSecurity) {
         const safeScheme = escapeJsDocString(scheme)
         const safeScopesStr = scopes.map((s) => escapeJsDocString(s)).join(' ')
-        lines.push(`   * @security ${safeScheme}${safeScopesStr.length > 0 ? ' ' + safeScopesStr : ''}`)
+        lines.push(
+          `   * @security ${safeScheme}${safeScopesStr.length > 0 ? ' ' + safeScopesStr : ''}`
+        )
       }
       lines.push('   */')
     } else {
