@@ -3505,7 +3505,7 @@ describe('generateFastifyRouter: auto-register formbody/multipart (commit 7)', (
     const { content } = generateFastifyRouter(spec)
     expect(content).toContain("import('@fastify/multipart')")
     expect(content).toContain(
-      "app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues' })"
+      "app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues', ...options?.multipart })"
     )
   })
 

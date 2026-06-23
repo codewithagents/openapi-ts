@@ -43,7 +43,7 @@ describe('generateFastifyRouter: multipart parser registration (#349)', () => {
     expect(content).toContain('options?.registerParsers !== false')
     expect(content).toContain("import('@fastify/multipart')")
     expect(content).toContain(
-      "app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues' })"
+      "app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues', ...options?.multipart })"
     )
   })
 
@@ -146,7 +146,7 @@ describe('generateFastifyRouter: multipart parser registration (#349)', () => {
     expect(content).toContain('options?.registerParsers !== false')
     expect(content).toContain("import('@fastify/multipart')")
     expect(content).toContain(
-      "app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues' })"
+      "app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues', ...options?.multipart })"
     )
   })
 
@@ -290,5 +290,46 @@ describe('generateFastifyRouter: multipart parser registration (#349)', () => {
     expect(content).not.toContain("import('@fastify/formbody')")
     expect(content).not.toContain('_multipart')
     expect(content).not.toContain('_formbody')
+  })
+
+  // ── #384 secondary: multipart.limits option in CreateRouterOptions ─────────────
+
+  it('spec with multipart body: emits multipart? option block in CreateRouterOptions', () => {
+    const spec = makeSpec({
+      '/upload': {
+        post: {
+          operationId: 'uploadFile',
+          requestBody: {
+            required: true,
+            content: { 'multipart/form-data': { schema: { type: 'object' } } },
+          },
+          responses: { '200': { description: 'ok' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain('multipart?: {')
+    expect(content).toContain('limits?: {')
+    expect(content).toContain('fileSize?: number')
+    expect(content).toContain(
+      "app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues', ...options?.multipart })"
+    )
+  })
+
+  it('JSON-only spec: multipart? option block is NOT emitted in CreateRouterOptions', () => {
+    const spec = makeSpec({
+      '/items': {
+        post: {
+          operationId: 'createItem',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object' } } },
+          },
+          responses: { '201': { description: 'created' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    expect(content).not.toContain('multipart?: {')
   })
 })
