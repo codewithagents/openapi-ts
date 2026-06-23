@@ -4,7 +4,12 @@ import { describe, expect, it, vi } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateRouter, generateExpressRouter, generateFastifyRouter } from '../plugins/router.js'
 import { generateFastifyTypes, generateFastifyTypedService } from '../plugins/fastify-service.js'
-import { emitSharedErrorsFile, deriveSharedDir, sharedErrorsImportPath, findCommonParent } from '../plugins/errors-emitter.js'
+import {
+  emitSharedErrorsFile,
+  deriveSharedDir,
+  sharedErrorsImportPath,
+  findCommonParent,
+} from '../plugins/errors-emitter.js'
 
 // ── Fixture helpers ────────────────────────────────────────────────────────────
 
@@ -1443,7 +1448,9 @@ describe('generateFastifyRouter with schemaNames (Zod validation)', () => {
     })
     // No hand-rolled safeParse: the body schema drives Fastify's native validatorCompiler.
     expect(result.content).toContain('body: CreatePetRequestSchema')
-    expect(result.content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
+    expect(result.content).toContain(
+      'app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)'
+    )
     expect(result.content).not.toContain('safeParse(req.body)')
   })
 
@@ -1464,7 +1471,9 @@ describe('generateFastifyRouter with schemaNames (Zod validation)', () => {
       schemaImportPath: './schemas.js',
     })
     // Body validation errors are now native (400 FST_ERR_VALIDATION), not the old 422 envelope.
-    expect(result.content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
+    expect(result.content).toContain(
+      'app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)'
+    )
     expect(result.content).not.toContain("error: 'Invalid request body'")
     expect(result.content).not.toContain('(reply as FastifyReply).status(422)')
   })
@@ -1650,7 +1659,9 @@ describe('Bug 3 — all frameworks: exported HttpError + service try/catch maps 
   it('Hono: GET service call wrapped in try/catch with HttpError mapping', () => {
     const { content } = generateRouter(spec)
     expect(content).toContain('if (err instanceof HttpError)')
-    expect(content).toContain("{ status: err.status, headers: { 'content-type': 'application/json' } }")
+    expect(content).toContain(
+      "{ status: err.status, headers: { 'content-type': 'application/json' } }"
+    )
     expect(content).toContain('throw err')
   })
 
@@ -1772,7 +1783,7 @@ describe('bug #1 fix: inline JSON request body synthesizes schema name from oper
     expect(content).toContain('parseResult.success')
     expect(content).toContain('422')
     // Synthesized name must NOT appear in model type import (no models.ts entry)
-    expect(content).not.toContain("import type { LabInlineBody }")
+    expect(content).not.toContain('import type { LabInlineBody }')
   })
 
   it('Hono: body variable is typed as unknown (synthesized, not a model type)', () => {
@@ -1809,7 +1820,7 @@ describe('bug #1 fix: inline JSON request body synthesizes schema name from oper
     })
     expect(content).toContain('LabInlineBodySchema.safeParse(req.body)')
     expect(content).toContain('422')
-    expect(content).not.toContain("import type { LabInlineBody }")
+    expect(content).not.toContain('import type { LabInlineBody }')
   })
 
   it('Fastify: synthesizes LabInlineBodySchema name and wires safeParse when schema present', () => {
@@ -1818,7 +1829,9 @@ describe('bug #1 fix: inline JSON request body synthesizes schema name from oper
       schemaImportPath: './schemas.js',
     })
     expect(content).toContain('body: LabInlineBodySchema')
-    expect(content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
+    expect(content).toContain(
+      'app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)'
+    )
     // No per-route generics in the type-provider emitter.
     expect(content).not.toContain('post<')
   })
@@ -1872,7 +1885,7 @@ describe('bug #7 fix: form-urlencoded request body uses parseBody() not JSON.par
     expect(content).toContain('parseResult.success')
     expect(content).toContain('422')
     // Synthesized name must NOT appear in model type import
-    expect(content).not.toContain("import type { LabFormBody }")
+    expect(content).not.toContain('import type { LabFormBody }')
   })
 
   it('Hono: uses validatedBody (coerced) in service call when form schema is matched', () => {
@@ -1931,7 +1944,9 @@ describe('bug #11 fix: text/plain and application/octet-stream responses', () =>
         responses: {
           '200': {
             description: 'binary download',
-            content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+            content: {
+              'application/octet-stream': { schema: { type: 'string', format: 'binary' } },
+            },
           },
         },
       },
@@ -1999,7 +2014,9 @@ describe('bug #11 fix: text/plain and application/octet-stream responses', () =>
             '200': {
               description: 'ok',
               content: {
-                'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Pet' } } },
+                'application/json': {
+                  schema: { type: 'array', items: { $ref: '#/components/schemas/Pet' } },
+                },
               },
             },
           },
@@ -2106,7 +2123,9 @@ describe('context type option (issue #310)', () => {
         operationId: 'createPet',
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } } },
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } },
+          },
         },
         responses: { '201': { description: 'created' } },
       },
@@ -2262,14 +2281,18 @@ describe('context type option (issue #310)', () => {
     it('Express: arg order is path, body, query params, req', () => {
       const { content } = generateExpressRouter(fullArgSpec, { contextType: 'RequestContext' })
       // Full call: service.updatePet((req.params['id'] as string), body, params, req)
-      expect(content).toContain("service.updatePet((req.params['id'] as string), body, params, req)")
+      expect(content).toContain(
+        "service.updatePet((req.params['id'] as string), body, params, req)"
+      )
     })
 
     it('Fastify: all request dimensions bundled inside single input object, ctx follows', () => {
       const { content } = generateFastifyRouter(fullArgSpec, { contextType: 'RequestContext' })
       // New input-object shape: params, body, query are facets of a single required input;
       // ctx (from createContext) is a separate trailing arg. Eliminates TS1016.
-      expect(content).toContain('service.updatePet({ params: req.params, body: req.body as UpdatePetRequest, query: req.query }, ctx)')
+      expect(content).toContain(
+        'service.updatePet({ params: req.params, body: req.body as UpdatePetRequest, query: req.query }, ctx)'
+      )
     })
   })
 })
@@ -2418,7 +2441,9 @@ describe('issue #308: Fastify schema.response wiring', () => {
       schemaNames: new Set(['PetSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(content).toContain('app.setSerializerCompiler(options?.serializerCompiler ?? serializerCompiler)')
+    expect(content).toContain(
+      'app.setSerializerCompiler(options?.serializerCompiler ?? serializerCompiler)'
+    )
     expect(content).toContain(
       "import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'"
     )
@@ -2432,14 +2457,22 @@ describe('issue #308: Fastify schema.response wiring', () => {
       schemaNames: new Set(['SomeOtherSchema']),
       schemaImportPath: './schemas.js',
     })
-    expect(content).toContain('app.setSerializerCompiler(options?.serializerCompiler ?? serializerCompiler)')
-    expect(content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
+    expect(content).toContain(
+      'app.setSerializerCompiler(options?.serializerCompiler ?? serializerCompiler)'
+    )
+    expect(content).toContain(
+      'app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)'
+    )
   })
 
   it('compilers are registered once even when schemaNames is not provided', () => {
     const { content } = generateFastifyRouter(getPetSpec)
-    expect(content).toContain('app.setSerializerCompiler(options?.serializerCompiler ?? serializerCompiler)')
-    expect(content).toContain('app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)')
+    expect(content).toContain(
+      'app.setSerializerCompiler(options?.serializerCompiler ?? serializerCompiler)'
+    )
+    expect(content).toContain(
+      'app.setValidatorCompiler(options?.validatorCompiler ?? validatorCompiler)'
+    )
   })
 
   it('void (DELETE 204) operation: no schema.response added', () => {
@@ -2552,7 +2585,9 @@ describe('issue #309: Fastify config.operationId in every route', () => {
           operationId: 'createPet',
           requestBody: {
             required: true,
-            content: { 'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } } },
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/CreatePetRequest' } },
+            },
           },
           responses: { '201': { description: 'created' } },
         },
@@ -2950,7 +2985,10 @@ describe('generateFastifyRouter synthesized response schema (C2)', () => {
             description: 'ok',
             content: {
               'application/json': {
-                schema: { type: 'object', properties: { ok: { type: 'boolean' }, note: { type: 'string' } } },
+                schema: {
+                  type: 'object',
+                  properties: { ok: { type: 'boolean' }, note: { type: 'string' } },
+                },
               },
             },
           },
@@ -3023,9 +3061,7 @@ describe('emitSharedErrorsFile: HttpError in _shared/errors.ts', () => {
 
   it('_shared/errors.ts HttpError class accepts status and message constructor params', () => {
     const result = emitSharedErrorsFile()
-    expect(result.content).toContain(
-      'constructor(public readonly status: number, message: string)'
-    )
+    expect(result.content).toContain('constructor(public readonly status: number, message: string)')
   })
 
   it('generateFastifyRouter imports HttpError from ./_shared/errors.js by default', () => {
@@ -3328,9 +3364,7 @@ describe('generateFastifyRouter: header + cookie forwarding to service (item 1)'
       '/items': {
         get: {
           operationId: 'listItems',
-          parameters: [
-            { name: 'q', in: 'query', required: false, schema: { type: 'string' } },
-          ],
+          parameters: [{ name: 'q', in: 'query', required: false, schema: { type: 'string' } }],
           responses: { '200': { description: 'ok' } },
         },
       },
@@ -3408,15 +3442,17 @@ describe('generateFastifyRouter: CreateRouterOptions escape hatch (commit 6)', (
           operationId: 'upload',
           requestBody: {
             required: true,
-            content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+            content: {
+              'application/octet-stream': { schema: { type: 'string', format: 'binary' } },
+            },
           },
           responses: { '200': { description: 'ok' } },
         },
       },
     })
     const { content } = generateFastifyRouter(spec)
-    expect(content).toContain("options?.registerParsers !== false")
-    expect(content).toContain("addContentTypeParser")
+    expect(content).toContain('options?.registerParsers !== false')
+    expect(content).toContain('addContentTypeParser')
   })
 
   it('spec without octet-stream body does not emit the registerParsers runtime gate', () => {
@@ -3468,7 +3504,9 @@ describe('generateFastifyRouter: auto-register formbody/multipart (commit 7)', (
     })
     const { content } = generateFastifyRouter(spec)
     expect(content).toContain("import('@fastify/multipart')")
-    expect(content).toContain('app.register(_multipart.default ?? _multipart, { attachFieldsToBody: true })')
+    expect(content).toContain(
+      "app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues' })"
+    )
   })
 
   it('spec with only JSON body emits neither formbody nor multipart imports', () => {
@@ -3574,9 +3612,7 @@ describe('generateFastifyRouter: emit_response_validation opt-in (commit 8)', ()
               content: {
                 'application/json': {
                   schema: {
-                    allOf: [
-                      { type: 'object', properties: { id: { type: 'string' } } },
-                    ],
+                    allOf: [{ type: 'object', properties: { id: { type: 'string' } } }],
                   },
                 },
               },
@@ -3958,8 +3994,12 @@ describe('cross-router shared HttpError: both routers reference the same _shared
   it('two Hono routers with different errorsImportPath still resolve to same logical module', () => {
     // Simulates public (output: gen/public) and admin (output: gen/admin) routers
     // with shared dir at gen/_shared. Both import ../_shared/errors.js.
-    const publicContent = generateRouter(petSpec, { errorsImportPath: '../_shared/errors.js' }).content
-    const adminContent = generateRouter(petSpec, { errorsImportPath: '../_shared/errors.js' }).content
+    const publicContent = generateRouter(petSpec, {
+      errorsImportPath: '../_shared/errors.js',
+    }).content
+    const adminContent = generateRouter(petSpec, {
+      errorsImportPath: '../_shared/errors.js',
+    }).content
     expect(publicContent).toContain("import { HttpError } from '../_shared/errors.js'")
     expect(adminContent).toContain("import { HttpError } from '../_shared/errors.js'")
     // Neither file contains an inline class (both share the same source)
@@ -4255,7 +4295,10 @@ describe('generateExpressRouter: readOnly/writeOnly transitive container body va
     const spec = makeContainerSpec()
     // Use schema-enhanced mode so the Zod validation + cast path is exercised.
     const schemaNames = new Set(['ContainerSchema', 'ItemSchema'])
-    const { content } = generateExpressRouter(spec, { schemaNames, schemaImportPath: './schemas.js' })
+    const { content } = generateExpressRouter(spec, {
+      schemaNames,
+      schemaImportPath: './schemas.js',
+    })
     // After safeParse, the validatedBody is cast to ContainerWritable.
     expect(content).toContain('as ContainerWritable')
   })
@@ -4270,7 +4313,10 @@ describe('generateExpressRouter: readOnly/writeOnly transitive container body va
   it('body validation schema name stays ContainerSchema (base name)', () => {
     const spec = makeContainerSpec()
     const schemaNames = new Set(['ContainerSchema', 'ItemSchema'])
-    const { content } = generateExpressRouter(spec, { schemaNames, schemaImportPath: './schemas.js' })
+    const { content } = generateExpressRouter(spec, {
+      schemaNames,
+      schemaImportPath: './schemas.js',
+    })
     expect(content).toContain('ContainerSchema.safeParse')
     expect(content).not.toContain('ContainerWritableSchema')
   })

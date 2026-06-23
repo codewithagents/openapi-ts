@@ -42,7 +42,39 @@ describe('generateFastifyRouter: multipart parser registration (#349)', () => {
     const { content } = generateFastifyRouter(spec)
     expect(content).toContain('options?.registerParsers !== false')
     expect(content).toContain("import('@fastify/multipart')")
-    expect(content).toContain('app.register(_multipart.default ?? _multipart, { attachFieldsToBody: true })')
+    expect(content).toContain(
+      "app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues' })"
+    )
+  })
+
+  // ── Regression (#384): use 'keyValues', not `true` (which wraps fields in busboy objects) ──
+  it("registers multipart with attachFieldsToBody: 'keyValues', never bare true (#384)", () => {
+    const spec = makeSpec({
+      '/avatars': {
+        post: {
+          operationId: 'uploadAvatar',
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    caption: { type: 'string' },
+                    file: { type: 'string', format: 'binary' },
+                  },
+                },
+              },
+            },
+          },
+          responses: { '201': { description: 'created' } },
+        },
+      },
+    })
+    const { content } = generateFastifyRouter(spec)
+    expect(content).toContain("{ attachFieldsToBody: 'keyValues' }")
+    // The old default wrapped every field in a busboy object; it must not be emitted.
+    expect(content).not.toContain('attachFieldsToBody: true')
   })
 
   it('inline multipart/form-data route: emits multipart marker comment', () => {
@@ -59,9 +91,8 @@ describe('generateFastifyRouter: multipart parser registration (#349)', () => {
       },
     })
     const { content } = generateFastifyRouter(spec)
-    expect(content).toContain(
-      '// multipart/form-data: requires @fastify/multipart registered with { attachFieldsToBody: true }.'
-    )
+    expect(content).toContain("{ attachFieldsToBody: 'keyValues' }")
+    expect(content).toContain('// multipart/form-data: req.body has field values directly')
   })
 
   it('inline multipart/form-data route: emits req.body as unknown cast', () => {
@@ -114,7 +145,9 @@ describe('generateFastifyRouter: multipart parser registration (#349)', () => {
     // Before fix this was false (block absent entirely)
     expect(content).toContain('options?.registerParsers !== false')
     expect(content).toContain("import('@fastify/multipart')")
-    expect(content).toContain('app.register(_multipart.default ?? _multipart, { attachFieldsToBody: true })')
+    expect(content).toContain(
+      "app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues' })"
+    )
   })
 
   it('$ref multipart requestBody: route emits multipart marker comment', () => {
@@ -138,9 +171,8 @@ describe('generateFastifyRouter: multipart parser registration (#349)', () => {
       }
     )
     const { content } = generateFastifyRouter(spec)
-    expect(content).toContain(
-      '// multipart/form-data: requires @fastify/multipart registered with { attachFieldsToBody: true }.'
-    )
+    expect(content).toContain("{ attachFieldsToBody: 'keyValues' }")
+    expect(content).toContain('// multipart/form-data: req.body has field values directly')
   })
 
   it('$ref multipart requestBody: route emits req.body as unknown cast', () => {
@@ -197,14 +229,15 @@ describe('generateFastifyRouter: multipart parser registration (#349)', () => {
     expect(content).toContain('options?.registerParsers !== false')
     expect(content).toContain("import('@fastify/multipart')")
     // The GET route has no body and should not include the multipart marker
+    const marker = 'multipart/form-data: req.body has field values directly'
     const getRouteIdx = content.indexOf('app.get("/items"')
     const postRouteIdx = content.indexOf('app.post("/upload"')
-    const markerIdx = content.indexOf('multipart/form-data: requires')
+    const markerIdx = content.indexOf(marker)
     // Marker must be in the POST route block (after the POST route declaration)
     expect(markerIdx).toBeGreaterThan(postRouteIdx)
     // Marker must not appear in the GET route block
     const getBlockEnd = postRouteIdx
-    expect(content.slice(getRouteIdx, getBlockEnd)).not.toContain('multipart/form-data: requires')
+    expect(content.slice(getRouteIdx, getBlockEnd)).not.toContain(marker)
   })
 
   // ── $ref'd formbody requestBody ───────────────────────────────────────────────
