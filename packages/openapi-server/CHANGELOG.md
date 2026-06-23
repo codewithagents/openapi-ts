@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v2.1.1...openapi-server-v2.2.0) (2026-06-23)
+
+
+### Features
+
+* **openapi-server:** expose @fastify/multipart limits via CreateRouterOptions ([#389](https://github.com/codewithagents/openapi-zod-ts/issues/389)) ([d715842](https://github.com/codewithagents/openapi-zod-ts/commit/d715842fedb9f7d8cb25b4078dc7efd3662c3658))
+
+
+### Bug Fixes
+
+* **openapi-server:** register @fastify/multipart with attachFieldsToBody 'keyValues' ([#384](https://github.com/codewithagents/openapi-zod-ts/issues/384)) ([#387](https://github.com/codewithagents/openapi-zod-ts/issues/387)) ([caa31da](https://github.com/codewithagents/openapi-zod-ts/commit/caa31dae5124ef00fc15864e4ef326590e6dafc1))
+
 ## [2.1.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v2.1.0...openapi-server-v2.1.1) (2026-06-22)
 
 
