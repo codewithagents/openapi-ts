@@ -435,9 +435,9 @@ export interface GetReceivedEmailResponse {
   from?: string
   subject?: string
   message_id?: string
-  bcc?: unknown | null
-  cc?: unknown | null
-  reply_to?: unknown | null
+  bcc?: string[] | null
+  cc?: string[] | null
+  reply_to?: string[] | null
   html?: string | null
   text?: string | null
   headers?: unknown | null
@@ -461,9 +461,9 @@ export interface ListReceivedEmailsResponse {
     from?: string
     subject?: string | null
     message_id?: string
-    bcc?: unknown | null
-    cc?: unknown | null
-    reply_to?: unknown | null
+    bcc?: string[] | null
+    cc?: string[] | null
+    reply_to?: string[] | null
     created_at?: string /* date-time */
     attachments?: {
       id?: string
@@ -491,7 +491,7 @@ export interface GetWebhookResponse {
   object?: string
   id?: string
   endpoint?: string
-  events?: unknown | null
+  events?: string[] | null
   status?: string
   created_at?: string /* date-time */
   signing_secret?: string
@@ -503,7 +503,7 @@ export interface ListWebhooksResponse {
   data?: {
     id?: string
     endpoint?: string
-    events?: unknown | null
+    events?: string[] | null
     status?: string
     created_at?: string /* date-time */
   }[]
@@ -549,7 +549,7 @@ export interface Template {
   alias?: string
   from?: string
   subject?: string
-  reply_to?: unknown | null
+  reply_to?: string[] | null
   html?: string
   text?: string
   variables?: TemplateVariable[]

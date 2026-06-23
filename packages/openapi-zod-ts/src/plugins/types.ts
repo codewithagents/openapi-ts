@@ -46,6 +46,42 @@ function buildSchemaRenameMap(spec: OpenAPIV3_1.Document): Map<string, string> {
   return map
 }
 
+/**
+ * Render the TypeScript array/tuple type string for a schema with type 'array'.
+ * Extracted so it can be reused by the Array.isArray(schema.type) branch when 'array'
+ * is one of the type-union members (e.g. type: ['array', 'null']).
+ */
+function arrayTypeString(
+  schema: SchemaObject,
+  renameMap?: Map<string, string>,
+  spec?: OpenAPIV3_1.Document,
+  visited?: Set<string>
+): string {
+  // prefixItems (OpenAPI 3.1 / JSON Schema 2020-12): fixed-position tuple elements
+  const prefixItems = (
+    schema as SchemaObject & { prefixItems?: (SchemaObject | ReferenceObject)[] }
+  ).prefixItems
+  if (prefixItems !== undefined && prefixItems.length > 0) {
+    const tupleElements = prefixItems.map((item) =>
+      schemaToTypeString(item, renameMap, spec, visited)
+    )
+    const arraySchema = schema as ArraySchemaObject
+    const restItems = arraySchema.items as SchemaObject | ReferenceObject | undefined
+    if (restItems !== undefined) {
+      // Tuple with rest: [T0, T1, ...Rest[]]
+      return `[${tupleElements.join(', ')}, ...${schemaToTypeString(restItems, renameMap, spec, visited)}[]]`
+    }
+    return `[${tupleElements.join(', ')}]`
+  }
+
+  const arraySchema = schema as ArraySchemaObject
+  const items = arraySchema.items as SchemaObject | ReferenceObject | undefined
+  if (items !== undefined) {
+    return `${schemaToTypeString(items, renameMap, spec, visited)}[]`
+  }
+  return 'unknown[]'
+}
+
 /** Return an inline comment for date/date-time formats, or '' for others. */
 function formatComment(schema: SchemaObject): string {
   if (schema.type !== 'string') return ''
@@ -93,6 +129,7 @@ function schemaToTypeString(
   if (Array.isArray(schema.type)) {
     const types = (schema.type as string[]).map((t) => {
       if (t === 'null') return 'null'
+      if (t === 'array') return arrayTypeString(schema, renameMap, spec, visited)
       return primitiveToTs(t, schema.format as string | undefined)
     })
     return types.join(' | ')
@@ -146,29 +183,7 @@ function schemaToTypeString(
 
   // array
   if (type === 'array') {
-    // prefixItems (OpenAPI 3.1 / JSON Schema 2020-12): fixed-position tuple elements
-    const prefixItems = (
-      schema as SchemaObject & { prefixItems?: (SchemaObject | ReferenceObject)[] }
-    ).prefixItems
-    if (prefixItems !== undefined && prefixItems.length > 0) {
-      const tupleElements = prefixItems.map((item) =>
-        schemaToTypeString(item, renameMap, spec, visited)
-      )
-      const arraySchema = schema as ArraySchemaObject
-      const restItems = arraySchema.items as SchemaObject | ReferenceObject | undefined
-      if (restItems !== undefined) {
-        // Tuple with rest: [T0, T1, ...Rest[]]
-        return `[${tupleElements.join(', ')}, ...${schemaToTypeString(restItems, renameMap, spec, visited)}[]]`
-      }
-      return `[${tupleElements.join(', ')}]`
-    }
-
-    const arraySchema = schema as ArraySchemaObject
-    const items = arraySchema.items as SchemaObject | ReferenceObject | undefined
-    if (items !== undefined) {
-      return `${schemaToTypeString(items, renameMap, spec, visited)}[]`
-    }
-    return 'unknown[]'
+    return arrayTypeString(schema, renameMap, spec, visited)
   }
 
   // object

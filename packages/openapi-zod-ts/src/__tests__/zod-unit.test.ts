@@ -107,6 +107,49 @@ describe('nullable types (OpenAPI 3.1 array syntax)', () => {
       genSingle('A', { type: 'object', properties: { f: { type: ['string', 'number'] } } })
     ).toContain('z.union([z.string(), z.number()])')
   })
+
+  it('["array","null"] with $ref items → z.array(ItemSchema).nullable() (fix #390)', () => {
+    const out = gen({
+      Item: { type: 'object', properties: { id: { type: 'string' } } },
+      A: {
+        type: 'object',
+        properties: {
+          tags: {
+            type: ['array', 'null'],
+            items: { $ref: '#/components/schemas/Item' },
+          } as any,
+        },
+      },
+    })
+    expect(out).toContain('z.array(ItemSchema).nullable()')
+    expect(out).not.toContain('z.unknown().nullable()')
+  })
+
+  it('["array","null"] with inline items → z.array(z.number()).nullable() (fix #390)', () => {
+    const out = genSingle('A', {
+      type: 'object',
+      properties: {
+        counts: {
+          type: ['array', 'null'],
+          items: { type: 'integer' },
+        } as any,
+      },
+    })
+    expect(out).toContain('z.array(z.number()).nullable()')
+    expect(out).not.toContain('z.unknown().nullable()')
+  })
+
+  it('non-nullable type: "array" with items still emits z.array(...) (no regression)', () => {
+    const out = gen({
+      Tag: { type: 'object', properties: { name: { type: 'string' } } },
+      A: {
+        type: 'object',
+        properties: { tags: { type: 'array', items: { $ref: '#/components/schemas/Tag' } } },
+      },
+    })
+    expect(out).toContain('z.array(TagSchema)')
+    expect(out).not.toContain('.nullable()')
+  })
 })
 
 describe('optional fields', () => {

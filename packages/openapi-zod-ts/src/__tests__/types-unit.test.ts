@@ -58,6 +58,65 @@ describe('nullable types (OpenAPI 3.1 array syntax)', () => {
       genSingle('A', { type: 'object', properties: { f: { type: ['string', 'number'] } } })
     ).toContain('string | number')
   })
+
+  it('["array","null"] with $ref items → Item[] | null, not unknown | null (fix #390)', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {},
+      components: {
+        schemas: {
+          Item: { type: 'object', properties: { id: { type: 'string' } } },
+          A: {
+            type: 'object',
+            properties: {
+              tags: {
+                type: ['array', 'null'],
+                items: { $ref: '#/components/schemas/Item' },
+              } as any,
+            },
+          },
+        },
+      },
+    }
+    const out = generateTypes(spec).content
+    expect(out).toContain('Item[] | null')
+    expect(out).not.toContain('unknown | null')
+  })
+
+  it('["array","null"] with inline items → number[] | null (fix #390)', () => {
+    const out = genSingle('A', {
+      type: 'object',
+      properties: {
+        counts: {
+          type: ['array', 'null'],
+          items: { type: 'integer' },
+        } as any,
+      },
+    })
+    expect(out).toContain('number[] | null')
+    expect(out).not.toContain('unknown | null')
+  })
+
+  it('non-nullable type: "array" with $ref items still emits Item[] (no regression)', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {},
+      components: {
+        schemas: {
+          Item: { type: 'object', properties: { id: { type: 'string' } } },
+          A: {
+            type: 'object',
+            properties: { tags: { type: 'array', items: { $ref: '#/components/schemas/Item' } } },
+          },
+        },
+      },
+    }
+    const out = generateTypes(spec).content
+    expect(out).toContain('Item[]')
+    expect(out).not.toContain('| null')
+  })
 })
 
 describe('enum types', () => {
