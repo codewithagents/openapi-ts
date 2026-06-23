@@ -1,0 +1,4 @@
+{
+  "input_openapi": "spec/matrix-legit-unknown.json",
+  "output": "generated-matrix-legit"
+}

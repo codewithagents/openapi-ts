@@ -5,11 +5,24 @@
     "examples/generated-rq/**",
     "packages/*/dist/**",
     "packages/*/generated/**",
+    "packages/*/generated-matrix/**",
+    "packages/*/generated-matrix-legit/**",
     "packages/openapi-zod-ts/src/__fixtures__/**",
     "packages/petstore-hono/**"
   ],
-  "ignoreUnresolvedImports": ["**/generated/**"],
-  "ignoreDependencies": ["zod", "@faker-js/faker", "fastify-type-provider-zod", "@fastify/formbody", "@fastify/multipart", "@codewithagents/petstore-hono"],
+  "ignoreUnresolvedImports": [
+    "**/generated/**",
+    "**/generated-matrix/**",
+    "**/generated-matrix-legit/**"
+  ],
+  "ignoreDependencies": [
+    "zod",
+    "@faker-js/faker",
+    "fastify-type-provider-zod",
+    "@fastify/formbody",
+    "@fastify/multipart",
+    "@codewithagents/petstore-hono"
+  ],
   "rules": {
     "unused-files": "warn",
     "unused-exports": "warn",

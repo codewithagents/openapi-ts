@@ -7,8 +7,10 @@
     "generate": "openapi-zod-ts --config openapi-zod-ts.config.json",
     "generate:hooks": "openapi-react-query --config openapi-react-query.config.json",
     "generate:mocks": "openapi-msw --config openapi-msw.config.json",
+    "generate:matrix": "openapi-zod-ts --config openapi-zod-ts.matrix.config.json && node node_modules/@codewithagents/openapi-server/dist/cli.cjs --config openapi-server.matrix.config.json",
+    "generate:legit-unknown": "openapi-zod-ts --config openapi-zod-ts.legit-unknown.config.json",
     "test": "vitest run",
-    "lint": "tsc --noEmit && eslint generated/"
+    "lint": "tsc --noEmit && eslint generated/ generated-matrix/ generated-matrix-legit/"
   },
   "dependencies": {
     "@codewithagents/api-errors": "workspace:*",
@@ -17,7 +19,11 @@
     "openapi-zod-ts": "workspace:*"
   },
   "devDependencies": {
+    "@codewithagents/openapi-server": "workspace:*",
     "@faker-js/faker": "^10.5.0",
+    "fastify": "^5.8.5",
+    "fastify-type-provider-zod": "^6.1.0",
+    "zod": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@testing-library/react": "^16.3.2",
     "@types/node": "catalog:",

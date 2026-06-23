@@ -1,0 +1,6 @@
+{
+  "input_openapi": "spec/matrix.json",
+  "output": "generated-matrix",
+  "framework": "fastify",
+  "input_schema": "generated-matrix/schemas.ts"
+}
