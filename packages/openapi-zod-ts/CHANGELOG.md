@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.2.0...openapi-zod-ts-v2.2.1) (2026-06-23)
+
+
+### Bug Fixes
+
+* **openapi-zod-ts:** type lazy-wrapped cyclic schemas and disambiguate synthesized response schema names ([#383](https://github.com/codewithagents/openapi-zod-ts/issues/383)) ([#385](https://github.com/codewithagents/openapi-zod-ts/issues/385)) ([f05b0a4](https://github.com/codewithagents/openapi-zod-ts/commit/f05b0a4f217d688b1c0645d83c9a07f1b27ace33))
+
 ## [2.2.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.1.0...openapi-zod-ts-v2.2.0) (2026-06-21)
 
 
