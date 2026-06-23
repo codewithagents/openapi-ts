@@ -824,6 +824,41 @@ describe('no spurious unknown fallbacks (regression guard)', () => {
     const out = genSingle('Loose', { type: 'object', additionalProperties: true } as any)
     expect(out).toContain('Record<string, unknown>')
   })
+
+  // 9. Multi-member type union with structural object member (regression guard: types.ts already correct)
+  it('["object","string","null"] with properties -> { ... } | string | null, no unknown', () => {
+    const out = genSingle('Wrapper', {
+      type: 'object',
+      properties: {
+        meta: {
+          type: ['object', 'string', 'null'],
+          properties: { name: { type: 'string' } },
+        } as any,
+      },
+    })
+    expect(out).toContain('name?:')
+    expect(out).toContain('| string')
+    expect(out).toContain('| null')
+    expect(out).not.toContain('unknown | null')
+    expect(out).not.toContain('unknown | string')
+  })
+
+  // 10. Multi-member type union with structural array member (regression guard: types.ts already correct)
+  it('["array","integer","null"] with items -> T[] | number | null, no unknown', () => {
+    const out = genSingle('Wrapper', {
+      type: 'object',
+      properties: {
+        counts: {
+          type: ['array', 'integer', 'null'],
+          items: { type: 'string' },
+        } as any,
+      },
+    })
+    expect(out).toContain('string[]')
+    expect(out).toContain('| number')
+    expect(out).toContain('| null')
+    expect(out).not.toContain('unknown')
+  })
 })
 
 describe('additionalProperties handling in types', () => {
