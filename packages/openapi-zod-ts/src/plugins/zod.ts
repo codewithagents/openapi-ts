@@ -1,5 +1,6 @@
 import type { OpenAPIV3_1 } from 'openapi-types'
-import { toPropertyKey, toTypeName } from '../utils/naming.js'
+import { toPropertyKey, toTypeName, uniquifyName } from '../utils/naming.js'
+import { findRecursiveSchemaNames } from '../utils/recursive-schemas.js'
 import type { GeneratedFile } from './types.js'
 
 type OperationObject = OpenAPIV3_1.OperationObject
@@ -21,51 +22,6 @@ function refToTypeName(ref: string): string {
   // '#/components/schemas/Foo' -> 'Foo' (sanitized to a valid TS identifier)
   const parts = ref.split('/')
   return toTypeName(parts[parts.length - 1]!)
-}
-
-/** Check whether a schema tree contains a $ref to the given schema name (self-reference). */
-function hasSelfRef(
-  schema: SchemaObject | ReferenceObject,
-  name: string,
-  visited = new Set<SchemaObject | ReferenceObject>()
-): boolean {
-  if (visited.has(schema)) return false
-  visited.add(schema)
-
-  if (isRef(schema)) {
-    return refToTypeName(schema.$ref) === name
-  }
-
-  const s = schema as SchemaObject
-
-  for (const key of ['allOf', 'anyOf', 'oneOf'] as const) {
-    const list = s[key] as (SchemaObject | ReferenceObject)[] | undefined
-    if (list !== undefined) {
-      for (const item of list) {
-        if (hasSelfRef(item, name, visited)) return true
-      }
-    }
-  }
-
-  if (s.properties !== undefined) {
-    for (const propSchema of Object.values(
-      s.properties as Record<string, SchemaObject | ReferenceObject>
-    )) {
-      if (hasSelfRef(propSchema, name, visited)) return true
-    }
-  }
-
-  const items = (s as unknown as ArraySchemaObject).items
-  if (items !== undefined) {
-    if (hasSelfRef(items as SchemaObject | ReferenceObject, name, visited)) return true
-  }
-
-  if (s.additionalProperties !== undefined && typeof s.additionalProperties === 'object') {
-    if (hasSelfRef(s.additionalProperties as SchemaObject | ReferenceObject, name, visited))
-      return true
-  }
-
-  return false
 }
 
 /**
@@ -498,18 +454,18 @@ function topoSortSchemas(schemas: Record<string, SchemaObject | ReferenceObject>
 function generateSchemaDeclaration(
   name: string,
   schema: SchemaObject | ReferenceObject,
-  inCycle = false
+  modelTypeName?: string
 ): string {
   // Sanitize schema name to a valid TS identifier (e.g. 'Foo-bar' -> 'FooBar')
   const safeName = toTypeName(name)
-  const useLazy = inCycle || (!isRef(schema) && hasSelfRef(schema, safeName))
 
-  if (useLazy) {
-    // Wrap in z.lazy() for circular/self-referential schemas.
-    // z.lazy() defers evaluation until first use, by which point all
-    // schema variables are declared - safe even for mutual cycles.
-    const inner = schemaToZod(schema)
-    return `export const ${safeName}Schema: z.ZodType = z.lazy(() => ${inner})`
+  if (modelTypeName !== undefined) {
+    // Recursive (cyclic or self-referential) schema: wrap in z.lazy() so the deferred
+    // reference resolves after all schema constants are declared, and annotate with the
+    // concrete model type (a plain interface emitted in models.ts) so that
+    // z.infer<typeof FooSchema> resolves to that shape rather than unknown. The model type
+    // is imported type-only at the top of the file, which is erased at runtime (no cycle).
+    return `export const ${safeName}Schema: z.ZodType<${modelTypeName}> = z.lazy(() => ${schemaToZod(schema)})`
   }
 
   return `export const ${safeName}Schema = ${schemaToZod(schema)}`
@@ -539,7 +495,9 @@ function collectContentfulTwoxxResponses(
   responses: Record<string, OpenAPIV3_1.ResponseObject | ReferenceObject>
 ): Array<{ code: string; schema: SchemaObject }> {
   const result: Array<{ code: string; schema: SchemaObject }> = []
-  for (const code of Object.keys(responses).filter((k) => /^2\d\d$/.test(k) && k !== '204').sort()) {
+  for (const code of Object.keys(responses)
+    .filter((k) => /^2\d\d$/.test(k) && k !== '204')
+    .sort()) {
     const resp = responses[code]!
     if (isRef(resp)) continue
     const r = resp as OpenAPIV3_1.ResponseObject
@@ -562,6 +520,12 @@ function collectContentfulTwoxxResponses(
  *
  * Single-code operations: export const LabInlineResponseSchema = <zodExpr>
  * Multi-code operations (multiple 2xx): export const LabResponseUnionSchema = z.union([...])
+ *
+ * Collision avoidance: synthesized names are deduplicated against component schema names
+ * and each other using the same suffix convention as buildSchemaRenameMap (_2, _3, ...).
+ * This prevents duplicate const declarations when an operationId sanitizes to the same
+ * PascalCase identifier as a component schema (e.g. operationId 'Holiday' and schema
+ * name 'Holiday' both sanitize to 'Holiday').
  */
 // fallow-ignore-next-line complexity
 function synthesizeInlineResponseSchemas(spec: OpenAPIV3_1.Document): InlineResponseSchema[] {
@@ -570,6 +534,18 @@ function synthesizeInlineResponseSchemas(spec: OpenAPIV3_1.Document): InlineResp
 
   const METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'] as const
   const result: InlineResponseSchema[] = []
+
+  // Seed the taken-name set with all component schema names so synthesized names
+  // never shadow a component schema (which would produce a duplicate const declaration).
+  const taken = new Set<string>()
+  const rawSchemas = spec.components?.schemas as
+    | Record<string, SchemaObject | ReferenceObject>
+    | undefined
+  if (rawSchemas !== undefined) {
+    for (const name of Object.keys(rawSchemas)) {
+      taken.add(toTypeName(name))
+    }
+  }
 
   for (const pathItem of Object.values(paths)) {
     for (const method of METHODS) {
@@ -587,10 +563,10 @@ function synthesizeInlineResponseSchemas(spec: OpenAPIV3_1.Document): InlineResp
       const inlineResps = collectContentfulTwoxxResponses(responses)
       if (inlineResps.length === 0) continue
 
-      // The schema variable name is toTypeName(operationId) + 'Schema'.
-      // For 'labInlineResponse' this produces 'LabInlineResponseSchema'.
-      // The operationId itself already encodes the context, so no extra suffix is added.
-      const baseName = toTypeName(operationId)
+      // Derive a collision-free name: toTypeName(operationId) is the preferred name,
+      // but if it collides with a component schema name or a prior synthesized name,
+      // uniquifyName appends _2, _3, ... (same convention as buildSchemaRenameMap).
+      const baseName = uniquifyName(toTypeName(operationId), taken)
 
       if (inlineResps.length === 1) {
         // Single inline response: emit a plain schema.
@@ -626,69 +602,93 @@ export function collectSynthesizedResponseSchemaNames(spec: OpenAPIV3_1.Document
   return names
 }
 
+// Header comment block for the bootstrapped schemas.ts (user-owned, never overwritten).
+const SCHEMAS_FILE_HEADER: readonly string[] = [
+  '// Bootstrapped by openapi-zod-ts - this file is yours.',
+  '// Add error messages, refinements, and business rules freely.',
+  '// Re-running the generator will NOT overwrite this file.',
+  '// Requires zod v4 (z.record takes two args, z.lazy for circular refs).',
+  '//',
+  '// Object schemas include .passthrough() so new optional server fields are',
+  '// preserved when the API evolves - without breaking existing consumers.',
+  '// Schemas with additionalProperties: false use .strict() instead.',
+  '//',
+  '// Form wizard pattern: extend API schemas for UI-only fields.',
+  '// The generated client strips unknown keys before sending, so extra form',
+  '// fields (step, confirmCheckbox, etc.) are never leaked to the backend:',
+  '//',
+  '//   export const CreateOrderFormSchema = CreateOrderSchema.extend({',
+  '//     step: z.number(),',
+  '//     confirmTerms: z.boolean(),',
+  '//   })',
+  '//',
+  '// Use CreateOrderFormSchema for React Hook Form validation, then pass the',
+  '// full form values to the generated client - it strips to API fields only.',
+]
+
+/**
+ * Emit the Zod constants for component schemas, topologically sorted so dependencies precede
+ * dependents. Recursive schemas are wrapped in z.lazy() and annotated z.ZodType<ModelType>,
+ * with those model types imported type-only from models.ts (erased at runtime, so no cycle).
+ */
+function emitComponentSchemas(
+  schemas: Record<string, SchemaObject | ReferenceObject>,
+  recursive: Set<string>
+): string[] {
+  const sanitizedSchemas: Record<string, SchemaObject | ReferenceObject> = {}
+  for (const [name, schema] of Object.entries(schemas)) {
+    sanitizedSchemas[toTypeName(name)] = schema
+  }
+
+  const { sorted } = topoSortSchemas(sanitizedSchemas)
+  const lines: string[] = []
+
+  const recursiveTypeNames = sorted.filter((name) => recursive.has(name))
+  if (recursiveTypeNames.length > 0) {
+    lines.push(`import type { ${recursiveTypeNames.join(', ')} } from './models.js'`)
+  }
+  lines.push('')
+
+  for (const name of sorted) {
+    const schema = sanitizedSchemas[name]!
+    lines.push(generateSchemaDeclaration(name, schema, recursive.has(name) ? name : undefined))
+    lines.push('')
+  }
+  return lines
+}
+
+/**
+ * Emit synthesized schemas for operations with inline (non-$ref) JSON responses. These are
+ * emitted after component schemas so referenced component schemas are already declared.
+ */
+function emitSynthesizedResponseSchemas(spec: OpenAPIV3_1.Document): string[] {
+  const inlineResponseSchemas = synthesizeInlineResponseSchemas(spec)
+  if (inlineResponseSchemas.length === 0) return []
+  const lines: string[] = [
+    '// Synthesized schemas for inline JSON responses (operationId-based naming).',
+    '// These are used by openapi-server to wire schema.response for Fastify routes.',
+    '// Add refinements here as needed; the generator will not overwrite this file.',
+    '',
+  ]
+  for (const entry of inlineResponseSchemas) {
+    lines.push(`export const ${entry.zodDecl}`)
+    lines.push('')
+  }
+  return lines
+}
+
 export function generateZodSchemas(spec: OpenAPIV3_1.Document): GeneratedFile {
   const schemas = spec.components?.schemas as
     | Record<string, SchemaObject | ReferenceObject>
     | undefined
 
-  const lines: string[] = [
-    '// Bootstrapped by openapi-zod-ts - this file is yours.',
-    '// Add error messages, refinements, and business rules freely.',
-    '// Re-running the generator will NOT overwrite this file.',
-    '// Requires zod v4 (z.record takes two args, z.lazy for circular refs).',
-    '//',
-    '// Object schemas include .passthrough() so new optional server fields are',
-    '// preserved when the API evolves - without breaking existing consumers.',
-    '// Schemas with additionalProperties: false use .strict() instead.',
-    '//',
-    '// Form wizard pattern: extend API schemas for UI-only fields.',
-    '// The generated client strips unknown keys before sending, so extra form',
-    '// fields (step, confirmCheckbox, etc.) are never leaked to the backend:',
-    '//',
-    '//   export const CreateOrderFormSchema = CreateOrderSchema.extend({',
-    '//     step: z.number(),',
-    '//     confirmTerms: z.boolean(),',
-    '//   })',
-    '//',
-    '// Use CreateOrderFormSchema for React Hook Form validation, then pass the',
-    '// full form values to the generated client - it strips to API fields only.',
-    '',
-    "import { z } from 'zod'",
-    '',
-  ]
+  // Recursive (cyclic or self-referential) schemas are annotated z.ZodType<ModelType>;
+  // their concrete model type lives in models.ts and is imported type-only.
+  const recursive = findRecursiveSchemaNames(spec)
 
-  if (schemas !== undefined) {
-    // Sanitize schema names so the topo sort and ref-collection use consistent identifiers.
-    // Schema names like 'Foo-bar' become 'FooBar' - safe for use as TS variable names.
-    const sanitizedSchemas: Record<string, SchemaObject | ReferenceObject> = {}
-    for (const [name, schema] of Object.entries(schemas)) {
-      sanitizedSchemas[toTypeName(name)] = schema
-    }
-
-    const { sorted, cyclic } = topoSortSchemas(sanitizedSchemas)
-    for (const name of sorted) {
-      const schema = sanitizedSchemas[name]!
-      lines.push(generateSchemaDeclaration(name, schema, cyclic.has(name)))
-      lines.push('')
-    }
-  }
-
-  // Synthesize named schemas for operations with inline (non-$ref) JSON responses.
-  // These are emitted after component schemas so any referenced component schemas are
-  // already declared and available. Naming: toTypeName(operationId) + 'Schema'.
-  const inlineResponseSchemas = synthesizeInlineResponseSchemas(spec)
-  if (inlineResponseSchemas.length > 0) {
-    lines.push(
-      '// Synthesized schemas for inline JSON responses (operationId-based naming).',
-      '// These are used by openapi-server to wire schema.response for Fastify routes.',
-      '// Add refinements here as needed; the generator will not overwrite this file.',
-    )
-    lines.push('')
-    for (const entry of inlineResponseSchemas) {
-      lines.push(`export const ${entry.zodDecl}`)
-      lines.push('')
-    }
-  }
+  const lines: string[] = [...SCHEMAS_FILE_HEADER, '', "import { z } from 'zod'"]
+  lines.push(...(schemas !== undefined ? emitComponentSchemas(schemas, recursive) : ['']))
+  lines.push(...emitSynthesizedResponseSchemas(spec))
 
   return {
     filename: 'schemas.ts',

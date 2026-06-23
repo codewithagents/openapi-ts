@@ -1,6 +1,7 @@
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { toPropertyKey, toTypeName, uniquifyName, refToTypeName } from '../utils/naming.js'
 import { isDeepRef, resolveJsonPointer } from '../utils/ref-resolver.js'
+import { findRecursiveSchemaNames } from '../utils/recursive-schemas.js'
 import {
   buildWritableVariantMap,
   readShapeProperties,
@@ -341,6 +342,12 @@ function discriminatorLiteralFor(ref: string, mapping: Record<string, string> | 
 interface TypesOptions {
   schemaNames?: Set<string>
   schemaImportPath?: string
+  /**
+   * Names (sanitized via toTypeName) of recursive schemas. These are emitted as concrete
+   * interfaces instead of `z.infer<typeof FooSchema>`, because their Zod schema is annotated
+   * `z.ZodType<Foo>` and deriving the type back via z.infer would be circular.
+   */
+  recursiveNames?: Set<string>
 }
 
 /**
@@ -421,17 +428,21 @@ function generateSchemaDeclaration(
   // LabVariantItemWriteSchema). In that case, fall through to the spec-derived interface
   // branch below so the read type comes from spec flags (items: LabVariantItem[]) and the
   // XWritable is deep-rendered (items: LabVariantItemWritable[]).
+  // Recursive schemas skip z.infer and fall through to the spec-derived interface branch:
+  // their Zod schema is annotated z.ZodType<Foo>, so z.infer<typeof FooSchema> would be a
+  // circular, excessively-deep instantiation. The concrete interface is referenced by the
+  // annotation in schemas.ts (imported type-only).
   if (
     options?.schemaNames !== undefined &&
     options.schemaNames.has(`${safeName}Schema`) &&
-    isObjectSchema(schema)
+    isObjectSchema(schema) &&
+    options.recursiveNames?.has(toTypeName(name)) !== true
   ) {
     const writableName = writableVariantMap?.get(name)
     // A schema is "only transitively" in the map when it has no direct split flags.
     // For such containers in schema-enhanced mode, derive the read type from spec (not z.infer)
     // so the response type is correct regardless of what the user's Zod schema embeds.
-    const isTransitiveContainer =
-      writableName !== undefined && !schemaHasSplitProperties(schema)
+    const isTransitiveContainer = writableName !== undefined && !schemaHasSplitProperties(schema)
     if (!isTransitiveContainer) {
       // Leaf or direct-split: keep z.infer as the read type (unchanged behaviour).
       const readDecl = `export type ${safeName} = z.infer<typeof ${safeName}Schema>`
@@ -571,6 +582,27 @@ function generateSchemaDeclaration(
  * In schema-enhanced mode, emits the zod import and the named schema imports.
  * In plain mode, emits only the auto-generated banner.
  */
+/**
+ * Names of the Zod schema constants that models.ts references via z.infer. Recursive schemas
+ * are excluded: they are emitted as concrete interfaces, so importing their schema const here
+ * would be unused.
+ */
+function inferImportNames(
+  schemas: Record<string, SchemaObject | ReferenceObject> | undefined,
+  options: TypesOptions,
+  renameMap: Map<string, string>
+): string[] {
+  const names: string[] = []
+  for (const name of Object.keys(schemas ?? {})) {
+    const safeName = renameMap.get(name) ?? toTypeName(name)
+    const isRecursive = options.recursiveNames?.has(toTypeName(name)) === true
+    if (options.schemaNames?.has(`${safeName}Schema`) && !isRecursive) {
+      names.push(`${safeName}Schema`)
+    }
+  }
+  return names
+}
+
 function buildModelsHeader(
   schemas: Record<string, SchemaObject | ReferenceObject> | undefined,
   options: TypesOptions | undefined,
@@ -580,12 +612,11 @@ function buildModelsHeader(
   if (options?.schemaNames === undefined || options.schemaImportPath === undefined) {
     return [banner, '']
   }
-  const importedSchemas: string[] = []
-  for (const name of Object.keys(schemas ?? {})) {
-    const safeName = renameMap.get(name) ?? toTypeName(name)
-    if (options.schemaNames.has(`${safeName}Schema`)) {
-      importedSchemas.push(`${safeName}Schema`)
-    }
+  const importedSchemas = inferImportNames(schemas, options, renameMap)
+  // When every schema in the file is recursive (or there are none), there is no z.infer
+  // usage, so neither the zod import nor the schema import is needed.
+  if (importedSchemas.length === 0) {
+    return [banner, '']
   }
   return [
     banner,
@@ -652,12 +683,15 @@ export function generateTypes(
   // Fall back to building it internally so existing callers without the map still work.
   const resolvedWritableVariantMap = writableVariantMap ?? buildWritableVariantMap(spec)
 
-  const lines: string[] = buildModelsHeader(schemas, options, renameMap)
+  // Recursive schemas are emitted as concrete interfaces (not z.infer); see TypesOptions.
+  const opts: TypesOptions = { ...options, recursiveNames: findRecursiveSchemaNames(spec) }
+
+  const lines: string[] = buildModelsHeader(schemas, opts, renameMap)
 
   if (schemas !== undefined) {
     for (const [name, schema] of Object.entries(schemas)) {
       lines.push(
-        generateSchemaDeclaration(name, schema, options, renameMap, spec, resolvedWritableVariantMap)
+        generateSchemaDeclaration(name, schema, opts, renameMap, spec, resolvedWritableVariantMap)
       )
       lines.push('')
     }
@@ -671,7 +705,7 @@ export function generateTypes(
       // Sub-defs are already sanitized; pass the safe name directly by faking a
       // 1-entry rename map so generateSchemaDeclaration picks it up.
       const subRenameMap = new Map([[safeName, safeName]])
-      lines.push(generateSchemaDeclaration(safeName, defSchema, options, subRenameMap, spec))
+      lines.push(generateSchemaDeclaration(safeName, defSchema, opts, subRenameMap, spec))
       lines.push('')
     }
   }

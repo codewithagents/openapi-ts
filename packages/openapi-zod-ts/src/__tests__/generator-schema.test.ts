@@ -6,6 +6,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import { generate } from '../generator.js'
 
 const taskApiFixture = join(import.meta.dirname, '../__fixtures__/specs/task-api.json')
+const cyclicSchemasFixture = join(import.meta.dirname, '../__fixtures__/specs/cyclic-schemas.json')
 
 let tmpDir: string | undefined
 
@@ -164,7 +165,11 @@ describe('schema-enhanced mode: drift gate (#336)', () => {
   })
 
   it("config.drift 'error' throws when drift is detected", async () => {
-    const { configPath, tmpDir: dir, schemaPath } = await makeConfig(taskApiFixture, {
+    const {
+      configPath,
+      tmpDir: dir,
+      schemaPath,
+    } = await makeConfig(taskApiFixture, {
       drift: 'error',
     })
     await writeFile(schemaPath, partialSchema, 'utf-8')
@@ -173,7 +178,12 @@ describe('schema-enhanced mode: drift gate (#336)', () => {
   })
 
   it("config.drift 'error' failure is atomic: no output files are written", async () => {
-    const { configPath, tmpDir: dir, outDir, schemaPath } = await makeConfig(taskApiFixture, {
+    const {
+      configPath,
+      tmpDir: dir,
+      outDir,
+      schemaPath,
+    } = await makeConfig(taskApiFixture, {
       drift: 'error',
     })
     await writeFile(schemaPath, partialSchema, 'utf-8')
@@ -207,5 +217,58 @@ describe('schema-enhanced mode: drift gate (#336)', () => {
     await expect(generate(dir, { configPath, check: true })).resolves.toBeUndefined()
     // No writes in check mode: the generated dir must not be recreated.
     await expect(access(join(outDir, 'models.ts'))).rejects.toThrow()
+  })
+})
+
+// ── Regression: cyclic schemas produce concrete types, not unknown (#383) ─────
+
+describe('schema-enhanced mode — cyclic schemas resolve to concrete types (#383)', () => {
+  it('models.ts emits concrete interfaces for cyclic types (not unknown) after second run', async () => {
+    const { configPath, tmpDir: dir } = await makeConfig(cyclicSchemasFixture)
+    await generate(dir, configPath) // first: bootstrap schemas.ts
+    await generate(dir, configPath) // second: schema-enhanced re-generation
+
+    const models = await readFile(join(dir, 'generated', 'models.ts'), 'utf-8')
+
+    // With the bug, z.infer<typeof HolidaySchema> and z.infer<typeof ProvinceSchema>
+    // both collapsed to unknown. Cyclic types are now emitted as concrete interfaces.
+    expect(models).not.toContain('Holiday = unknown')
+    expect(models).not.toContain('Province = unknown')
+    expect(models).toMatch(/export interface Holiday \{/)
+    expect(models).toMatch(/export interface Province \{/)
+
+    // The interfaces reference each other (mutual cycle), proving concrete resolution.
+    expect(models).toMatch(/provinces\?: Province\[\]/)
+    expect(models).toMatch(/nextHoliday\?: Holiday/)
+
+    // A cyclic interface referencing an acyclic schema (Province -> Region) resolves to an
+    // in-scope model type, and the acyclic Region is still declared in models.ts.
+    expect(models).toMatch(/region\?: Region/)
+    expect(models).toMatch(/(export interface Region \{|export type Region =)/)
+  })
+
+  it('bootstrapped schemas.ts annotates cyclic schemas with their model type, not bare z.ZodType', async () => {
+    const { configPath, tmpDir: dir, schemaPath } = await makeConfig(cyclicSchemasFixture)
+    await generate(dir, configPath) // bootstrap
+
+    const schemas = await readFile(schemaPath, 'utf-8')
+
+    // Holiday and Province are mutually cyclic: both wrapped in z.lazy() and annotated with
+    // their concrete model type (imported type-only from models.ts).
+    expect(schemas).toContain('HolidaySchema: z.ZodType<Holiday>')
+    expect(schemas).toContain('ProvinceSchema: z.ZodType<Province>')
+    expect(schemas).toMatch(/import type \{[^}]*\} from '\.\/models\.js'/)
+
+    // The bare annotation (which causes unknown) must not appear anywhere.
+    expect(schemas).not.toMatch(/: z\.ZodType =/)
+
+    // No helper interfaces are emitted into the user-owned schemas.ts.
+    expect(schemas).not.toContain('interface _')
+
+    // Acyclic schemas (Error, Region) remain plain assignments with no annotation.
+    expect(schemas).toContain('ErrorSchema =')
+    expect(schemas).not.toContain('ErrorSchema: z.ZodType')
+    expect(schemas).toContain('RegionSchema =')
+    expect(schemas).not.toContain('RegionSchema: z.ZodType')
   })
 })
