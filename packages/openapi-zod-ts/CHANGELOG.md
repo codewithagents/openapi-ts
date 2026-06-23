@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.2.2](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.2.1...openapi-zod-ts-v2.2.2) (2026-06-23)
+
+
+### Bug Fixes
+
+* **openapi-zod-ts:** render nullable arrays (type: ["array","null"]) as z.array(...).nullable() ([#391](https://github.com/codewithagents/openapi-zod-ts/issues/391)) ([148c7dd](https://github.com/codewithagents/openapi-zod-ts/commit/148c7dd04efa22e6be81a6b486f21583c4e48edc))
+* **openapi-zod-ts:** render nullable objects (type: ["object","null"]) concretely and guard against unknown fallbacks ([#393](https://github.com/codewithagents/openapi-zod-ts/issues/393)) ([306f620](https://github.com/codewithagents/openapi-zod-ts/commit/306f6205122149324e702335d4d0f1be9de02f5e))
+* **openapi-zod-ts:** render structural members in multi-type unions; add schema-shape property tests ([#394](https://github.com/codewithagents/openapi-zod-ts/issues/394)) ([64a67ff](https://github.com/codewithagents/openapi-zod-ts/commit/64a67ff219e6ff5c5c50c25b374ee54b54e92405))
+
 ## [2.2.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.2.0...openapi-zod-ts-v2.2.1) (2026-06-23)
 
 
