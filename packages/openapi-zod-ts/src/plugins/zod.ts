@@ -152,6 +152,8 @@ function arrayTypeToZod(schema: SchemaObject): string {
     } else if (nonNull[0] === 'number') {
       base = primitiveToZod('number')
       base = applyNumberConstraints(base, schema)
+    } else if (nonNull[0] === 'array') {
+      base = arraySchemaToZodBase(schema)
     } else {
       base = primitiveToZod(nonNull[0]!)
     }
@@ -217,11 +219,11 @@ function compositeToZod(schema: SchemaObject): string {
 }
 
 /**
- * Handle `type: 'array'` schemas.
- * Supports prefixItems (OpenAPI 3.1 / JSON Schema 2020-12 tuples), plain arrays,
- * and array constraints (minItems, maxItems, uniqueItems).
+ * Build the raw Zod array/tuple expression for a schema without applying `.default()`.
+ * Called by both arraySchemaToZod (which applies default) and arrayTypeToZod (which
+ * applies nullable + default itself, so default must not be applied here).
  */
-function arraySchemaToZod(schema: SchemaObject): string {
+function arraySchemaToZodBase(schema: SchemaObject): string {
   const arraySchema = schema as unknown as ArraySchemaObject
 
   // prefixItems (OpenAPI 3.1 / JSON Schema 2020-12): fixed-position tuple elements
@@ -236,7 +238,7 @@ function arraySchemaToZod(schema: SchemaObject): string {
     if (restItems !== undefined) {
       base += `.rest(${schemaToZod(restItems)})`
     }
-    return applyDefault(base, schema)
+    return base
   }
 
   const items = arraySchema.items as SchemaObject | ReferenceObject | undefined
@@ -252,7 +254,16 @@ function arraySchemaToZod(schema: SchemaObject): string {
   if ((schema as SchemaObject & { uniqueItems?: boolean }).uniqueItems === true) {
     base += `.refine((a) => new Set(a).size === a.length, { message: 'Items must be unique' })`
   }
-  return applyDefault(base, schema)
+  return base
+}
+
+/**
+ * Handle `type: 'array'` schemas.
+ * Supports prefixItems (OpenAPI 3.1 / JSON Schema 2020-12 tuples), plain arrays,
+ * and array constraints (minItems, maxItems, uniqueItems).
+ */
+function arraySchemaToZod(schema: SchemaObject): string {
+  return applyDefault(arraySchemaToZodBase(schema), schema)
 }
 
 /**
