@@ -154,6 +154,8 @@ function arrayTypeToZod(schema: SchemaObject): string {
       base = applyNumberConstraints(base, schema)
     } else if (nonNull[0] === 'array') {
       base = arraySchemaToZodBase(schema)
+    } else if (nonNull[0] === 'object') {
+      base = objectSchemaToZodBase(schema)
     } else {
       base = primitiveToZod(nonNull[0]!)
     }
@@ -267,12 +269,11 @@ function arraySchemaToZod(schema: SchemaObject): string {
 }
 
 /**
- * Handle `type: 'object'` schemas.
- * Delegates to z.record() for additionalProperties-only objects,
- * inlineObjectZod() for objects with explicit properties,
- * and z.record(z.string(), z.unknown()) as the open-object fallback.
+ * Build the raw Zod object/record expression for a schema without applying `.default()`.
+ * Called by both objectSchemaToZod (which applies default) and arrayTypeToZod (which
+ * applies nullable + default itself, so default must not be applied here).
  */
-function objectSchemaToZod(schema: SchemaObject): string {
+function objectSchemaToZodBase(schema: SchemaObject): string {
   // additionalProperties only (no explicit properties) -> z.record()
   if (
     schema.additionalProperties !== undefined &&
@@ -281,14 +282,24 @@ function objectSchemaToZod(schema: SchemaObject): string {
     (schema.properties === undefined || Object.keys(schema.properties).length === 0)
   ) {
     const valZod = schemaToZod(schema.additionalProperties as SchemaObject | ReferenceObject)
-    return applyDefault(`z.record(z.string(), ${valZod})`, schema)
+    return `z.record(z.string(), ${valZod})`
   }
 
   if (schema.properties !== undefined && Object.keys(schema.properties).length > 0) {
-    return applyDefault(inlineObjectZod(schema), schema)
+    return inlineObjectZod(schema)
   }
 
-  return applyDefault('z.record(z.string(), z.unknown())', schema)
+  return 'z.record(z.string(), z.unknown())'
+}
+
+/**
+ * Handle `type: 'object'` schemas.
+ * Delegates to z.record() for additionalProperties-only objects,
+ * inlineObjectZod() for objects with explicit properties,
+ * and z.record(z.string(), z.unknown()) as the open-object fallback.
+ */
+function objectSchemaToZod(schema: SchemaObject): string {
+  return applyDefault(objectSchemaToZodBase(schema), schema)
 }
 
 /**

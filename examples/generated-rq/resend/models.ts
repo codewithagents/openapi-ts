@@ -440,7 +440,7 @@ export interface GetReceivedEmailResponse {
   reply_to?: string[] | null
   html?: string | null
   text?: string | null
-  headers?: unknown | null
+  headers?: Record<string, unknown> | null
   created_at?: string /* date-time */
   attachments?: {
     id?: string
@@ -827,8 +827,8 @@ export interface Log {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS'
   response_status?: number
   user_agent?: string | null
-  request_body?: unknown | null
-  response_body?: unknown | null
+  request_body?: Record<string, unknown> | null
+  response_body?: Record<string, unknown> | null
 }
 
 export interface ListLogsResponse {
@@ -946,8 +946,8 @@ export interface AutomationRunStep {
   status?: string
   started_at?: string | null
   completed_at?: string | null
-  output?: unknown | null
-  error?: unknown | null
+  output?: Record<string, unknown> | null
+  error?: Record<string, unknown> | null
   created_at?: string
 }
 
@@ -979,7 +979,7 @@ export interface Event {
   object?: string
   id?: string
   name?: string
-  schema?: unknown | null
+  schema?: Record<string, unknown> | null
   created_at?: string
   updated_at?: string | null
 }
@@ -987,14 +987,14 @@ export interface Event {
 export interface EventSummary {
   id?: string
   name?: string
-  schema?: unknown | null
+  schema?: Record<string, unknown> | null
   created_at?: string
   updated_at?: string | null
 }
 
 export interface CreateEventRequest {
   name: string
-  schema?: unknown | null
+  schema?: Record<string, unknown> | null
 }
 
 export interface CreateEventResponse {
@@ -1009,7 +1009,7 @@ export interface ListEventsResponse {
 }
 
 export interface UpdateEventRequest {
-  schema: unknown | null
+  schema: Record<string, unknown> | null
 }
 
 export interface UpdateEventResponse {

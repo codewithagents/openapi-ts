@@ -47,6 +47,39 @@ function buildSchemaRenameMap(spec: OpenAPIV3_1.Document): Map<string, string> {
 }
 
 /**
+ * Render the TypeScript object/record type string for a schema with type 'object'.
+ * Extracted so it can be reused by the Array.isArray(schema.type) branch when 'object'
+ * is one of the type-union members (e.g. type: ['object', 'null']).
+ */
+function objectTypeString(
+  schema: SchemaObject,
+  renameMap?: Map<string, string>,
+  spec?: OpenAPIV3_1.Document,
+  visited?: Set<string>
+): string {
+  // additionalProperties without explicit properties -> Record
+  if (
+    schema.additionalProperties !== undefined &&
+    schema.additionalProperties !== false &&
+    schema.additionalProperties !== true &&
+    (schema.properties === undefined || Object.keys(schema.properties).length === 0)
+  ) {
+    const valType = schemaToTypeString(
+      schema.additionalProperties as SchemaObject | ReferenceObject,
+      renameMap,
+      spec,
+      visited
+    )
+    return `Record<string, ${valType}>`
+  }
+  // inline object with properties
+  if (schema.properties !== undefined) {
+    return inlineObjectType(schema, renameMap, spec, visited)
+  }
+  return 'Record<string, unknown>'
+}
+
+/**
  * Render the TypeScript array/tuple type string for a schema with type 'array'.
  * Extracted so it can be reused by the Array.isArray(schema.type) branch when 'array'
  * is one of the type-union members (e.g. type: ['array', 'null']).
@@ -130,6 +163,7 @@ function schemaToTypeString(
     const types = (schema.type as string[]).map((t) => {
       if (t === 'null') return 'null'
       if (t === 'array') return arrayTypeString(schema, renameMap, spec, visited)
+      if (t === 'object') return objectTypeString(schema, renameMap, spec, visited)
       return primitiveToTs(t, schema.format as string | undefined)
     })
     return types.join(' | ')
@@ -188,26 +222,7 @@ function schemaToTypeString(
 
   // object
   if (type === 'object') {
-    // additionalProperties without explicit properties -> Record
-    if (
-      schema.additionalProperties !== undefined &&
-      schema.additionalProperties !== false &&
-      schema.additionalProperties !== true &&
-      (schema.properties === undefined || Object.keys(schema.properties).length === 0)
-    ) {
-      const valType = schemaToTypeString(
-        schema.additionalProperties as SchemaObject | ReferenceObject,
-        renameMap,
-        spec,
-        visited
-      )
-      return `Record<string, ${valType}>`
-    }
-    // inline object with properties
-    if (schema.properties !== undefined) {
-      return inlineObjectType(schema, renameMap, spec, visited)
-    }
-    return 'Record<string, unknown>'
+    return objectTypeString(schema, renameMap, spec, visited)
   }
 
   if (type !== undefined) {
