@@ -183,7 +183,11 @@ function getResponseTypeName(
   // Guard: skip any candidate whose name collides with the operation's body schema name.
   // This prevents a form-body schema (e.g. LabFormBodySchema) from being misidentified
   // as a response schema for the same operation.
-  if (schemaNames !== undefined && operation.operationId !== undefined && operation.operationId.length > 0) {
+  if (
+    schemaNames !== undefined &&
+    operation.operationId !== undefined &&
+    operation.operationId.length > 0
+  ) {
     const synthesizedName = toTypeName(operation.operationId)
     const bodyInfo = getBodyInfo(operation)
     const bodySchemaName =
@@ -216,7 +220,10 @@ function getResponseTypeName(
 
 // ── Operation collection ──────────────────────────────────────────────────────
 
-function collectOperations(spec: OpenAPIV3_1.Document, schemaNames?: Set<string>): RouteOperation[] {
+function collectOperations(
+  spec: OpenAPIV3_1.Document,
+  schemaNames?: Set<string>
+): RouteOperation[] {
   // fallow-ignore-next-line code-duplication
   const operations: RouteOperation[] = []
 
@@ -339,7 +346,8 @@ function synthesizePropExpr(
     }
     return `z.string()${stringConstraintSuffix(s as { minLength?: number; maxLength?: number; pattern?: string })}`
   }
-  if (s.type === 'number' || s.type === 'integer') return `z.number()${numberConstraintSuffix(s as { minimum?: number; maximum?: number; exclusiveMinimum?: number; exclusiveMaximum?: number })}`
+  if (s.type === 'number' || s.type === 'integer')
+    return `z.number()${numberConstraintSuffix(s as { minimum?: number; maximum?: number; exclusiveMinimum?: number; exclusiveMaximum?: number })}`
   if (s.type === 'boolean') return 'z.boolean()'
   // Array with simple items.
   if (s.type === 'array' && s.items !== undefined && !isRef(s.items)) {
@@ -383,7 +391,9 @@ function synthesizeResponseSchemaExpr(
   // Object type with properties.
   if (s.type === 'object' && s.properties !== undefined) {
     const required = Array.isArray(s.required) ? new Set(s.required as string[]) : new Set<string>()
-    const fields = Object.entries(s.properties as Record<string, OpenAPIV3_1.SchemaObject | ReferenceObject>)
+    const fields = Object.entries(
+      s.properties as Record<string, OpenAPIV3_1.SchemaObject | ReferenceObject>
+    )
       .map(([key, propSchema]) => {
         // Nested objects fall back to z.unknown().
         if (!isRef(propSchema) && (propSchema as OpenAPIV3_1.SchemaObject).type === 'object') {
@@ -650,9 +660,13 @@ function buildFastifyTypeProviderHandler(
       // fastify-service.ts resolves type names, this emitter synthesizes Zod expressions.
       // They cannot share a helper without coupling two separate generation passes.
       // fallow-ignore-next-line code-duplication
-      const priority = ['200', '201', ...Object.keys(responses).filter(
-        (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
-      )]
+      const priority = [
+        '200',
+        '201',
+        ...Object.keys(responses).filter(
+          (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
+        ),
+      ]
       for (const code of priority) {
         const response = responses[code]
         if (response === undefined || isRef(response)) continue
@@ -684,7 +698,12 @@ function buildFastifyTypeProviderHandler(
     schemaParts.push(`response: { ${op.responseStatus.status}: ${responseSchemaExpr} }`)
   }
 
-  const routeOpts = buildRouteOptions(schemaParts, preValidationLines, op.methodName, op.effectiveSecurity)
+  const routeOpts = buildRouteOptions(
+    schemaParts,
+    preValidationLines,
+    op.methodName,
+    op.effectiveSecurity
+  )
   lines.push(
     `${indent}app.${op.httpMethod}(${JSON.stringify(op.honoPath)}, ${routeOpts}, async (req, reply) => {`
   )
@@ -832,11 +851,15 @@ function buildFastifyTypeProviderHandler(
   // Use the robust content-type detector so that $ref'd requestBodies and operations with
   // multiple declared content types (e.g. both json and multipart) are handled correctly.
   const isMultipartRoute = operationHasBodyContentType(op.rawOperation, 'multipart/form-data', spec)
-  const isOctetRoute = operationHasBodyContentType(op.rawOperation, 'application/octet-stream', spec)
+  const isOctetRoute = operationHasBodyContentType(
+    op.rawOperation,
+    'application/octet-stream',
+    spec
+  )
   if (isMultipartRoute) {
-    // multipart/form-data: requires @fastify/multipart registered with { attachFieldsToBody: true }.
+    // multipart/form-data: requires @fastify/multipart registered with { attachFieldsToBody: 'keyValues' }.
     lines.push(
-      `${inner}// multipart/form-data: requires @fastify/multipart registered with { attachFieldsToBody: true }.`
+      `${inner}// multipart/form-data: req.body has field values directly (and file fields as @fastify/multipart file objects) via { attachFieldsToBody: 'keyValues' }.`
     )
   } else if (isOctetRoute) {
     // application/octet-stream: req.body is a Buffer from the registered content-type parser.
@@ -899,7 +922,11 @@ function resolveRequestBody(
   if (match === null) return undefined
   const name = match[1]
   const components = spec.components as OpenAPIV3_1.ComponentsObject | undefined
-  const rb = (components?.requestBodies as Record<string, OpenAPIV3_1.RequestBodyObject | OpenAPIV3_1.ReferenceObject> | undefined)?.[name ?? '']
+  const rb = (
+    components?.requestBodies as
+      | Record<string, OpenAPIV3_1.RequestBodyObject | OpenAPIV3_1.ReferenceObject>
+      | undefined
+  )?.[name ?? '']
   if (rb === undefined || isRef(rb)) return undefined
   return rb as OpenAPIV3_1.RequestBodyObject
 }
@@ -915,7 +942,10 @@ function operationHasBodyContentType(
   contentType: string,
   spec: OpenAPIV3_1.Document
 ): boolean {
-  const raw = operation.requestBody as OpenAPIV3_1.RequestBodyObject | OpenAPIV3_1.ReferenceObject | undefined
+  const raw = operation.requestBody as
+    | OpenAPIV3_1.RequestBodyObject
+    | OpenAPIV3_1.ReferenceObject
+    | undefined
   const rb = resolveRequestBody(raw, spec)
   if (rb === undefined) return false
   const content = rb.content as Record<string, unknown> | undefined
@@ -955,14 +985,14 @@ export function generateFastifyRouter(
   // so multipart/formbody routes are found even when the requestBody is a $ref'd component or
   // when the operation declares multiple content types (e.g. both json and multipart). This is
   // independent of getBodyInfo's json-priority logic which only returns ONE content type.
-  const hasOctetStreamRequestBody = operations.some(
-    (op) => operationHasBodyContentType(op.rawOperation, 'application/octet-stream', spec)
+  const hasOctetStreamRequestBody = operations.some((op) =>
+    operationHasBodyContentType(op.rawOperation, 'application/octet-stream', spec)
   )
-  const hasFormUrlencodedBody = operations.some(
-    (op) => operationHasBodyContentType(op.rawOperation, 'application/x-www-form-urlencoded', spec)
+  const hasFormUrlencodedBody = operations.some((op) =>
+    operationHasBodyContentType(op.rawOperation, 'application/x-www-form-urlencoded', spec)
   )
-  const hasMultipartBody = operations.some(
-    (op) => operationHasBodyContentType(op.rawOperation, 'multipart/form-data', spec)
+  const hasMultipartBody = operations.some((op) =>
+    operationHasBodyContentType(op.rawOperation, 'multipart/form-data', spec)
   )
   const hasAnyParserNeeded = hasOctetStreamRequestBody || hasFormUrlencodedBody || hasMultipartBody
 
@@ -981,13 +1011,11 @@ export function generateFastifyRouter(
     '// Pass registerParsers: false in CreateRouterOptions to opt out (e.g. to set custom size limits).'
   )
   lines.push('')
+  lines.push("import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'")
+  lines.push("import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'")
   lines.push(
-    "import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'"
+    "import type { FastifyRequest, FastifyReply, onRequestHookHandler, preHandlerHookHandler, onSendHookHandler, onErrorHookHandler } from 'fastify'"
   )
-  lines.push(
-    "import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'"
-  )
-  lines.push("import type { FastifyRequest, FastifyReply, onRequestHookHandler, preHandlerHookHandler, onSendHookHandler, onErrorHookHandler } from 'fastify'")
   if (sortedBodyTypes.length > 0) {
     lines.push(`import type { ${sortedBodyTypes.join(', ')} } from './models.js'`)
   }
@@ -1014,19 +1042,22 @@ export function generateFastifyRouter(
   // Emit the CreateRouterOptions escape hatch so callers can override compilers/errorHandler
   // and control parser registration without having to re-implement the whole plugin.
   // When context_type is set, the interface is generic and adds the required createContext field.
-  const optionsInterfaceDecl = ctx !== undefined
-    ? 'export interface CreateRouterOptions<Ctx = never> {'
-    : 'export interface CreateRouterOptions {'
+  const optionsInterfaceDecl =
+    ctx !== undefined
+      ? 'export interface CreateRouterOptions<Ctx = never> {'
+      : 'export interface CreateRouterOptions {'
   lines.push(optionsInterfaceDecl)
   if (ctx !== undefined) {
     lines.push('  /**')
     lines.push('   * Produce a typed request context from the raw Fastify request.')
     lines.push('   * Called at the start of every route handler, before param extraction.')
     lines.push('   * Throw an HttpError(401) (or any error) here to reject the request.')
-    lines.push('   * The returned value is passed as the final ctx argument to every service method.')
+    lines.push(
+      '   * The returned value is passed as the final ctx argument to every service method.'
+    )
     lines.push('   *')
     lines.push('   * Operation security metadata is available on')
-    lines.push("   * req.routeOptions.config.security so you can inspect required scopes here.")
+    lines.push('   * req.routeOptions.config.security so you can inspect required scopes here.')
     lines.push('   */')
     lines.push('  createContext: (req: FastifyRequest) => Ctx | Promise<Ctx>')
   }
@@ -1042,7 +1073,9 @@ export function generateFastifyRouter(
   lines.push('   * compilers, error handler, and body parsers are set up. Custom routes registered')
   lines.push('   * here inherit the ZodTypeProvider context and the HttpError error handler.')
   lines.push('   */')
-  lines.push("  registerCustomRoutes?: (app: import('fastify').FastifyInstance) => void | Promise<void>")
+  lines.push(
+    "  registerCustomRoutes?: (app: import('fastify').FastifyInstance) => void | Promise<void>"
+  )
   // Global hook fields: single handler or array, plugin-scoped so they cover all routes.
   lines.push('  /**')
   lines.push('   * Lifecycle hooks registered via app.addHook inside the plugin scope.')
@@ -1068,9 +1101,8 @@ export function generateFastifyRouter(
   // (createContext is required inside it). When not set, options stays optional for
   // backward compatibility.
   const typeParam = ctx !== undefined ? '<Ctx = never>' : ''
-  const optionsParam = ctx !== undefined
-    ? 'options: CreateRouterOptions<Ctx>'
-    : 'options?: CreateRouterOptions'
+  const optionsParam =
+    ctx !== undefined ? 'options: CreateRouterOptions<Ctx>' : 'options?: CreateRouterOptions'
   lines.push(
     `export function createRouter${typeParam}(service: ${serviceRef}, ${optionsParam}): FastifyPluginAsyncZod {`
   )
@@ -1103,7 +1135,9 @@ export function generateFastifyRouter(
   lines.push('        if (err instanceof HttpError) {')
   lines.push("          const _errCode = _HTTP_CODES[err.status] ?? 'APP_ERROR'")
   lines.push('          const _errReply = reply.status(err.status)')
-  lines.push('          return _errReply.send({ statusCode: err.status, code: _errCode, error: err.message, message: err.message })')
+  lines.push(
+    '          return _errReply.send({ statusCode: err.status, code: _errCode, error: err.message, message: err.message })'
+  )
   lines.push('        }')
   lines.push('        throw err')
   lines.push('      })')
@@ -1111,11 +1145,15 @@ export function generateFastifyRouter(
 
   // Global lifecycle hooks: registered after setErrorHandler, before body parsers.
   // _asHookArray normalizes single-handler and array forms into a plain array.
-  lines.push('    const _asHookArray = <T>(v: T | T[] | undefined): T[] => (v === undefined ? [] : Array.isArray(v) ? v : [v])')
-  lines.push('    for (const _h of _asHookArray(options?.onRequest)) app.addHook(\'onRequest\', _h)')
-  lines.push('    for (const _h of _asHookArray(options?.preHandler)) app.addHook(\'preHandler\', _h)')
-  lines.push('    for (const _h of _asHookArray(options?.onSend)) app.addHook(\'onSend\', _h)')
-  lines.push('    for (const _h of _asHookArray(options?.onError)) app.addHook(\'onError\', _h)')
+  lines.push(
+    '    const _asHookArray = <T>(v: T | T[] | undefined): T[] => (v === undefined ? [] : Array.isArray(v) ? v : [v])'
+  )
+  lines.push("    for (const _h of _asHookArray(options?.onRequest)) app.addHook('onRequest', _h)")
+  lines.push(
+    "    for (const _h of _asHookArray(options?.preHandler)) app.addHook('preHandler', _h)"
+  )
+  lines.push("    for (const _h of _asHookArray(options?.onSend)) app.addHook('onSend', _h)")
+  lines.push("    for (const _h of _asHookArray(options?.onError)) app.addHook('onError', _h)")
 
   // Auto-register body parsers for content types the spec uses, gated on registerParsers !== false.
   // Callers who need custom options (e.g. upload size limits) should pass registerParsers: false
@@ -1135,7 +1173,12 @@ export function generateFastifyRouter(
     if (hasMultipartBody) {
       lines.push("      if (!app.hasContentTypeParser('multipart/form-data')) {")
       lines.push("        const _multipart = await import('@fastify/multipart')")
-      lines.push('        app.register(_multipart.default ?? _multipart, { attachFieldsToBody: true })')
+      // attachFieldsToBody: 'keyValues' puts each field's value directly on req.body
+      // (file fields become @fastify/multipart file objects), which is what handlers and
+      // body validators expect. The previous `true` wrapped every field in a busboy object.
+      lines.push(
+        "        app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues' })"
+      )
       lines.push('      }')
     }
     if (hasOctetStreamRequestBody) {
@@ -1156,7 +1199,17 @@ export function generateFastifyRouter(
 
   for (const op of operations) {
     lines.push('')
-    lines.push(buildFastifyTypeProviderHandler(op, '    ', spec, options?.schemaNames, ctx, zeroCast, options?.emitResponseValidation))
+    lines.push(
+      buildFastifyTypeProviderHandler(
+        op,
+        '    ',
+        spec,
+        options?.schemaNames,
+        ctx,
+        zeroCast,
+        options?.emitResponseValidation
+      )
+    )
   }
 
   lines.push('  }')

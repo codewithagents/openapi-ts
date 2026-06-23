@@ -856,18 +856,18 @@ No manual registration needed. `fastify.register(createRouter(service))` handles
 
 ### multipart/form-data
 
-When your spec has multipart request bodies, the generated router auto-registers [`@fastify/multipart`](https://github.com/fastify/fastify-multipart) with `attachFieldsToBody: true` inside the plugin closure:
+When your spec has multipart request bodies, the generated router auto-registers [`@fastify/multipart`](https://github.com/fastify/fastify-multipart) with `attachFieldsToBody: 'keyValues'` inside the plugin closure:
 
 ```bash
 pnpm add @fastify/multipart
 ```
 
-No manual registration needed. The `attachFieldsToBody: true` option is set automatically so `req.body` is populated for all fields.
+No manual registration needed. The `attachFieldsToBody: 'keyValues'` option is set automatically so each field's value lands directly on `req.body` (file fields arrive as `@fastify/multipart` file objects), which is what handlers and body validators expect.
 
 **Custom options (e.g. upload size limits):** pass `registerParsers: false` in `CreateRouterOptions` and register the plugin yourself before mounting the router:
 
 ```ts
-fastify.register(fastifyMultipart, { attachFieldsToBody: true, limits: { fileSize: 10_000_000 } })
+fastify.register(fastifyMultipart, { attachFieldsToBody: 'keyValues', limits: { fileSize: 10_000_000 } })
 fastify.register(createRouter(service, { registerParsers: false }), { prefix: '/api' })
 ```
 
