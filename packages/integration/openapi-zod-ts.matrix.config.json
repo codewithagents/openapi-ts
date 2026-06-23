@@ -1,0 +1,5 @@
+{
+  "input_openapi": "spec/matrix.json",
+  "output": "generated-matrix",
+  "input_schema": "generated-matrix/schemas.ts"
+}

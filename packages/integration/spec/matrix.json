@@ -1,0 +1,1065 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Matrix Coverage Spec",
+    "version": "1.0.0",
+    "description": "Fictional spec exercising every concretely-representable construct in every position. Used by the no-partial-unknown coverage net in @codewithagents/integration."
+  },
+  "paths": {
+    "/matrix/primitives": {
+      "get": {
+        "operationId": "getPrimitiveEcho",
+        "summary": "Echo primitives via query params",
+        "parameters": [
+          { "name": "strParam", "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "emailParam",
+            "in": "query",
+            "schema": { "type": "string", "format": "email" }
+          },
+          { "name": "uuidParam", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "dateParam", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "intParam", "in": "query", "schema": { "type": "integer" } },
+          {
+            "name": "int32Param",
+            "in": "query",
+            "schema": { "type": "integer", "format": "int32" }
+          },
+          { "name": "numParam", "in": "query", "schema": { "type": "number" } },
+          { "name": "boolParam", "in": "query", "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "All-primitive container as response body (response-body position)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxAllPrimitivesContainer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/primitives/{id}/{code}": {
+      "get": {
+        "operationId": "getPrimitiveByPath",
+        "summary": "Path params: string and integer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Formats container as response body",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxFormatsContainer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/enums": {
+      "get": {
+        "operationId": "getEnumEcho",
+        "summary": "Enum params",
+        "parameters": [
+          {
+            "name": "strEnum",
+            "in": "query",
+            "schema": { "$ref": "#/components/schemas/MxStringEnum" }
+          },
+          {
+            "name": "intEnum",
+            "in": "query",
+            "schema": { "$ref": "#/components/schemas/MxIntegerEnum" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Enum+const container as response (response-body position for enums)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxEnumConstContainer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/enums/{pathEnum}": {
+      "get": {
+        "operationId": "getEnumByPath",
+        "summary": "String enum as path param",
+        "parameters": [
+          {
+            "name": "pathEnum",
+            "in": "path",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/MxStringEnum" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Integer enum as response body (response-body position for integer enum)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxIntegerEnum" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/arrays": {
+      "post": {
+        "operationId": "postArrays",
+        "summary": "Array constructs: request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxArraysContainer" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Array container as response (response-body position for arrays)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxArraysContainer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/objects": {
+      "post": {
+        "operationId": "postObjects",
+        "summary": "Object constructs: request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxObjectsContainer" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Objects container as response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxObjectsContainer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/nullable": {
+      "post": {
+        "operationId": "postNullable",
+        "summary": "Nullable constructs: request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxNullableContainer" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nullable container as response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxNullableContainer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/composition": {
+      "post": {
+        "operationId": "postComposition",
+        "summary": "Composition constructs: request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxCompositionContainer" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Composition container as response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxCompositionContainer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/cyclic": {
+      "post": {
+        "operationId": "postCyclic",
+        "summary": "Cyclic/recursive constructs: request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxCyclicContainer" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cyclic container as response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxCyclicContainer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/multitypes": {
+      "post": {
+        "operationId": "postMultiTypes",
+        "summary": "Multi-type union constructs: request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxMultiTypeContainer" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Multi-type container as response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxMultiTypeContainer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/primitives-direct": {
+      "get": {
+        "operationId": "getPrimitiveDirect",
+        "summary": "Individual primitive component schemas as request/response bodies",
+        "responses": {
+          "200": {
+            "description": "Plain string as response body (string in response-body position)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxString" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/record-direct": {
+      "post": {
+        "operationId": "postRecordDirect",
+        "summary": "Record as request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxRecord" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Record as response body",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxRecord" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/allof-direct": {
+      "post": {
+        "operationId": "postAllOfDirect",
+        "summary": "AllOf schemas as request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxAllOfRefs" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AllOf as response body",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxAllOfWithSiblingProps" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/anyof-direct": {
+      "post": {
+        "operationId": "postAnyOfDirect",
+        "summary": "AnyOf schemas as request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxAnyOfRefs" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AnyOf with null as response body",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxAnyOfWithNull" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/oneof-direct": {
+      "post": {
+        "operationId": "postOneOfDirect",
+        "summary": "OneOf schemas as request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxOneOfRefs" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OneOf with discriminator as response body",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxOneOfDiscriminator" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/self-recursive": {
+      "post": {
+        "operationId": "postSelfRecursive",
+        "summary": "Self-recursive schema as request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxTreeNode" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Self-recursive as response body",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxTreeNode" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/mutual-cycle": {
+      "post": {
+        "operationId": "postMutualCycle",
+        "summary": "Mutual cycle A as request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxMutualA" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MutualB as response body",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxMutualB" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/cycle-composition": {
+      "post": {
+        "operationId": "postCycleComposition",
+        "summary": "Cycle through composition as request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxCycleCompA" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "CycleCompB as response body",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxCycleCompB" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matrix/tuple-direct": {
+      "post": {
+        "operationId": "postTupleDirect",
+        "summary": "Tuple schemas as request body and response",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MxTuple" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "TupleWithRest as response body",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MxTupleWithRest" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MxString": {
+        "type": "string",
+        "description": "CONSTRUCT: plain string"
+      },
+      "MxEmail": {
+        "type": "string",
+        "format": "email",
+        "description": "CONSTRUCT: string+format email"
+      },
+      "MxUuid": {
+        "type": "string",
+        "format": "uuid",
+        "description": "CONSTRUCT: string+format uuid"
+      },
+      "MxDateTime": {
+        "type": "string",
+        "format": "date-time",
+        "description": "CONSTRUCT: string+format date-time"
+      },
+      "MxDate": {
+        "type": "string",
+        "format": "date",
+        "description": "CONSTRUCT: string+format date"
+      },
+      "MxUri": {
+        "type": "string",
+        "format": "uri",
+        "description": "CONSTRUCT: string+format uri"
+      },
+      "MxInteger": {
+        "type": "integer",
+        "description": "CONSTRUCT: integer"
+      },
+      "MxInt32": {
+        "type": "integer",
+        "format": "int32",
+        "description": "CONSTRUCT: integer+format int32"
+      },
+      "MxInt64": {
+        "type": "integer",
+        "format": "int64",
+        "description": "CONSTRUCT: integer+format int64"
+      },
+      "MxFloat": {
+        "type": "number",
+        "format": "float",
+        "description": "CONSTRUCT: number+format float"
+      },
+      "MxDouble": {
+        "type": "number",
+        "format": "double",
+        "description": "CONSTRUCT: number+format double"
+      },
+      "MxBoolean": {
+        "type": "boolean",
+        "description": "CONSTRUCT: boolean"
+      },
+      "MxStringEnum": {
+        "type": "string",
+        "enum": ["alpha", "beta", "gamma"],
+        "description": "CONSTRUCT: string enum"
+      },
+      "MxIntegerEnum": {
+        "type": "integer",
+        "enum": [1, 2, 3],
+        "description": "CONSTRUCT: integer enum"
+      },
+      "MxStringConst": {
+        "type": "string",
+        "const": "fixed-value",
+        "description": "CONSTRUCT: string const"
+      },
+      "MxNumberConst": {
+        "type": "number",
+        "const": 42,
+        "description": "CONSTRUCT: number const"
+      },
+      "MxArrayOfPrimitive": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "CONSTRUCT: array of primitive"
+      },
+      "MxArrayOfRef": {
+        "type": "array",
+        "items": { "$ref": "#/components/schemas/MxObject" },
+        "description": "CONSTRUCT: array of $ref"
+      },
+      "MxArrayOfArray": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": { "type": "integer" }
+        },
+        "description": "CONSTRUCT: array of array of primitive (nested)"
+      },
+      "MxTuple": {
+        "type": "object",
+        "required": ["pair"],
+        "properties": {
+          "pair": {
+            "type": "array",
+            "prefixItems": [{ "type": "string" }, { "type": "integer" }, { "type": "boolean" }],
+            "description": "CONSTRUCT: tuple via prefixItems"
+          }
+        },
+        "description": "CONSTRUCT: tuple via prefixItems in object property"
+      },
+      "MxTupleWithRest": {
+        "type": "object",
+        "required": ["tagged"],
+        "properties": {
+          "tagged": {
+            "type": "array",
+            "prefixItems": [{ "type": "string" }, { "type": "number" }],
+            "items": { "type": "string" },
+            "description": "CONSTRUCT: tuple with rest (items after prefixItems)"
+          }
+        },
+        "description": "CONSTRUCT: tuple+rest in object property"
+      },
+      "MxObject": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "count": { "type": "integer" }
+        },
+        "description": "CONSTRUCT: object with properties and required"
+      },
+      "MxRecord": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "CONSTRUCT: record (additionalProperties: schema)"
+      },
+      "MxObjectWithBoth": {
+        "type": "object",
+        "required": ["label"],
+        "properties": {
+          "label": { "type": "string" },
+          "count": { "type": "integer" }
+        },
+        "additionalProperties": {
+          "type": "number"
+        },
+        "description": "CONSTRUCT: object with both properties and additionalProperties"
+      },
+      "MxNullableStringUnion": {
+        "type": ["string", "null"],
+        "description": "CONSTRUCT: nullable string (3.1 type-union form)"
+      },
+      "MxNullableArrayUnion": {
+        "oneOf": [{ "type": "array", "items": { "type": "string" } }, { "type": "null" }],
+        "description": "CONSTRUCT: nullable array with items (3.1 type-union form)"
+      },
+      "MxNullableObjectUnion": {
+        "oneOf": [{ "$ref": "#/components/schemas/MxObject" }, { "type": "null" }],
+        "description": "CONSTRUCT: nullable object with properties (3.1 type-union form)"
+      },
+      "MxNullableRecordUnion": {
+        "oneOf": [{ "$ref": "#/components/schemas/MxRecord" }, { "type": "null" }],
+        "description": "CONSTRUCT: nullable record (3.1 type-union form)"
+      },
+      "MxNullableRefUnion": {
+        "oneOf": [{ "$ref": "#/components/schemas/MxObject" }, { "type": "null" }],
+        "description": "CONSTRUCT: nullable $ref (3.1 type-union form)"
+      },
+      "MxNullableStringLegacy": {
+        "type": "string",
+        "nullable": true,
+        "description": "CONSTRUCT: nullable string (3.0 nullable:true form)"
+      },
+      "MxNullableArrayLegacy": {
+        "type": "array",
+        "items": { "type": "string" },
+        "nullable": true,
+        "description": "CONSTRUCT: nullable array with items (3.0 nullable:true form)"
+      },
+      "MxNullableObjectLegacy": {
+        "type": "object",
+        "nullable": true,
+        "required": ["val"],
+        "properties": {
+          "val": { "type": "string" }
+        },
+        "description": "CONSTRUCT: nullable object with properties (3.0 nullable:true form)"
+      },
+      "MxNullableRecordLegacy": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": {
+          "type": "integer"
+        },
+        "description": "CONSTRUCT: nullable record (3.0 nullable:true form)"
+      },
+      "MxNullableRefLegacy": {
+        "allOf": [{ "$ref": "#/components/schemas/MxObject" }],
+        "nullable": true,
+        "description": "CONSTRUCT: nullable $ref (3.0 nullable:true form)"
+      },
+      "MxBase1": {
+        "type": "object",
+        "required": ["field1"],
+        "properties": {
+          "field1": { "type": "string" }
+        },
+        "description": "Base type for allOf/anyOf composition"
+      },
+      "MxBase2": {
+        "type": "object",
+        "required": ["field2"],
+        "properties": {
+          "field2": { "type": "integer" }
+        },
+        "description": "Second base type for composition"
+      },
+      "MxAllOfRefs": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MxBase1" },
+          { "$ref": "#/components/schemas/MxBase2" }
+        ],
+        "description": "CONSTRUCT: allOf of 2 $refs"
+      },
+      "MxAllOfWithSiblingProps": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MxBase1" },
+          {
+            "type": "object",
+            "required": ["extra"],
+            "properties": {
+              "extra": { "type": "boolean" }
+            }
+          }
+        ],
+        "description": "CONSTRUCT: allOf with sibling properties"
+      },
+      "MxAnyOfRefs": {
+        "anyOf": [
+          { "$ref": "#/components/schemas/MxBase1" },
+          { "$ref": "#/components/schemas/MxBase2" }
+        ],
+        "description": "CONSTRUCT: anyOf of 2 $refs"
+      },
+      "MxAnyOfWithNull": {
+        "anyOf": [{ "$ref": "#/components/schemas/MxBase1" }, { "type": "null" }],
+        "description": "CONSTRUCT: anyOf including a null type"
+      },
+      "MxDiscBase": {
+        "type": "object",
+        "required": ["kind"],
+        "properties": {
+          "kind": { "type": "string" }
+        },
+        "description": "Discriminator base for oneOf"
+      },
+      "MxVariantA": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MxDiscBase" },
+          {
+            "type": "object",
+            "required": ["aValue"],
+            "properties": {
+              "aValue": { "type": "string" }
+            }
+          }
+        ],
+        "description": "oneOf variant A"
+      },
+      "MxVariantB": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MxDiscBase" },
+          {
+            "type": "object",
+            "required": ["bCount"],
+            "properties": {
+              "bCount": { "type": "integer" }
+            }
+          }
+        ],
+        "description": "oneOf variant B"
+      },
+      "MxOneOfRefs": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/MxBase1" },
+          { "$ref": "#/components/schemas/MxBase2" }
+        ],
+        "description": "CONSTRUCT: oneOf of 2 $refs"
+      },
+      "MxOneOfDiscriminator": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/MxVariantA" },
+          { "$ref": "#/components/schemas/MxVariantB" }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "typeA": "#/components/schemas/MxVariantA",
+            "typeB": "#/components/schemas/MxVariantB"
+          }
+        },
+        "description": "CONSTRUCT: oneOf + discriminator with mapping"
+      },
+      "MxTreeNode": {
+        "type": "object",
+        "required": ["value"],
+        "properties": {
+          "value": { "type": "string" },
+          "left": { "$ref": "#/components/schemas/MxTreeNode" },
+          "right": { "$ref": "#/components/schemas/MxTreeNode" }
+        },
+        "description": "CONSTRUCT: self-recursive schema (tree node)"
+      },
+      "MxMutualA": {
+        "type": "object",
+        "required": ["aName"],
+        "properties": {
+          "aName": { "type": "string" },
+          "child": { "$ref": "#/components/schemas/MxMutualB" }
+        },
+        "description": "CONSTRUCT: mutual cycle A (A has B)"
+      },
+      "MxMutualB": {
+        "type": "object",
+        "required": ["bName"],
+        "properties": {
+          "bName": { "type": "string" },
+          "parent": { "$ref": "#/components/schemas/MxMutualA" }
+        },
+        "description": "CONSTRUCT: mutual cycle B (B has A)"
+      },
+      "MxCycleCompA": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MxBase1" },
+          {
+            "type": "object",
+            "properties": {
+              "next": { "$ref": "#/components/schemas/MxCycleCompB" }
+            }
+          }
+        ],
+        "description": "CONSTRUCT: cycle through composition A (allOf includes ref to B)"
+      },
+      "MxCycleCompB": {
+        "anyOf": [
+          { "$ref": "#/components/schemas/MxCycleCompA" },
+          { "$ref": "#/components/schemas/MxBase2" }
+        ],
+        "description": "CONSTRUCT: cycle through composition B (anyOf refs A)"
+      },
+      "MxMultiTypeStringInt": {
+        "type": ["string", "integer"],
+        "description": "CONSTRUCT: multi-type union string|integer"
+      },
+      "MxMultiTypeStringIntNull": {
+        "type": ["string", "integer", "null"],
+        "description": "CONSTRUCT: multi-type union string|integer|null"
+      },
+      "MxMultiTypeObjectStringNull": {
+        "type": ["object", "string", "null"],
+        "required": ["label"],
+        "properties": {
+          "label": { "type": "string" }
+        },
+        "description": "CONSTRUCT: multi-type union object|string|null with properties"
+      },
+      "MxAllPrimitivesContainer": {
+        "type": "object",
+        "required": [
+          "str",
+          "email",
+          "uuid",
+          "dateTime",
+          "date",
+          "uri",
+          "int",
+          "int32",
+          "int64",
+          "float",
+          "double",
+          "bool"
+        ],
+        "properties": {
+          "str": { "$ref": "#/components/schemas/MxString" },
+          "email": { "$ref": "#/components/schemas/MxEmail" },
+          "uuid": { "$ref": "#/components/schemas/MxUuid" },
+          "dateTime": { "$ref": "#/components/schemas/MxDateTime" },
+          "date": { "$ref": "#/components/schemas/MxDate" },
+          "uri": { "$ref": "#/components/schemas/MxUri" },
+          "int": { "$ref": "#/components/schemas/MxInteger" },
+          "int32": { "$ref": "#/components/schemas/MxInt32" },
+          "int64": { "$ref": "#/components/schemas/MxInt64" },
+          "float": { "$ref": "#/components/schemas/MxFloat" },
+          "double": { "$ref": "#/components/schemas/MxDouble" },
+          "bool": { "$ref": "#/components/schemas/MxBoolean" }
+        },
+        "description": "POSITION: all primitives as object properties ($ref)"
+      },
+      "MxFormatsContainer": {
+        "type": "object",
+        "required": ["email", "uuid", "dateTime", "date", "uri"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "uuid": { "type": "string", "format": "uuid" },
+          "dateTime": { "type": "string", "format": "date-time" },
+          "date": { "type": "string", "format": "date" },
+          "uri": { "type": "string", "format": "uri" }
+        },
+        "description": "POSITION: string formats as inline object properties"
+      },
+      "MxEnumConstContainer": {
+        "type": "object",
+        "required": ["strEnum", "intEnum", "strConst", "numConst"],
+        "properties": {
+          "strEnum": { "$ref": "#/components/schemas/MxStringEnum" },
+          "intEnum": { "$ref": "#/components/schemas/MxIntegerEnum" },
+          "strConst": { "$ref": "#/components/schemas/MxStringConst" },
+          "numConst": { "$ref": "#/components/schemas/MxNumberConst" }
+        },
+        "description": "POSITION: enum+const as object properties"
+      },
+      "MxArraysContainer": {
+        "type": "object",
+        "required": ["arrayOfPrimitive", "arrayOfRef", "arrayOfArray"],
+        "properties": {
+          "arrayOfPrimitive": { "$ref": "#/components/schemas/MxArrayOfPrimitive" },
+          "arrayOfRef": { "$ref": "#/components/schemas/MxArrayOfRef" },
+          "arrayOfArray": { "$ref": "#/components/schemas/MxArrayOfArray" },
+          "inlineArrayOfEnum": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/MxStringEnum" },
+            "description": "POSITION: enum as array item"
+          },
+          "inlineArrayOfObject": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/MxObject" },
+            "description": "POSITION: object as array item"
+          },
+          "inlineArrayOfNullable": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/MxNullableStringUnion" },
+            "description": "POSITION: nullable as array item"
+          },
+          "inlineArrayOfAllOf": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/MxAllOfRefs" },
+            "description": "POSITION: allOf as array item"
+          },
+          "inlineArrayOfAnyOf": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/MxAnyOfRefs" },
+            "description": "POSITION: anyOf as array item"
+          },
+          "inlineArrayOfOneOf": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/MxOneOfRefs" },
+            "description": "POSITION: oneOf as array item"
+          }
+        },
+        "description": "POSITION: arrays as object properties; various constructs as array items"
+      },
+      "MxObjectsContainer": {
+        "type": "object",
+        "required": ["obj", "record", "objWithBoth"],
+        "properties": {
+          "obj": { "$ref": "#/components/schemas/MxObject" },
+          "record": { "$ref": "#/components/schemas/MxRecord" },
+          "objWithBoth": { "$ref": "#/components/schemas/MxObjectWithBoth" },
+          "recordOfEnum": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/components/schemas/MxStringEnum" },
+            "description": "POSITION: enum as additionalProperties value"
+          },
+          "recordOfObject": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/components/schemas/MxObject" },
+            "description": "POSITION: object as additionalProperties value"
+          },
+          "recordOfArray": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/components/schemas/MxArrayOfPrimitive" },
+            "description": "POSITION: array as additionalProperties value"
+          },
+          "recordOfAllOf": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/components/schemas/MxAllOfRefs" },
+            "description": "POSITION: allOf as additionalProperties value"
+          }
+        },
+        "description": "POSITION: object constructs as object properties; various constructs as additionalProperties values"
+      },
+      "MxNullableContainer": {
+        "type": "object",
+        "required": ["nullableStrUnion", "nullableStrLegacy"],
+        "properties": {
+          "nullableStrUnion": { "$ref": "#/components/schemas/MxNullableStringUnion" },
+          "nullableArrayUnion": { "$ref": "#/components/schemas/MxNullableArrayUnion" },
+          "nullableObjectUnion": { "$ref": "#/components/schemas/MxNullableObjectUnion" },
+          "nullableRecordUnion": { "$ref": "#/components/schemas/MxNullableRecordUnion" },
+          "nullableRefUnion": { "$ref": "#/components/schemas/MxNullableRefUnion" },
+          "nullableStrLegacy": { "$ref": "#/components/schemas/MxNullableStringLegacy" },
+          "nullableArrayLegacy": { "$ref": "#/components/schemas/MxNullableArrayLegacy" },
+          "nullableObjectLegacy": { "$ref": "#/components/schemas/MxNullableObjectLegacy" },
+          "nullableRecordLegacy": { "$ref": "#/components/schemas/MxNullableRecordLegacy" },
+          "nullableRefLegacy": { "$ref": "#/components/schemas/MxNullableRefLegacy" }
+        },
+        "description": "POSITION: all nullable constructs as object properties"
+      },
+      "MxCompositionContainer": {
+        "type": "object",
+        "required": [
+          "allOfRefs",
+          "allOfSiblings",
+          "anyOfRefs",
+          "anyOfNull",
+          "oneOfRefs",
+          "oneOfDisc"
+        ],
+        "properties": {
+          "allOfRefs": { "$ref": "#/components/schemas/MxAllOfRefs" },
+          "allOfSiblings": { "$ref": "#/components/schemas/MxAllOfWithSiblingProps" },
+          "anyOfRefs": { "$ref": "#/components/schemas/MxAnyOfRefs" },
+          "anyOfNull": { "$ref": "#/components/schemas/MxAnyOfWithNull" },
+          "oneOfRefs": { "$ref": "#/components/schemas/MxOneOfRefs" },
+          "oneOfDisc": { "$ref": "#/components/schemas/MxOneOfDiscriminator" },
+          "inlineAnyOf": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/MxString" },
+              { "$ref": "#/components/schemas/MxInteger" },
+              { "type": "null" }
+            ],
+            "description": "POSITION: primitives as anyOf members (inline)"
+          },
+          "inlineOneOf": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/MxObject" },
+              { "$ref": "#/components/schemas/MxBase1" }
+            ],
+            "description": "POSITION: objects as oneOf members (inline)"
+          },
+          "inlineAllOf": {
+            "allOf": [
+              { "$ref": "#/components/schemas/MxBase1" },
+              { "$ref": "#/components/schemas/MxBase2" },
+              {
+                "type": "object",
+                "properties": {
+                  "extra": { "type": "string" }
+                }
+              }
+            ],
+            "description": "POSITION: multiple refs + inline as allOf members"
+          }
+        },
+        "description": "POSITION: all composition constructs as object properties"
+      },
+      "MxCyclicContainer": {
+        "type": "object",
+        "required": ["treeNode", "mutualA", "mutualB", "cycleCompA", "cycleCompB"],
+        "properties": {
+          "treeNode": { "$ref": "#/components/schemas/MxTreeNode" },
+          "mutualA": { "$ref": "#/components/schemas/MxMutualA" },
+          "mutualB": { "$ref": "#/components/schemas/MxMutualB" },
+          "cycleCompA": { "$ref": "#/components/schemas/MxCycleCompA" },
+          "cycleCompB": { "$ref": "#/components/schemas/MxCycleCompB" }
+        },
+        "description": "POSITION: all cyclic constructs as object properties"
+      },
+      "MxMultiTypeContainer": {
+        "type": "object",
+        "required": ["strOrInt", "strOrIntOrNull", "objOrStrOrNull"],
+        "properties": {
+          "strOrInt": { "$ref": "#/components/schemas/MxMultiTypeStringInt" },
+          "strOrIntOrNull": { "$ref": "#/components/schemas/MxMultiTypeStringIntNull" },
+          "objOrStrOrNull": { "$ref": "#/components/schemas/MxMultiTypeObjectStringNull" },
+          "inlineMultiType": {
+            "type": ["boolean", "string"],
+            "description": "POSITION: multi-type union as object property (inline)"
+          }
+        },
+        "description": "POSITION: all multi-type union constructs as object properties"
+      }
+    }
+  }
+}

@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "outDir": "dist"
   },
-  "include": ["src", "generated"]
+  "include": ["src", "generated", "generated-matrix", "generated-matrix-legit"]
 }

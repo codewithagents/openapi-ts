@@ -1,0 +1,71 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Matrix Legit-Unknown Spec",
+    "version": "1.0.0",
+    "description": "Fictional spec containing INTENTIONALLY unknown constructs. These SHOULD produce unknown/z.unknown() in generated output. Used to prove the scan detector has teeth."
+  },
+  "paths": {
+    "/legit/open-map": {
+      "post": {
+        "operationId": "postOpenMap",
+        "summary": "additionalProperties:true produces unknown record values",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LegitOpenMap" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Open map response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LegitOpenMap" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/legit/empty-object": {
+      "post": {
+        "operationId": "postEmptyObject",
+        "summary": "Empty {} schema produces unknown",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LegitEmptyObject" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Empty object response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LegitEmptyObject" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "LegitOpenMap": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "LEGIT UNKNOWN: additionalProperties:true -> Record<string, unknown>"
+      },
+      "LegitEmptyObject": {
+        "type": "object",
+        "description": "LEGIT UNKNOWN: empty {} (no properties, no additionalProperties schema) -> unknown or Record<string, unknown>"
+      }
+    }
+  }
+}
