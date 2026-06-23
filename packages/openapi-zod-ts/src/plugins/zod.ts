@@ -162,7 +162,12 @@ function arrayTypeToZod(schema: SchemaObject): string {
     const expr = isNullable ? `${base}.nullable()` : base
     return applyDefault(expr, schema)
   }
-  const parts = types.map((t) => (t === 'null' ? 'z.null()' : primitiveToZod(t)))
+  const parts = types.map((t) => {
+    if (t === 'null') return 'z.null()'
+    if (t === 'array') return arraySchemaToZodBase(schema)
+    if (t === 'object') return objectSchemaToZodBase(schema)
+    return primitiveToZod(t)
+  })
   return applyDefault(`z.union([${parts.join(', ')}])`, schema)
 }
 

@@ -2,9 +2,11 @@ import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import type { OpenAPIV3_1 } from 'openapi-types'
 import { generateTypes } from '../plugins/types.js'
+import { generateZodSchemas } from '../plugins/zod.js'
 import { generateClient } from '../plugins/client.js'
 import { generateClientConfig } from '../plugins/client-config.js'
 import { generateIndexBarrel } from '../plugins/index-barrel.js'
+import { normalizeNullable } from '../utils/normalize-nullable.js'
 
 // ── Arbitrary generators ────────────────────────────────────────────────────
 
@@ -345,6 +347,255 @@ describe('property-based tests — openapi-zod-ts generator invariants', () => {
         expect(filename).toBe('client.ts')
       }),
       { numRuns: 100 }
+    )
+  })
+})
+
+// ── Schema-shape property tests: "no unknown for concretely-representable schemas" ──────────────
+//
+// Every schema the arbitrary can produce has a concrete, well-typed representation.
+// If the generator falls back to `unknown` (or `z.unknown()`) for any of them, it is a bug.
+// This is the regression net for the #383/#390 class of unknown-fallback bugs.
+
+type SchemaLiteral = OpenAPIV3_1.SchemaObject & { nullable?: boolean }
+
+/**
+ * A fixed property key index used when building Container object properties
+ * from the arbitrary. Keys must be valid JS identifiers.
+ */
+const PROP_KEYS = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'] as const
+
+/**
+ * Recursive arbitrary for concretely-representable OpenAPI 3.1 schemas.
+ * Depth is capped at 3 to bound the generated size.
+ *
+ * INVARIANT: every schema produced here has a well-defined non-unknown representation
+ * in BOTH models.ts (TypeScript types) and schemas.ts (Zod v4 schemas). Any `unknown`
+ * in the generator output is therefore a bug.
+ */
+const arbSchema: fc.Memo<SchemaLiteral> = fc.memo((depth: number) => {
+  // Base cases (depth = 0 or leaf nodes)
+  const primitives: fc.Arbitrary<SchemaLiteral>[] = [
+    fc.constant({ type: 'string' } as SchemaLiteral),
+    fc.constant({ type: 'string', format: 'email' } as SchemaLiteral),
+    fc.constant({ type: 'string', format: 'uuid' } as SchemaLiteral),
+    fc.constant({ type: 'string', format: 'date-time' } as SchemaLiteral),
+    fc.constant({ type: 'string', format: 'date' } as SchemaLiteral),
+    fc.constant({ type: 'integer' } as SchemaLiteral),
+    fc.constant({ type: 'integer', format: 'int64' } as SchemaLiteral),
+    fc.constant({ type: 'number' } as SchemaLiteral),
+    fc.constant({ type: 'boolean' } as SchemaLiteral),
+    // String enum: only primitive values, never object/array
+    fc.constant({
+      type: 'string',
+      enum: ['active', 'inactive', 'pending'],
+    } as SchemaLiteral),
+    // Integer enum: only primitive values
+    fc.constant({
+      type: 'integer',
+      enum: [1, 2, 3],
+    } as SchemaLiteral),
+    // Nullable 3.1 type-array forms (primitives only at depth 0)
+    fc.constant({ type: ['string', 'null'] } as unknown as SchemaLiteral),
+    fc.constant({ type: ['integer', 'null'] } as unknown as SchemaLiteral),
+    fc.constant({ type: ['number', 'null'] } as unknown as SchemaLiteral),
+    fc.constant({ type: ['boolean', 'null'] } as unknown as SchemaLiteral),
+    // Multi-type primitive unions (no structural members here)
+    fc.constant({ type: ['string', 'integer'] } as unknown as SchemaLiteral),
+    fc.constant({ type: ['string', 'integer', 'null'] } as unknown as SchemaLiteral),
+    // $ref to fixed component schemas
+    fc.constant({ $ref: '#/components/schemas/Item' } as unknown as SchemaLiteral),
+    fc.constant({ $ref: '#/components/schemas/Tag' } as unknown as SchemaLiteral),
+    fc.constant({ $ref: '#/components/schemas/Status' } as unknown as SchemaLiteral),
+    // Composition of fixed component refs (never inline-only unknown shapes)
+    fc.constant({
+      allOf: [{ $ref: '#/components/schemas/Item' }, { $ref: '#/components/schemas/Tag' }],
+    } as SchemaLiteral),
+    fc.constant({
+      anyOf: [{ $ref: '#/components/schemas/Item' }, { $ref: '#/components/schemas/Tag' }],
+    } as SchemaLiteral),
+    fc.constant({
+      oneOf: [{ $ref: '#/components/schemas/Item' }, { $ref: '#/components/schemas/Tag' }],
+    } as SchemaLiteral),
+  ]
+
+  if (depth <= 0) {
+    return fc.oneof(...primitives)
+  }
+
+  // Recursive cases that require depth > 0
+  const propKey1 = fc.constantFrom(...PROP_KEYS)
+  const propKey2 = fc.constantFrom(...PROP_KEYS)
+
+  // Array with concrete items (ALWAYS has items: non-unknown schema)
+  const arbArray: fc.Arbitrary<SchemaLiteral> = arbSchema(depth - 1).map((items) => ({
+    type: 'array',
+    items,
+  }))
+
+  // Object with >=1 concrete property (ALWAYS has properties, NEVER empty)
+  const arbObject: fc.Arbitrary<SchemaLiteral> = fc
+    .tuple(propKey1, arbSchema(depth - 1))
+    .map(([key, propSchema]) => ({
+      type: 'object',
+      properties: { [key]: propSchema },
+    }))
+
+  // Record with concrete additionalProperties (NEVER additionalProperties: true)
+  const arbRecord: fc.Arbitrary<SchemaLiteral> = arbSchema(depth - 1).map((valSchema) => ({
+    type: 'object',
+    additionalProperties: valSchema,
+  }))
+
+  // Object with 2 properties from two independent keys
+  const arbObject2: fc.Arbitrary<SchemaLiteral> = fc
+    .tuple(propKey1, propKey2, arbSchema(depth - 1), arbSchema(depth - 1))
+    .map(([k1, k2, s1, s2]) => ({
+      type: 'object',
+      properties: { [k1]: s1, [k2]: s2 },
+    }))
+
+  // Nullable 3.1 array with concrete items: type: ['array','null']
+  const arbNullableArray: fc.Arbitrary<SchemaLiteral> = arbSchema(depth - 1).map((items) => ({
+    type: ['array', 'null'],
+    items,
+  }))
+
+  // Nullable 3.1 object with >=1 property: type: ['object','null']
+  const arbNullableObject: fc.Arbitrary<SchemaLiteral> = fc
+    .tuple(propKey1, arbSchema(depth - 1))
+    .map(([key, propSchema]) => ({
+      type: ['object', 'null'],
+      properties: { [key]: propSchema },
+    }))
+
+  // Nullable 3.0 form (nullable: true) on a primitive: normalizeNullable converts to type-array
+  const arbNullable30Primitive: fc.Arbitrary<SchemaLiteral> = fc
+    .constantFrom(
+      { type: 'string', nullable: true },
+      { type: 'integer', nullable: true },
+      { type: 'number', nullable: true },
+      { type: 'boolean', nullable: true }
+    )
+    .map((s) => s as SchemaLiteral)
+
+  // Multi-type union with structural object member: type: ['object','string','null'] with properties
+  const arbMultiTypeObject: fc.Arbitrary<SchemaLiteral> = fc
+    .tuple(propKey1, arbSchema(depth - 1))
+    .map(([key, propSchema]) => ({
+      type: ['object', 'string', 'null'],
+      properties: { [key]: propSchema },
+    }))
+
+  // Multi-type union with structural array member: type: ['array','integer','null'] with items
+  const arbMultiTypeArray: fc.Arbitrary<SchemaLiteral> = arbSchema(depth - 1).map((items) => ({
+    type: ['array', 'integer', 'null'],
+    items,
+  }))
+
+  return fc.oneof(
+    ...primitives,
+    arbArray,
+    arbObject,
+    arbRecord,
+    arbObject2,
+    arbNullableArray,
+    arbNullableObject,
+    arbNullable30Primitive,
+    arbMultiTypeObject,
+    arbMultiTypeArray
+  )
+})
+
+/** Fixed component schemas used as $ref targets and in allOf/anyOf/oneOf composition. */
+const FIXED_COMPONENTS: Record<string, OpenAPIV3_1.SchemaObject> = {
+  Item: {
+    type: 'object',
+    properties: { id: { type: 'string' }, value: { type: 'integer' } },
+    required: ['id'],
+  },
+  Tag: {
+    type: 'object',
+    properties: { name: { type: 'string' }, active: { type: 'boolean' } },
+    required: ['name'],
+  },
+  Status: {
+    type: 'string',
+    enum: ['active', 'inactive', 'pending'],
+  },
+}
+
+/**
+ * Build a spec with fixed components plus a Container schema whose properties
+ * are generated by the schema arbitrary.
+ */
+function buildSchemaShapeSpec(containerProps: Record<string, SchemaLiteral>): OpenAPIV3_1.Document {
+  return {
+    openapi: '3.1.0',
+    info: { title: 'SchemaShapeTest', version: '1.0.0' },
+    paths: {},
+    components: {
+      schemas: {
+        ...FIXED_COMPONENTS,
+        Container: {
+          type: 'object',
+          properties: containerProps as Record<string, OpenAPIV3_1.SchemaObject>,
+        },
+      },
+    },
+  }
+}
+
+describe('property-based tests — schema-shape: no unknown for concretely-representable schemas', () => {
+  it('generateTypes and generateZodSchemas never emit unknown for concretely-representable schemas (numRuns: 1000)', () => {
+    // Build an arbitrary for the Container's properties: 1-3 keys, each with an arbSchema value
+    const arbContainerProps: fc.Arbitrary<Record<string, SchemaLiteral>> = fc
+      .tuple(
+        fc.constantFrom(...PROP_KEYS),
+        fc.constantFrom(...PROP_KEYS),
+        fc.constantFrom(...PROP_KEYS),
+        arbSchema(3),
+        arbSchema(3),
+        arbSchema(3),
+        fc.integer({ min: 1, max: 3 })
+      )
+      .map(([k1, k2, k3, s1, s2, s3, count]) => {
+        const keys = [k1, k2, k3]
+        const schemas = [s1, s2, s3]
+        const props: Record<string, SchemaLiteral> = {}
+        for (let i = 0; i < count; i++) {
+          props[keys[i]!] = schemas[i]!
+        }
+        return props
+      })
+
+    fc.assert(
+      fc.property(arbContainerProps, (containerProps) => {
+        // Build spec and apply normalizeNullable to mirror the real CLI pipeline
+        const spec = buildSchemaShapeSpec(containerProps)
+        normalizeNullable(spec)
+
+        // Generate both outputs
+        const { content: typesContent } = generateTypes(spec)
+        const { content: zodContent } = generateZodSchemas(spec)
+
+        // Strip comment lines before checking: the schemas.ts file header always contains
+        // "unknown" in a comment ("strips unknown keys before sending"), which is not a bug.
+        const nonCommentLines = (content: string): string =>
+          content
+            .split('\n')
+            .filter((line) => !line.trimStart().startsWith('//'))
+            .join('\n')
+
+        const typesNonComment = nonCommentLines(typesContent)
+        const zodNonComment = nonCommentLines(zodContent)
+
+        // Neither non-comment output should contain 'unknown': if it does, the generator fell
+        // back for a concretely-representable schema, which is always a bug.
+        expect(typesNonComment, 'models.ts must not contain unknown').not.toContain('unknown')
+        expect(zodNonComment, 'schemas.ts must not contain unknown').not.toContain('unknown')
+      }),
+      { numRuns: 1000 }
     )
   })
 })

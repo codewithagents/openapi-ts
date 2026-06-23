@@ -1108,6 +1108,32 @@ describe('no spurious unknown fallbacks (regression guard)', () => {
     const out = genSingle('Loose', { type: 'object', additionalProperties: true } as any)
     expect(out).toContain('z.record(z.string(), z.unknown())')
   })
+
+  // 9. Multi-member type union with structural object member (fix: multi-member structural union)
+  it('["object","string","null"] with properties -> z.union([z.object({...}), z.string(), z.null()]), no z.unknown()', () => {
+    const out = genSingle('A', {
+      type: ['object', 'string', 'null'],
+      properties: { name: { type: 'string' } },
+    } as any)
+    expect(out).toContain('z.union(')
+    expect(out).toContain('z.object({')
+    expect(out).toContain('z.string()')
+    expect(out).toContain('z.null()')
+    expect(out).not.toContain('z.unknown()')
+  })
+
+  // 10. Multi-member type union with structural array member (fix: multi-member structural union)
+  it('["array","integer","null"] with items -> z.union([z.array(...), z.number(), z.null()]), no z.unknown()', () => {
+    const out = genSingle('A', {
+      type: ['array', 'integer', 'null'],
+      items: { type: 'string' },
+    } as any)
+    expect(out).toContain('z.union(')
+    expect(out).toContain('z.array(z.string())')
+    expect(out).toContain('z.number()')
+    expect(out).toContain('z.null()')
+    expect(out).not.toContain('z.unknown()')
+  })
 })
 
 // ── Component C1: inline response schema synthesis ─────────────────────────────
