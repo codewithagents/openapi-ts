@@ -1,0 +1,60 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cyclic Schemas Test API (fictional)",
+    "version": "1.0.0",
+    "description": "Fictional API used to test cyclic schema handling. Contains a mutual cycle (Holiday <-> Province), an acyclic schema referenced by the cycle (Region), and a standalone acyclic schema (Error)."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "A plain acyclic error schema, not referenced by the cycle.",
+        "required": ["code"],
+        "properties": {
+          "code": { "type": "integer" },
+          "message": { "type": "string" }
+        }
+      },
+      "Region": {
+        "type": "object",
+        "description": "A plain acyclic schema referenced by the cyclic Province.",
+        "required": ["code"],
+        "properties": {
+          "code": { "type": "string" },
+          "label": { "type": "string" }
+        }
+      },
+      "Holiday": {
+        "type": "object",
+        "description": "A fictional holiday. References Province, creating a mutual cycle.",
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "provinces": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Province" }
+          }
+        }
+      },
+      "Province": {
+        "type": "object",
+        "description": "A fictional province. References Holiday, creating a mutual cycle.",
+        "required": ["id", "nameEn"],
+        "properties": {
+          "id": { "type": "string" },
+          "nameEn": { "type": "string" },
+          "region": { "$ref": "#/components/schemas/Region" },
+          "nextHoliday": { "$ref": "#/components/schemas/Holiday" },
+          "holidays": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Holiday" }
+          }
+        }
+      }
+    }
+  }
+}

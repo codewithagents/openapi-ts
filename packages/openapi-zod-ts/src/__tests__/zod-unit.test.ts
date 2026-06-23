@@ -338,7 +338,26 @@ describe('circular / self-referential schemas', () => {
     expect(out).toContain('TreeNodeSchema')
   })
 
-  it('mutually circular schemas (A ↔ B) are both wrapped in z.lazy()', () => {
+  it('self-referential schema annotation uses z.ZodType<ModelType>, not bare z.ZodType', () => {
+    const out = gen({
+      TreeNode: {
+        type: 'object',
+        properties: {
+          value: { type: 'string' },
+          children: { type: 'array', items: { $ref: '#/components/schemas/TreeNode' } },
+        },
+      },
+    })
+    // The annotation references the concrete model type (not bare z.ZodType = ...)
+    expect(out).toContain('TreeNodeSchema: z.ZodType<TreeNode>')
+    expect(out).not.toMatch(/: z\.ZodType =/)
+    // The model type is imported type-only from models.ts (erased at runtime, no cycle)
+    expect(out).toMatch(/import type \{ TreeNode \} from '\.\/models\.js'/)
+    // No local helper interfaces are emitted into the user-owned schemas.ts
+    expect(out).not.toContain('interface _')
+  })
+
+  it('mutually circular schemas (A <-> B) are both wrapped in z.lazy()', () => {
     const out = gen({
       A: { type: 'object', properties: { b: { $ref: '#/components/schemas/B' } } },
       B: { type: 'object', properties: { a: { $ref: '#/components/schemas/A' } } },
@@ -350,12 +369,61 @@ describe('circular / self-referential schemas', () => {
     expect(bDecl?.[0]).toContain('z.lazy(')
   })
 
+  it('mutually circular schemas carry z.ZodType<ModelType> annotations, not bare z.ZodType', () => {
+    const out = gen({
+      A: { type: 'object', properties: { b: { $ref: '#/components/schemas/B' } } },
+      B: { type: 'object', properties: { a: { $ref: '#/components/schemas/A' } } },
+    })
+    // Both carry parameterized annotations referencing their model types (no bare z.ZodType =)
+    expect(out).not.toMatch(/: z\.ZodType =/)
+    expect(out).toContain('ASchema: z.ZodType<A>')
+    expect(out).toContain('BSchema: z.ZodType<B>')
+    // Both model types are imported type-only from models.ts
+    const importLine = out.match(/import type \{([^}]*)\} from '\.\/models\.js'/)
+    expect(importLine).not.toBeNull()
+    expect(importLine![1]).toContain('A')
+    expect(importLine![1]).toContain('B')
+    // No local helper interfaces in the user-owned schemas.ts
+    expect(out).not.toContain('interface _')
+  })
+
+  it('cyclic schema referencing an acyclic schema annotates only the recursive one', () => {
+    const out = gen({
+      Meta: { type: 'object', properties: { label: { type: 'string' } } },
+      Node: {
+        type: 'object',
+        properties: {
+          meta: { $ref: '#/components/schemas/Meta' },
+          children: { type: 'array', items: { $ref: '#/components/schemas/Node' } },
+        },
+      },
+    })
+    // Only the recursive Node is annotated + imported; the acyclic Meta stays plain.
+    // The Node interface in models.ts references Meta (both in scope there); see
+    // generator-schema.test.ts for the models.ts side.
+    expect(out).toContain('NodeSchema: z.ZodType<Node>')
+    expect(out).toMatch(/import type \{ Node \} from '\.\/models\.js'/)
+    expect(out).not.toMatch(/MetaSchema:\s*z\.ZodType/)
+    expect(out.match(/export const MetaSchema[^=]*=.*/)?.[0]).not.toContain('z.lazy(')
+    // No local helper interfaces are emitted into schemas.ts
+    expect(out).not.toContain('interface _')
+  })
+
   it('non-circular schema is NOT wrapped in z.lazy()', () => {
     const out = gen({
       Tag: { type: 'object', properties: { id: { type: 'string' } } },
       Task: { type: 'object', properties: { tag: { $ref: '#/components/schemas/Tag' } } },
     })
     expect(out).not.toContain('z.lazy(')
+  })
+
+  it('non-circular schema does not have a z.ZodType annotation (no regression)', () => {
+    const out = gen({
+      Tag: { type: 'object', properties: { id: { type: 'string' } } },
+      Task: { type: 'object', properties: { tag: { $ref: '#/components/schemas/Tag' } } },
+    })
+    // Acyclic schemas remain as plain assignments with no type annotation
+    expect(out).not.toContain(': z.ZodType')
   })
 })
 
@@ -940,7 +1008,10 @@ describe('generateZodSchemas - inline response synthesis (C1)', () => {
                 'application/json': {
                   schema: {
                     type: 'object',
-                    properties: { kind: { type: 'string', const: 'circle' }, radius: { type: 'number' } },
+                    properties: {
+                      kind: { type: 'string', const: 'circle' },
+                      radius: { type: 'number' },
+                    },
                   },
                 },
               },
@@ -951,7 +1022,10 @@ describe('generateZodSchemas - inline response synthesis (C1)', () => {
                 'application/json': {
                   schema: {
                     type: 'object',
-                    properties: { kind: { type: 'string', const: 'square' }, side: { type: 'number' } },
+                    properties: {
+                      kind: { type: 'string', const: 'square' },
+                      side: { type: 'number' },
+                    },
                   },
                 },
               },
@@ -1016,6 +1090,49 @@ describe('generateZodSchemas - inline response synthesis (C1)', () => {
     const out = generateZodSchemas(spec).content
     // No schema should be emitted for an operation without operationId.
     expect(out).not.toContain('Schema = z.object(')
+  })
+
+  it('synthesized response schema name that collides with a component schema is disambiguated with _2 suffix', () => {
+    // operationId 'Holiday' sanitizes to 'Holiday', which collides with the component schema 'Holiday'.
+    // The synthesized schema must be renamed to 'Holiday_2' to avoid a duplicate const declaration.
+    const spec = makeSpecWithPaths(
+      {
+        '/holidays/{id}': {
+          get: {
+            operationId: 'Holiday',
+            responses: {
+              '200': {
+                description: 'single holiday',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: { holiday: { $ref: '#/components/schemas/Holiday' } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        Holiday: {
+          type: 'object',
+          required: ['id', 'name'],
+          properties: { id: { type: 'integer' }, name: { type: 'string' } },
+        },
+      }
+    )
+    const out = generateZodSchemas(spec).content
+
+    // The component schema Holiday must still be present.
+    expect(out).toContain('export const HolidaySchema')
+    // The synthesized response schema must not reuse the same name (no duplicate const).
+    expect(out).toContain('export const Holiday_2Schema')
+    // Exactly one declaration for HolidaySchema (no duplicate that would cause a compile error).
+    const holidayDeclCount = (out.match(/export const HolidaySchema\b/g) ?? []).length
+    expect(holidayDeclCount).toBe(1)
   })
 })
 
