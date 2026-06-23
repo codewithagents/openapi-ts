@@ -987,6 +987,129 @@ describe('additionalProperties handling in zod', () => {
   })
 })
 
+describe('no spurious unknown fallbacks (regression guard)', () => {
+  // 1. type: ["object","null"] + properties -> z.object({...}).nullable()
+  it('["object","null"] with properties -> z.object({...}).nullable(), not z.unknown().nullable()', () => {
+    const out = genSingle('A', {
+      type: 'object',
+      properties: { name: { type: 'string' } },
+    })
+    // Sanity: normal object renders as z.object
+    expect(out).toContain('z.object({')
+
+    const out2 = genSingle('A', {
+      type: ['object', 'null'],
+      properties: { name: { type: 'string' } },
+    } as any)
+    expect(out2).toContain('z.object({')
+    expect(out2).toContain('.nullable()')
+    expect(out2).not.toContain('z.unknown().nullable()')
+    expect(out2).not.toContain('z.unknown()')
+  })
+
+  // 2. type: ["object","null"] + additionalProperties: { type: 'string' } -> z.record(...).nullable()
+  it('["object","null"] with additionalProperties -> z.record(...).nullable(), not z.unknown().nullable()', () => {
+    const out = genSingle('M', {
+      type: ['object', 'null'],
+      additionalProperties: { type: 'string' },
+    } as any)
+    expect(out).toContain('z.record(z.string(), z.string()).nullable()')
+    expect(out).not.toContain('z.unknown().nullable()')
+  })
+
+  // 3. type: ["array","null"] + items ($ref and inline) -> array.nullable() (sanity, overlaps #390)
+  it('["array","null"] with $ref items -> z.array(ItemSchema).nullable() (sanity, #390)', () => {
+    const out = gen({
+      Item: { type: 'object', properties: { id: { type: 'string' } } },
+      A: {
+        type: 'object',
+        properties: {
+          tags: {
+            type: ['array', 'null'],
+            items: { $ref: '#/components/schemas/Item' },
+          } as any,
+        },
+      },
+    })
+    expect(out).toContain('z.array(ItemSchema).nullable()')
+    expect(out).not.toContain('z.unknown().nullable()')
+  })
+
+  // 4. Nested arrays: items: { type: 'array', items: { $ref } } -> z.array(z.array(X))
+  it('nested array items -> z.array(z.array(X)), not z.array(z.unknown())', () => {
+    const out = gen({
+      Tag: { type: 'object', properties: { id: { type: 'string' } } },
+      A: {
+        type: 'object',
+        properties: {
+          matrix: {
+            type: 'array',
+            items: { type: 'array', items: { $ref: '#/components/schemas/Tag' } },
+          },
+        },
+      },
+    })
+    expect(out).toContain('z.array(z.array(TagSchema))')
+    // The matrix field itself should not contain z.unknown
+    const matrixLine = out.split('\n').find((l) => l.includes('matrix'))
+    expect(matrixLine).toBeDefined()
+    expect(matrixLine).not.toContain('z.unknown()')
+  })
+
+  // 5. additionalProperties: { $ref } object -> z.record(z.string(), X)
+  it('additionalProperties with $ref -> z.record(z.string(), ContainerSchema), not z.unknown()', () => {
+    const out = gen({
+      Container: { type: 'object', properties: { id: { type: 'string' } } },
+      ContainerMap: {
+        type: 'object',
+        additionalProperties: { $ref: '#/components/schemas/Container' },
+      },
+    })
+    expect(out).toContain('z.record(z.string(), ContainerSchema)')
+    // ContainerMapSchema must not contain z.unknown
+    const mapLine = out.split('\n').find((l) => l.includes('ContainerMapSchema'))
+    expect(mapLine).toBeDefined()
+    expect(mapLine).not.toContain('z.unknown()')
+  })
+
+  // 6. allOf / anyOf / oneOf of refs -> intersection/union, never z.unknown()
+  it('allOf of refs -> .and() chain, not z.unknown()', () => {
+    const out = gen({
+      A: { type: 'object', properties: { a: { type: 'string' } } },
+      B: { type: 'object', properties: { b: { type: 'string' } } },
+      C: { allOf: [{ $ref: '#/components/schemas/A' }, { $ref: '#/components/schemas/B' }] },
+    })
+    expect(out).toContain('ASchema.and(BSchema)')
+    const cLine = out.split('\n').find((l) => l.includes('CSchema'))
+    expect(cLine).toBeDefined()
+    expect(cLine).not.toContain('z.unknown()')
+  })
+
+  it('anyOf of refs -> z.union([...]), not z.unknown()', () => {
+    const out = gen({
+      A: { type: 'object', properties: { a: { type: 'string' } } },
+      B: { type: 'object', properties: { b: { type: 'string' } } },
+      C: { anyOf: [{ $ref: '#/components/schemas/A' }, { $ref: '#/components/schemas/B' }] },
+    })
+    expect(out).toContain('z.union([ASchema, BSchema])')
+    const cLine = out.split('\n').find((l) => l.includes('CSchema'))
+    expect(cLine).toBeDefined()
+    expect(cLine).not.toContain('z.unknown()')
+  })
+
+  // 7. Legitimate unknown: empty schema {} -> z.unknown()
+  it('empty schema {} -> z.unknown() (legitimate)', () => {
+    const out = genSingle('Anything', {})
+    expect(out).toContain('z.unknown()')
+  })
+
+  // 8. Legitimate unknown: additionalProperties: true -> z.record(z.string(), z.unknown())
+  it('additionalProperties: true -> z.record(z.string(), z.unknown()) (legitimate)', () => {
+    const out = genSingle('Loose', { type: 'object', additionalProperties: true } as any)
+    expect(out).toContain('z.record(z.string(), z.unknown())')
+  })
+})
+
 // ── Component C1: inline response schema synthesis ─────────────────────────────
 
 function makeSpecWithPaths(

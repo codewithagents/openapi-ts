@@ -660,6 +660,172 @@ describe('prefixItems -> TS tuple type', () => {
   })
 })
 
+describe('no spurious unknown fallbacks (regression guard)', () => {
+  // 1. type: ["object","null"] + properties -> { ... } | null, not unknown | null
+  // (tested as an inline property so schemaToTypeString handles it, not generateSchemaDeclaration)
+  it('["object","null"] with properties as a field -> { ... } | null, not unknown | null', () => {
+    const out = genSingle('Wrapper', {
+      type: 'object',
+      properties: {
+        meta: {
+          type: ['object', 'null'],
+          properties: { name: { type: 'string' } },
+        } as any,
+      },
+    })
+    // The meta field must be a nullable inline object, not unknown
+    expect(out).toContain('name?:')
+    expect(out).toContain('| null')
+    expect(out).not.toContain('unknown | null')
+  })
+
+  // 2. type: ["object","null"] + additionalProperties: { type: 'string' } -> Record<string, string> | null
+  // (tested as an inline property so schemaToTypeString handles it)
+  it('["object","null"] with additionalProperties as a field -> Record<string, string> | null, not unknown | null', () => {
+    const out = genSingle('Wrapper', {
+      type: 'object',
+      properties: {
+        labels: {
+          type: ['object', 'null'],
+          additionalProperties: { type: 'string' },
+        } as any,
+      },
+    })
+    expect(out).toContain('Record<string, string> | null')
+    expect(out).not.toContain('unknown | null')
+  })
+
+  // 3. type: ["array","null"] + items ($ref and inline) -> array | null (sanity, #390)
+  it('["array","null"] with $ref items -> Item[] | null (sanity, #390)', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {},
+      components: {
+        schemas: {
+          Item: { type: 'object', properties: { id: { type: 'string' } } },
+          A: {
+            type: 'object',
+            properties: {
+              tags: {
+                type: ['array', 'null'],
+                items: { $ref: '#/components/schemas/Item' },
+              } as any,
+            },
+          },
+        },
+      },
+    }
+    const out = generateTypes(spec).content
+    expect(out).toContain('Item[] | null')
+    expect(out).not.toContain('unknown | null')
+  })
+
+  // 4. Nested arrays: items: { type: 'array', items: { $ref } } -> Tag[][]
+  it('nested array items -> Tag[][], not unknown[][]', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {},
+      components: {
+        schemas: {
+          Tag: { type: 'object', properties: { id: { type: 'string' } } },
+          A: {
+            type: 'object',
+            properties: {
+              matrix: {
+                type: 'array',
+                items: { type: 'array', items: { $ref: '#/components/schemas/Tag' } },
+              },
+            },
+          },
+        },
+      },
+    }
+    const out = generateTypes(spec).content
+    expect(out).toContain('Tag[][]')
+    const matrixLine = out.split('\n').find((l) => l.includes('matrix'))
+    expect(matrixLine).toBeDefined()
+    expect(matrixLine).not.toContain('unknown')
+  })
+
+  // 5. additionalProperties: { $ref } object -> Record<string, Container>, not unknown
+  it('additionalProperties with $ref -> Record<string, Container>, not unknown', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {},
+      components: {
+        schemas: {
+          Container: { type: 'object', properties: { id: { type: 'string' } } },
+          ContainerMap: {
+            type: 'object',
+            additionalProperties: { $ref: '#/components/schemas/Container' },
+          },
+        },
+      },
+    }
+    const out = generateTypes(spec).content
+    expect(out).toContain('Record<string, Container>')
+    const mapLine = out.split('\n').find((l) => l.includes('ContainerMap'))
+    expect(mapLine).toBeDefined()
+    expect(mapLine).not.toContain('unknown')
+  })
+
+  // 6. allOf / anyOf / oneOf of refs -> intersection/union, never unknown
+  it('allOf of refs -> A & B, not unknown', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {},
+      components: {
+        schemas: {
+          A: { type: 'object', properties: { a: { type: 'string' } } },
+          B: { type: 'object', properties: { b: { type: 'string' } } },
+          C: { allOf: [{ $ref: '#/components/schemas/A' }, { $ref: '#/components/schemas/B' }] },
+        },
+      },
+    }
+    const out = generateTypes(spec).content
+    expect(out).toContain('A & B')
+    const cLine = out.split('\n').find((l) => l.includes('export type C'))
+    expect(cLine).toBeDefined()
+    expect(cLine).not.toContain('unknown')
+  })
+
+  it('oneOf of refs -> A | B, not unknown', () => {
+    const spec: OpenAPIV3_1.Document = {
+      openapi: '3.1.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {},
+      components: {
+        schemas: {
+          A: { type: 'object', properties: { a: { type: 'string' } } },
+          B: { type: 'object', properties: { b: { type: 'string' } } },
+          C: { oneOf: [{ $ref: '#/components/schemas/A' }, { $ref: '#/components/schemas/B' }] },
+        },
+      },
+    }
+    const out = generateTypes(spec).content
+    expect(out).toContain('A | B')
+    const cLine = out.split('\n').find((l) => l.includes('export type C'))
+    expect(cLine).toBeDefined()
+    expect(cLine).not.toContain('unknown')
+  })
+
+  // 7. Legitimate unknown: empty schema {} -> unknown
+  it('empty schema {} -> unknown (legitimate)', () => {
+    const out = genSingle('Anything', {})
+    expect(out).toContain('unknown')
+  })
+
+  // 8. Legitimate unknown: additionalProperties: true -> Record<string, unknown>
+  it('additionalProperties: true -> Record<string, unknown> (legitimate)', () => {
+    const out = genSingle('Loose', { type: 'object', additionalProperties: true } as any)
+    expect(out).toContain('Record<string, unknown>')
+  })
+})
+
 describe('additionalProperties handling in types', () => {
   it('additionalProperties as inline primitive schema -> Record<string, string>', () => {
     const out = genSingle('Labels', { type: 'object', additionalProperties: { type: 'string' } })
