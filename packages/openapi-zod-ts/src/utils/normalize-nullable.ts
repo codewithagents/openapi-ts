@@ -36,7 +36,7 @@ function wrapInNullableAnyOf(s: Record<string, unknown>): void {
  * A schema with structure cannot be represented by the simple `type: [..., 'null']`
  * array form, so it must be wrapped in an anyOf union instead.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function hasStructuralKeywords(s: Record<string, any>): boolean {
   return (
     s['properties'] !== undefined ||
@@ -49,7 +49,7 @@ function hasStructuralKeywords(s: Record<string, any>): boolean {
 }
 
 /** Handle `enum + nullable`: add null to enum values and drop the explicit type. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function applyNullableEnum(s: Record<string, any>): void {
   if (!(s['enum'] as unknown[]).includes(null)) {
     s['enum'] = [...(s['enum'] as unknown[]), null]
@@ -61,7 +61,7 @@ function applyNullableEnum(s: Record<string, any>): void {
 }
 
 /** Handle `type[] + nullable`: append 'null' to the existing array if absent. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function applyNullableTypeArray(s: Record<string, any>): void {
   if (!(s['type'] as string[]).includes('null')) {
     s['type'] = [...(s['type'] as string[]), 'null']
@@ -69,7 +69,7 @@ function applyNullableTypeArray(s: Record<string, any>): void {
 }
 
 /** Handle `primitive type + nullable`: convert to `[type, 'null']` array form. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function applyNullablePrimitiveType(s: Record<string, any>): void {
   s['type'] = [s['type'] as string, 'null']
 }
@@ -96,7 +96,7 @@ function applyNullablePrimitiveType(s: Record<string, any>): void {
 function normalizeNode(schema: SchemaObject): void {
   // Use a loose cast for reading/writing the 3.0-only keys that openapi-types
   // does not model in its 3.1 type definitions.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const s = schema as Record<string, any>
 
   const isNullable = s['nullable'] === true || s['x-nullable'] === true
@@ -268,7 +268,7 @@ function walkPathSchemas(spec: OpenAPIV3_1.Document, visited: Set<AnySchema>): v
 
   for (const pathItem of Object.values(paths)) {
     if (pathItem == null || typeof pathItem !== 'object') continue
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const pi = pathItem as Record<string, any>
     for (const method of HTTP_METHODS) {
       const op = pi[method]

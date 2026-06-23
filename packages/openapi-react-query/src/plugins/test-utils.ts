@@ -16,7 +16,7 @@ export interface GeneratedFile {
  * Consumers bring their own test runner / MSW / @testing-library/react.
  * This file just eliminates the boilerplate they'd write in every test suite.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 export function generateTestUtils(_spec: OpenAPIV3_1.Document): GeneratedFile {
   const lines: string[] = []
 

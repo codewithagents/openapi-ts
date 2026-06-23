@@ -487,7 +487,7 @@ describe('coverage: requestBody as $ref — body param is omitted from service m
       '/items': {
         post: {
           operationId: 'createItem',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           requestBody: { $ref: '#/components/requestBodies/ItemBody' } as any,
           responses: { '201': { description: 'created' } },
         },
@@ -508,7 +508,7 @@ describe('coverage: 200/$ref response — getReturnInfo falls through to void', 
         get: {
           operationId: 'getItem',
           parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           responses: { '200': { $ref: '#/components/responses/ItemResponse' } as any },
         },
       },
@@ -571,7 +571,7 @@ describe('coverage: requestBody with no content property in service — body is 
       '/items': {
         post: {
           operationId: 'createItem',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           requestBody: { required: true } as any, // no content property
           responses: { '201': { description: 'created' } },
         },
@@ -590,7 +590,6 @@ describe('coverage: operation with no responses in service — returns Promise<v
       '/items': {
         get: {
           operationId: 'listItems',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any, // no responses property
       },
     })
@@ -625,10 +624,7 @@ describe('coverage: resolveParamRef — component parameter that is itself a $re
         '/items': {
           get: {
             operationId: 'listItems',
-            parameters: [
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              { $ref: '#/components/parameters/FilterParam' } as any,
-            ],
+            parameters: [{ $ref: '#/components/parameters/FilterParam' } as any],
             responses: { '200': { description: 'ok' } },
           },
         },
@@ -636,7 +632,7 @@ describe('coverage: resolveParamRef — component parameter that is itself a $re
       components: {
         parameters: {
           // This parameter is itself a $ref — double indirection, treated as unresolvable
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           FilterParam: { $ref: '#/components/parameters/BaseFilter' } as any,
         },
       },
@@ -676,7 +672,9 @@ describe('bug #11 fix: text/plain and octet-stream return types in service inter
           responses: {
             '200': {
               description: 'binary download',
-              content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+              content: {
+                'application/octet-stream': { schema: { type: 'string', format: 'binary' } },
+              },
             },
           },
         },
@@ -702,8 +700,8 @@ describe('bug #11 fix: text/plain and octet-stream return types in service inter
     })
     const { content } = generateService(spec)
     // Primitive types must not appear as model imports
-    expect(content).not.toContain("import type { string }")
-    expect(content).not.toContain("import type {")
+    expect(content).not.toContain('import type { string }')
+    expect(content).not.toContain('import type {')
   })
 
   it('JSON response still maps to Promise<ModelType> and imports from models.ts', () => {
@@ -805,7 +803,7 @@ describe('service: synthesized body types use unknown — no dangling model impo
     expect(content).not.toContain('LabGallery')
     expect(content).toContain('body: unknown')
     // No dangling import from models.ts
-    expect(content).not.toContain("import type { LabGallery }")
+    expect(content).not.toContain('import type { LabGallery }')
   })
 
   it('$ref body: named type IS imported from models and used in param', () => {
@@ -821,7 +819,12 @@ describe('service: synthesized body types use unknown — no dangling model impo
               },
             },
           },
-          responses: { '200': { description: 'ok', content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } } } },
+          responses: {
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+            },
+          },
         },
       },
     })
@@ -829,7 +832,7 @@ describe('service: synthesized body types use unknown — no dangling model impo
     expect(content).toContain('body: CreatePetRequest')
     expect(content).toContain('CreatePetRequest')
     // Named type is imported
-    expect(content).toContain("import type {")
+    expect(content).toContain('import type {')
   })
 })
 
@@ -838,7 +841,9 @@ describe('service: synthesized body types use unknown — no dangling model impo
 describe('generateService with contextType option', () => {
   it('without contextType: interface has no generic and no ctx arg (backward compat)', () => {
     const spec = makeSpec({
-      '/pets': { get: makeGetOp({ operationId: 'listPets', responseRef: 'Pet', responseArray: true }) },
+      '/pets': {
+        get: makeGetOp({ operationId: 'listPets', responseRef: 'Pet', responseArray: true }),
+      },
     })
     const { content } = generateService(spec)
     // No generic on the interface
@@ -849,7 +854,9 @@ describe('generateService with contextType option', () => {
 
   it('with contextType: interface declaration includes <Ctx = never>', () => {
     const spec = makeSpec({
-      '/pets': { get: makeGetOp({ operationId: 'listPets', responseRef: 'Pet', responseArray: true }) },
+      '/pets': {
+        get: makeGetOp({ operationId: 'listPets', responseRef: 'Pet', responseArray: true }),
+      },
     })
     const { content } = generateService(spec, { contextType: 'RequestContext' })
     // makeSpec uses title 'Test API' which derives to TestAPIService
@@ -860,7 +867,11 @@ describe('generateService with contextType option', () => {
     const spec = makeSpec({
       '/pets': {
         get: makeGetOp({ operationId: 'listPets', responseRef: 'Pet', responseArray: true }),
-        post: makePostOp({ operationId: 'createPet', bodyRef: 'CreatePetRequest', responseRef: 'Pet' }),
+        post: makePostOp({
+          operationId: 'createPet',
+          bodyRef: 'CreatePetRequest',
+          responseRef: 'Pet',
+        }),
       },
     })
     const { content } = generateService(spec, { contextType: 'RequestContext' })
@@ -1020,7 +1031,9 @@ describe('issue #312: warn on untyped service responses', () => {
           responses: {
             '200': {
               description: 'ok',
-              content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+              content: {
+                'application/octet-stream': { schema: { type: 'string', format: 'binary' } },
+              },
             },
           },
         },
@@ -1071,7 +1084,10 @@ describe('issue #312: warn on untyped service responses', () => {
         get: {
           operationId: 'listThings',
           responses: {
-            '200': { description: 'ok', content: { 'application/json': { schema: { type: 'object' } } } },
+            '200': {
+              description: 'ok',
+              content: { 'application/json': { schema: { type: 'object' } } },
+            },
           },
         },
       },
@@ -1180,10 +1196,7 @@ describe('schemaToTsType: enum query param produces literal-union tsType', () =>
 
 // ── Item 1: header + cookie forwarding in Fastify typed service ───────────────
 
-function makeFastifySpec(
-  paths: OpenAPIV3_1.PathsObject,
-  title = 'Test API'
-): OpenAPIV3_1.Document {
+function makeFastifySpec(paths: OpenAPIV3_1.PathsObject, title = 'Test API'): OpenAPIV3_1.Document {
   return { openapi: '3.1.0', info: { title, version: '1.0.0' }, paths }
 }
 
@@ -1246,9 +1259,7 @@ describe('generateFastifyTypedService: header + cookie params in method signatur
       '/items': {
         get: {
           operationId: 'listItems',
-          parameters: [
-            { name: 'q', in: 'query', required: false, schema: { type: 'string' } },
-          ],
+          parameters: [{ name: 'q', in: 'query', required: false, schema: { type: 'string' } }],
           responses: { '200': { description: 'ok' } },
         },
       },

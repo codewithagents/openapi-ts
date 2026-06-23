@@ -9,10 +9,7 @@ import {
   extractPathParamsFromPath,
   resolveParam,
   deriveServiceName,
-  sanitizeOperationId,
   deriveMethodName,
-  normalizeParamName,
-  schemaToTsType,
   type QueryParam,
   getQueryParams,
   type BodyInfo,
@@ -282,9 +279,7 @@ function queryParamHasConstraints(q: QueryParam): boolean {
  * or carries schema constraints (enum, min/max, pattern, etc.).
  */
 function queryParamsNeedValidation(queryParams: QueryParam[]): boolean {
-  return queryParams.some(
-    (q) => q.required || q.tsType !== 'string' || queryParamHasConstraints(q)
-  )
+  return queryParams.some((q) => q.required || q.tsType !== 'string' || queryParamHasConstraints(q))
 }
 
 /** Returns the delimiter character for a delimited-style array query param. */
@@ -476,9 +471,13 @@ function getResponseTypeName(
     | undefined
   if (responses === undefined) return undefined
 
-  const priority = ['200', '201', ...Object.keys(responses).filter(
-    (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
-  )]
+  const priority = [
+    '200',
+    '201',
+    ...Object.keys(responses).filter(
+      (k) => /^2\d\d$/.test(k) && k !== '200' && k !== '201' && k !== '204'
+    ),
+  ]
 
   for (const code of priority) {
     const response = responses[code]
@@ -659,7 +658,9 @@ function collectGeneratorSetup(
   const needsZod =
     (usedSchemaNames.size > 0 && options?.schemaImportPath !== undefined) ||
     operationsNeedZodForParams(operations) ||
-    (usedResponseSchemaNames.size > 0 && options?.schemaImportPath !== undefined && hasArrayResponseSchema)
+    (usedResponseSchemaNames.size > 0 &&
+      options?.schemaImportPath !== undefined &&
+      hasArrayResponseSchema)
   return { sortedBodyTypes, usedSchemaNames, usedResponseSchemaNames, needsZod }
 }
 

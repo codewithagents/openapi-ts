@@ -48,7 +48,6 @@ describe('primitive + nullable: true', () => {
       Widget: {
         type: 'object',
         properties: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           name: { type: 'string', nullable: true } as any,
         },
       },
@@ -61,7 +60,6 @@ describe('primitive + nullable: true', () => {
       Widget: {
         type: 'object',
         properties: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           name: { type: 'string', nullable: true } as any,
         },
       },
@@ -74,7 +72,6 @@ describe('primitive + nullable: true', () => {
       Widget: {
         type: 'object',
         properties: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           count: { type: 'integer', nullable: true } as any,
         },
       },
@@ -87,7 +84,6 @@ describe('primitive + nullable: true', () => {
       Widget: {
         type: 'object',
         properties: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           count: { type: 'integer', nullable: true } as any,
         },
       },
@@ -97,7 +93,6 @@ describe('primitive + nullable: true', () => {
 
   it('boolean + nullable → models.ts has | null', () => {
     const out = genTypes({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       Flag: { type: 'boolean', nullable: true } as any,
     })
     expect(out).toContain('boolean | null')
@@ -105,7 +100,6 @@ describe('primitive + nullable: true', () => {
 
   it('boolean + nullable → schemas.ts has .nullable()', () => {
     const out = genZod({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       Flag: { type: 'boolean', nullable: true } as any,
     })
     expect(out).toContain('z.boolean().nullable()')
@@ -122,7 +116,6 @@ describe('array type + nullable: true', () => {
       Widget: {
         type: 'object',
         properties: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           val: { type: ['string', 'number'], nullable: true } as any,
         },
       },
@@ -136,7 +129,6 @@ describe('array type + nullable: true', () => {
       Widget: {
         type: 'object',
         properties: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           val: { type: ['string', 'number'], nullable: true } as any,
         },
       },
@@ -149,7 +141,7 @@ describe('array type + nullable: true', () => {
     const out = genTypes({
       Widget: {
         type: 'object',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         properties: { val: { type: ['string', 'null'] } as any },
       },
     })
@@ -175,13 +167,11 @@ describe('object / array + nullable: true (structure preserved)', () => {
       Widget: {
         type: 'object',
         properties: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           meta: {
             type: 'object',
             nullable: true,
             properties: { id: { type: 'string' }, label: { type: 'string' } },
             required: ['id'],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any,
         },
       },
@@ -197,12 +187,10 @@ describe('object / array + nullable: true (structure preserved)', () => {
       Widget: {
         type: 'object',
         properties: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           scores: {
             type: 'object',
             nullable: true,
             additionalProperties: { type: 'integer' },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any,
         },
       },
@@ -216,7 +204,6 @@ describe('object / array + nullable: true (structure preserved)', () => {
       Widget: {
         type: 'object',
         properties: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           tags: { type: 'array', nullable: true, items: { type: 'string' } } as any,
         },
       },
@@ -231,12 +218,10 @@ describe('object / array + nullable: true (structure preserved)', () => {
       Widget: {
         type: 'object',
         properties: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           meta: {
             type: 'object',
             nullable: true,
             properties: { id: { type: 'string' } },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any,
         },
       },
@@ -254,7 +239,6 @@ describe('object / array + nullable: true (structure preserved)', () => {
 describe('enum + nullable: true', () => {
   it('string enum + nullable → models.ts union includes | null', () => {
     const out = genTypes({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       Status: { type: 'string', enum: ['active', 'inactive'], nullable: true } as any,
     })
     expect(out).toContain('null')
@@ -265,7 +249,6 @@ describe('enum + nullable: true', () => {
 
   it('string enum + nullable → schemas.ts Zod accepts null literal', () => {
     const out = genZod({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       Status: { type: 'string', enum: ['active', 'inactive'], nullable: true } as any,
     })
     // With null in enum, falls into mixed-enum union path: z.union([z.literal(...), z.literal(null)])
@@ -276,7 +259,6 @@ describe('enum + nullable: true', () => {
   it('enum + nullable — null not duplicated if already present', () => {
     // Spec that already carries null in the enum (unusual but valid in 3.0 too)
     const out = genTypes({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       Status: { type: 'string', enum: ['active', null], nullable: true } as any,
     })
     // Should not contain 'null, null' or double null in the union
@@ -294,7 +276,6 @@ describe('x-nullable: true vendor extension', () => {
       Widget: {
         type: 'object',
         properties: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           label: { type: 'string', 'x-nullable': true } as any,
         },
       },
@@ -307,7 +288,6 @@ describe('x-nullable: true vendor extension', () => {
       Widget: {
         type: 'object',
         properties: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           label: { type: 'string', 'x-nullable': true } as any,
         },
       },
@@ -324,7 +304,7 @@ describe('allOf + nullable: true', () => {
   it('allOf + nullable → models.ts has | null in the union', () => {
     const out = genTypes({
       Base: { type: 'object', properties: { id: { type: 'string' } } },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       Extended: { allOf: [{ $ref: '#/components/schemas/Base' }], nullable: true } as any,
     })
     // Extended should produce a type that includes null
@@ -334,7 +314,7 @@ describe('allOf + nullable: true', () => {
   it('allOf + nullable → schemas.ts has z.null() in the union', () => {
     const out = genZod({
       Base: { type: 'object', properties: { id: { type: 'string' } } },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       Extended: { allOf: [{ $ref: '#/components/schemas/Base' }], nullable: true } as any,
     })
     expect(out).toContain('z.null()')
@@ -355,7 +335,7 @@ function make31NullUnionSpec(): OpenAPIV3_1.Document {
       schemas: {
         Widget: {
           type: 'object',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           properties: { name: { type: ['string', 'null'] } as any },
         },
       },
@@ -387,7 +367,6 @@ describe('OpenAPI 3.1 null union (no regression)', () => {
 
 describe('normalizeNullable cycle guard', () => {
   it('shared schema objects do not cause infinite loop', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sharedProp: any = { type: 'string', nullable: true }
     const spec: OpenAPIV3_1.Document = {
       openapi: '3.0.3',

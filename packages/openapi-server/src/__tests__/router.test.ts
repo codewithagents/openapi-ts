@@ -527,7 +527,7 @@ describe('coverage: requestBody as $ref — body type falls back to untyped', ()
       '/items': {
         post: {
           operationId: 'createItem',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           requestBody: { $ref: '#/components/requestBodies/ItemBody' } as any,
           responses: { '201': { description: 'created' } },
         },
@@ -548,7 +548,7 @@ describe('coverage: 200 response as $ref — falls through to default status 200
         get: {
           operationId: 'getItem',
           parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           responses: { '200': { $ref: '#/components/responses/ItemResponse' } as any },
         },
       },
@@ -566,7 +566,7 @@ describe('coverage: requestBody with no content property — falls back to untyp
       '/items': {
         post: {
           operationId: 'createItem',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           requestBody: { required: true } as any, // no content property
           responses: { '201': { description: 'created' } },
         },
@@ -585,7 +585,6 @@ describe('coverage: operation with no responses — falls back to default status
       '/items': {
         get: {
           operationId: 'listItems',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any, // no responses property
       },
     })

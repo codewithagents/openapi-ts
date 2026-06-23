@@ -1,7 +1,6 @@
 import type { OpenAPIV3_1 } from 'openapi-types'
 import {
   toPropertyKey,
-  toTypeName,
   uniquifyName,
   refToTypeName,
   sanitizeOperationId,
@@ -382,7 +381,13 @@ function getReturnType(
     | Record<string, ResponseObject | ReferenceObject>
     | undefined
   if (responses === undefined)
-    return { typeName: 'unknown', isArray: false, isVoid: false, bodyKind: 'json', mayBeEmpty: false }
+    return {
+      typeName: 'unknown',
+      isArray: false,
+      isVoid: false,
+      bodyKind: 'json',
+      mayBeEmpty: false,
+    }
 
   // When a 204 response is also present alongside a 200/201 body response, the
   // operation can return an empty body at runtime. Flag this so callers can emit
@@ -416,7 +421,13 @@ function getReturnType(
     }
 
     if (picked.kind === 'text') {
-      return { typeName: 'string', isArray: false, isVoid: false, bodyKind: 'text', mayBeEmpty: has204 }
+      return {
+        typeName: 'string',
+        isArray: false,
+        isVoid: false,
+        bodyKind: 'text',
+        mayBeEmpty: has204,
+      }
     }
 
     if (picked.kind === 'event-stream') {
@@ -430,7 +441,13 @@ function getReturnType(
     }
 
     // binary: application/octet-stream, application/pdf, image/*, application/sdp, etc.
-    return { typeName: 'Blob', isArray: false, isVoid: false, bodyKind: 'binary', mayBeEmpty: has204 }
+    return {
+      typeName: 'Blob',
+      isArray: false,
+      isVoid: false,
+      bodyKind: 'binary',
+      mayBeEmpty: has204,
+    }
   }
 
   // Check for 204 (no content) or no successful response
@@ -1384,7 +1401,13 @@ function generateFunctionCode(
   queryParams: QueryParam[],
   headerParams: HeaderParam[],
   bodyInfo: RequestBodyInfo | undefined,
-  returnType: { typeName: string; isArray: boolean; isVoid: boolean; bodyKind: ResponseBodyKind; mayBeEmpty: boolean },
+  returnType: {
+    typeName: string
+    isArray: boolean
+    isVoid: boolean
+    bodyKind: ResponseBodyKind
+    mayBeEmpty: boolean
+  },
   deprecated: boolean,
   throwsTags: string[],
   options?: ClientOptions,
@@ -1410,9 +1433,7 @@ function generateFunctionCode(
   // For all other params, use the normalized camelCase identifier (qp.name).
   const allParamFields: string[] = []
   for (const qp of queryParams) {
-    const fieldKey = qp.urlName.endsWith('[]')
-      ? toPropertyKey(qp.urlName)
-      : toPropertyKey(qp.name)
+    const fieldKey = qp.urlName.endsWith('[]') ? toPropertyKey(qp.urlName) : toPropertyKey(qp.name)
     allParamFields.push(`  ${fieldKey}${qp.required ? '' : '?'}: ${qp.type}`)
   }
   for (const hp of headerParams) {
@@ -1468,12 +1489,8 @@ function generateFunctionCode(
       // the generated code so the property key matches the interface declaration.
       // For all other params, use dot notation with the normalized identifier.
       const isBracket = qp.urlName.endsWith('[]')
-      const access = isBracket
-        ? `params?.[${JSON.stringify(qp.urlName)}]`
-        : `params?.${qp.name}`
-      const valueAccess = isBracket
-        ? `params[${JSON.stringify(qp.urlName)}]`
-        : `params.${qp.name}`
+      const access = isBracket ? `params?.[${JSON.stringify(qp.urlName)}]` : `params?.${qp.name}`
+      const valueAccess = isBracket ? `params[${JSON.stringify(qp.urlName)}]` : `params.${qp.name}`
       if (qp.type.endsWith('[]')) {
         // Array params: use append in a loop (not set) so multiple values are preserved.
         // urlName is used as the wire key (e.g. 'ids[]' -> searchParams.append('ids[]', ...)).
@@ -1844,9 +1861,7 @@ export function generateClient(
     options.errorBodyType !== 'laravel' &&
     options.errorBodyTypeImport !== undefined
   ) {
-    lines.push(
-      `import type { ${options.errorBodyType} } from '${options.errorBodyTypeImport}'`
-    )
+    lines.push(`import type { ${options.errorBodyType} } from '${options.errorBodyTypeImport}'`)
   }
 
   lines.push('')

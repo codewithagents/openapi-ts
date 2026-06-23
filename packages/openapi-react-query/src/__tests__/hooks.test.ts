@@ -20,15 +20,11 @@ describe('generateHooks — bug #259: $ref params with mixed required+optional f
     // getMultipleAlbums: ids (required $ref) + market (optional $ref)
     // client signature: getMultipleAlbums(params: { ids: string; market?: string }, config?)
     // The hook must emit `params` (not `params?`) because ids is required.
-    expect(refParamsContent).toContain(
-      'params: Parameters<typeof getMultipleAlbums>[0]'
-    )
+    expect(refParamsContent).toContain('params: Parameters<typeof getMultipleAlbums>[0]')
   })
 
   it('queryOptions factory for mixed $ref params emits params as required arg', () => {
-    expect(refParamsContent).toContain(
-      'params: Parameters<typeof getMultipleAlbums>[0]'
-    )
+    expect(refParamsContent).toContain('params: Parameters<typeof getMultipleAlbums>[0]')
   })
 
   it('queryFn for mixed $ref params passes params to the client', () => {
@@ -52,17 +48,13 @@ describe('generateHooks — bug #259: $ref params with mixed required+optional f
     // listTracks: market (optional $ref) + limit (optional $ref)
     // client signature: listTracks(params?: { market?: string; limit?: number }, config?)
     // The hook must emit `params?` (optional).
-    expect(refParamsContent).toContain(
-      'params?: Parameters<typeof listTracks>[0]'
-    )
+    expect(refParamsContent).toContain('params?: Parameters<typeof listTracks>[0]')
   })
 
   it('query hook for all-required $ref params emits params as required', () => {
     // getMultipleArtists: ids (required $ref only)
     // client signature: getMultipleArtists(params: { ids: string }, config?)
-    expect(refParamsContent).toContain(
-      'params: Parameters<typeof getMultipleArtists>[0]'
-    )
+    expect(refParamsContent).toContain('params: Parameters<typeof getMultipleArtists>[0]')
   })
 
   it('queryFn for all-required $ref params passes params to the client', () => {
@@ -136,7 +128,9 @@ describe('generateHooks — task-hooks.json fixture', () => {
 
   it('useUpdateTask variables type has { id: Parameters<typeof updateTask>[0]; body: Parameters<typeof updateTask>[1] }', () => {
     expect(content).toContain('useUpdateTask')
-    expect(content).toContain('{ id: Parameters<typeof updateTask>[0]; body: Parameters<typeof updateTask>[1] }')
+    expect(content).toContain(
+      '{ id: Parameters<typeof updateTask>[0]; body: Parameters<typeof updateTask>[1] }'
+    )
   })
 
   it('useUpdateTask mutationFn destructures { id, body }', () => {
@@ -320,7 +314,9 @@ describe('generateHooks — Bug #53: key factory includes query params when oper
   it('key factory detail entry includes optional params when path + optional query params', () => {
     const { content } = generateHooks(specWithPathAndQueryParams, { staleTime: 0, gcTime: 0 })
     // Key factory should accept (uuid: Parameters<typeof readTemplateDetails>[0], params?)
-    expect(content).toContain('(uuid: Parameters<typeof readTemplateDetails>[0], params?: Parameters<typeof readTemplateDetails>[1])')
+    expect(content).toContain(
+      '(uuid: Parameters<typeof readTemplateDetails>[0], params?: Parameters<typeof readTemplateDetails>[1])'
+    )
   })
 
   it('key factory detail entry includes params value in tuple', () => {
@@ -340,7 +336,9 @@ describe('generateHooks — Bug #53: key factory includes query params when oper
       gcTime: 0,
     })
     // Key factory should accept required params (no ?)
-    expect(content).toContain('(id: Parameters<typeof getReport>[0], params: Parameters<typeof getReport>[1])')
+    expect(content).toContain(
+      '(id: Parameters<typeof getReport>[0], params: Parameters<typeof getReport>[1])'
+    )
   })
 
   it('hook marks params as required when path param + required query param', () => {
@@ -622,7 +620,9 @@ describe('generateHooks — Feature #60: suspense query variants', () => {
     const suspenseHookEnd = content.indexOf('\n}', suspenseHookStart) + 2
     const suspenseHookContent = content.slice(suspenseHookStart, suspenseHookEnd)
     expect(suspenseHookContent).toContain('id: Parameters<typeof getTask>[0]')
-    expect(suspenseHookContent).not.toContain('id: Parameters<typeof getTask>[0] | undefined | null')
+    expect(suspenseHookContent).not.toContain(
+      'id: Parameters<typeof getTask>[0] | undefined | null'
+    )
   })
 
   it('when suspense: false (default), no useSuspense* hooks generated', () => {
@@ -1318,12 +1318,16 @@ describe('mutation hook variables type — all 12 shapes', () => {
   })
 
   it('case 6 (1 path param, no body, has query): variablesType is { id: Parameters<typeof deleteF>[0]; params: ...[1] }, mutationFn destructures { id, params }', () => {
-    expect(shapesContent).toContain('id: Parameters<typeof deleteF>[0]; params: Parameters<typeof deleteF>[1]')
+    expect(shapesContent).toContain(
+      'id: Parameters<typeof deleteF>[0]; params: Parameters<typeof deleteF>[1]'
+    )
     expect(shapesContent).toContain('mutationFn: ({ id, params }) => deleteF(id, params)')
   })
 
   it('case 7 (1 path param, has body, no query): variablesType is { id: Parameters<typeof putG>[0]; body: ...[1] }, mutationFn destructures { id, body }', () => {
-    expect(shapesContent).toContain('id: Parameters<typeof putG>[0]; body: Parameters<typeof putG>[1]')
+    expect(shapesContent).toContain(
+      'id: Parameters<typeof putG>[0]; body: Parameters<typeof putG>[1]'
+    )
     expect(shapesContent).toContain('mutationFn: ({ id, body }) => putG(id, body)')
   })
 
@@ -1924,7 +1928,7 @@ describe('coverage: requestBody with no content — hasBody but no bodyTypeName'
         '/items': {
           post: {
             operationId: 'createItem',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             requestBody: { required: true } as any, // no content property
             responses: { '201': { description: 'created' } },
           },
@@ -2245,10 +2249,7 @@ describe('generateHooks — operationId collides with client-internal helper (#2
 
 describe('generateHooks — #189: infinite query generation', () => {
   // Base helper for building minimal list specs
-  const makeListSpec = (
-    paramNames: string[],
-    xInfinite?: boolean
-  ): OpenAPIV3_1.Document => ({
+  const makeListSpec = (paramNames: string[], xInfinite?: boolean): OpenAPIV3_1.Document => ({
     openapi: '3.1.0',
     info: { title: 'Test', version: '1.0.0' },
     paths: {
