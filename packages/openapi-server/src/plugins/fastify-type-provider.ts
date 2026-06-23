@@ -1001,7 +1001,7 @@ export function generateFastifyRouter(
     '// @fastify/formbody and @fastify/multipart are auto-registered inside the plugin for the content types your spec uses.'
   )
   lines.push(
-    '// Pass registerParsers: false in CreateRouterOptions to opt out (e.g. to set custom size limits).'
+    '// Pass multipart.limits in CreateRouterOptions to raise upload-size caps, or registerParsers: false to opt out entirely.'
   )
   lines.push('')
   lines.push("import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'")
@@ -1061,6 +1061,31 @@ export function generateFastifyRouter(
   lines.push('  serializerCompiler?: typeof serializerCompiler')
   lines.push('  /** Set to false to skip automatic parser registration (default: true). */')
   lines.push('  registerParsers?: boolean')
+  if (hasMultipartBody) {
+    lines.push('  /**')
+    lines.push('   * Options forwarded to @fastify/multipart when it is auto-registered.')
+    lines.push("   * Merged over the generated defaults (attachFieldsToBody stays 'keyValues').")
+    lines.push('   * Use limits.fileSize to raise the per-file upload cap without setting')
+    lines.push('   * registerParsers: false.')
+    lines.push('   *')
+    lines.push("   * Note: @fastify/multipart's fileSize caps the multipart stream, but Fastify")
+    lines.push('   * core bodyLimit (default 1 MiB) caps the raw request body first. For large')
+    lines.push(
+      '   * uploads also raise it at instance creation, e.g. Fastify({ bodyLimit: 20_000_000 }).'
+    )
+    lines.push('   */')
+    lines.push('  multipart?: {')
+    lines.push('    limits?: {')
+    lines.push('      fieldNameSize?: number')
+    lines.push('      fieldSize?: number')
+    lines.push('      fields?: number')
+    lines.push('      fileSize?: number')
+    lines.push('      files?: number')
+    lines.push('      headerPairs?: number')
+    lines.push('      parts?: number')
+    lines.push('    }')
+    lines.push('  }')
+  }
   lines.push('  /**')
   lines.push('   * Register additional routes on the Fastify instance after the ZodTypeProvider')
   lines.push('   * compilers, error handler, and body parsers are set up. Custom routes registered')
@@ -1149,8 +1174,8 @@ export function generateFastifyRouter(
   lines.push("    for (const _h of _asHookArray(options?.onError)) app.addHook('onError', _h)")
 
   // Auto-register body parsers for content types the spec uses, gated on registerParsers !== false.
-  // Callers who need custom options (e.g. upload size limits) should pass registerParsers: false
-  // and register the plugins themselves before mounting this router.
+  // Callers can raise upload size limits via multipart.limits in CreateRouterOptions without opting out.
+  // To take full control of @fastify/multipart options, pass registerParsers: false and register the plugin manually.
   if (hasAnyParserNeeded) {
     // Registrations are guarded by hasContentTypeParser so they are idempotent and order-safe:
     // if the caller already registered the parser on a parent scope (the child inherits it), we skip.
@@ -1170,7 +1195,7 @@ export function generateFastifyRouter(
       // (file fields become @fastify/multipart file objects), which is what handlers and
       // body validators expect. The previous `true` wrapped every field in a busboy object.
       lines.push(
-        "        app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues' })"
+        "        app.register(_multipart.default ?? _multipart, { attachFieldsToBody: 'keyValues', ...options?.multipart })"
       )
       lines.push('      }')
     }

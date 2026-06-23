@@ -864,7 +864,22 @@ pnpm add @fastify/multipart
 
 No manual registration needed. The `attachFieldsToBody: 'keyValues'` option is set automatically so each field's value lands directly on `req.body` (file fields arrive as `@fastify/multipart` file objects), which is what handlers and body validators expect.
 
-**Custom options (e.g. upload size limits):** pass `registerParsers: false` in `CreateRouterOptions` and register the plugin yourself before mounting the router:
+**Upload size limits:** pass `multipart.limits` in `CreateRouterOptions` to raise the per-file cap without opting out of auto-registration. The limits are merged over the generated defaults (`attachFieldsToBody` stays `'keyValues'`):
+
+```ts
+fastify.register(
+  createRouter(service, {
+    multipart: { limits: { fileSize: 10_000_000 } },
+  }),
+  { prefix: '/api' }
+)
+```
+
+Note: `@fastify/multipart`'s `fileSize` caps the multipart stream, but Fastify's core `bodyLimit` (default 1 MiB) caps the raw request body first. For large uploads also raise it at instance creation: `Fastify({ bodyLimit: 20_000_000 })`.
+
+The `multipart` option is only present in `CreateRouterOptions` when the spec has multipart bodies. Specs with no multipart bodies get an unchanged `CreateRouterOptions`.
+
+**Full control (all @fastify/multipart options):** pass `registerParsers: false` and register the plugin yourself before mounting the router:
 
 ```ts
 fastify.register(fastifyMultipart, { attachFieldsToBody: 'keyValues', limits: { fileSize: 10_000_000 } })
