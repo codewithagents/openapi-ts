@@ -7,5 +7,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["generated/**/*.ts", "generated-rq/**/*.ts", "verify.test.ts"]
+  "include": ["generated/**/*.ts", "generated-rq/**/*.ts", "verify.test.ts", "type-assertions.ts"]
 }
