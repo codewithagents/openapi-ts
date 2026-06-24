@@ -247,28 +247,31 @@ describe('schema-enhanced mode — cyclic schemas resolve to concrete types (#38
     expect(models).toMatch(/(export interface Region \{|export type Region =)/)
   })
 
-  it('bootstrapped schemas.ts annotates cyclic schemas with their model type, not bare z.ZodType', async () => {
+  it('bootstrapped schemas.ts uses assertion form for cyclic schemas, not annotation form', async () => {
     const { configPath, tmpDir: dir, schemaPath } = await makeConfig(cyclicSchemasFixture)
     await generate(dir, configPath) // bootstrap
 
     const schemas = await readFile(schemaPath, 'utf-8')
 
-    // Holiday and Province are mutually cyclic: both wrapped in z.lazy() and annotated with
-    // their concrete model type (imported type-only from models.ts).
-    expect(schemas).toContain('HolidaySchema: z.ZodType<Holiday>')
-    expect(schemas).toContain('ProvinceSchema: z.ZodType<Province>')
+    // Holiday and Province are mutually cyclic: both wrapped in z.lazy() and cast with
+    // the assertion form `as z.ZodType<T>` so that z.infer resolves to the concrete model.
+    // The annotation form (: z.ZodType<T> = ...) was fragile for all-optional recursive
+    // schemas with .passthrough() under older TS/Zod combinations.
+    expect(schemas).toContain('as z.ZodType<Holiday>')
+    expect(schemas).toContain('as z.ZodType<Province>')
+    expect(schemas).not.toContain('HolidaySchema: z.ZodType<Holiday>')
+    expect(schemas).not.toContain('ProvinceSchema: z.ZodType<Province>')
     expect(schemas).toMatch(/import type \{[^}]*\} from '\.\/models\.js'/)
-
-    // The bare annotation (which causes unknown) must not appear anywhere.
-    expect(schemas).not.toMatch(/: z\.ZodType =/)
 
     // No helper interfaces are emitted into the user-owned schemas.ts.
     expect(schemas).not.toContain('interface _')
 
-    // Acyclic schemas (Error, Region) remain plain assignments with no annotation.
+    // Acyclic schemas (Error, Region) remain plain assignments with no annotation or assertion.
     expect(schemas).toContain('ErrorSchema =')
     expect(schemas).not.toContain('ErrorSchema: z.ZodType')
+    expect(schemas).not.toContain('ErrorSchema as z.ZodType')
     expect(schemas).toContain('RegionSchema =')
     expect(schemas).not.toContain('RegionSchema: z.ZodType')
+    expect(schemas).not.toContain('RegionSchema as z.ZodType')
   })
 })

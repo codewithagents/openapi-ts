@@ -488,11 +488,18 @@ function generateSchemaDeclaration(
 
   if (modelTypeName !== undefined) {
     // Recursive (cyclic or self-referential) schema: wrap in z.lazy() so the deferred
-    // reference resolves after all schema constants are declared, and annotate with the
-    // concrete model type (a plain interface emitted in models.ts) so that
-    // z.infer<typeof FooSchema> resolves to that shape rather than unknown. The model type
-    // is imported type-only at the top of the file, which is erased at runtime (no cycle).
-    return `export const ${safeName}Schema: z.ZodType<${modelTypeName}> = z.lazy(() => ${schemaToZod(schema)})`
+    // reference resolves after all schema constants are declared, and cast with
+    // `as z.ZodType<ModelType>` so that z.infer<typeof FooSchema> resolves to the concrete
+    // model shape rather than unknown. The model type is imported type-only at the top of
+    // the file and erased at runtime (no cycle).
+    //
+    // We use an assertion (`as`) rather than an annotation (`: z.ZodType<T> = ...`) because
+    // the annotation form forces a strict assignability check that can fail for all-optional
+    // recursive schemas with .passthrough() under older TypeScript or Zod versions: the
+    // passthrough object infers an index signature ({ [x: string]: unknown }) that TS cannot
+    // always prove assignable to the strict generated model interface in those toolchains.
+    // The assertion form bypasses that check while keeping z.infer concrete and exact.
+    return `export const ${safeName}Schema = z.lazy(() => ${schemaToZod(schema)}) as z.ZodType<${modelTypeName}>`
   }
 
   return `export const ${safeName}Schema = ${schemaToZod(schema)}`
@@ -655,8 +662,9 @@ const SCHEMAS_FILE_HEADER: readonly string[] = [
 
 /**
  * Emit the Zod constants for component schemas, topologically sorted so dependencies precede
- * dependents. Recursive schemas are wrapped in z.lazy() and annotated z.ZodType<ModelType>,
- * with those model types imported type-only from models.ts (erased at runtime, so no cycle).
+ * dependents. Recursive schemas are wrapped in z.lazy() and cast with `as z.ZodType<ModelType>`
+ * so that z.infer resolves to the concrete model rather than unknown. Those model types are
+ * imported type-only from models.ts and erased at runtime (no cycle).
  */
 function emitComponentSchemas(
   schemas: Record<string, SchemaObject | ReferenceObject>,
@@ -709,8 +717,8 @@ export function generateZodSchemas(spec: OpenAPIV3_1.Document): GeneratedFile {
     | Record<string, SchemaObject | ReferenceObject>
     | undefined
 
-  // Recursive (cyclic or self-referential) schemas are annotated z.ZodType<ModelType>;
-  // their concrete model type lives in models.ts and is imported type-only.
+  // Recursive (cyclic or self-referential) schemas are cast with `as z.ZodType<ModelType>`
+  // so that z.infer resolves concretely. Their model type lives in models.ts, imported type-only.
   const recursive = findRecursiveSchemaNames(spec)
 
   const lines: string[] = [...SCHEMAS_FILE_HEADER, '', "import { z } from 'zod'"]
