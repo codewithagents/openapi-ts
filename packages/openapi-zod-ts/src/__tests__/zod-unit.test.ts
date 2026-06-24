@@ -381,7 +381,7 @@ describe('circular / self-referential schemas', () => {
     expect(out).toContain('TreeNodeSchema')
   })
 
-  it('self-referential schema annotation uses z.ZodType<ModelType>, not bare z.ZodType', () => {
+  it('self-referential schema uses assertion form `as z.ZodType<ModelType>`, not annotation form', () => {
     const out = gen({
       TreeNode: {
         type: 'object',
@@ -391,9 +391,11 @@ describe('circular / self-referential schemas', () => {
         },
       },
     })
-    // The annotation references the concrete model type (not bare z.ZodType = ...)
-    expect(out).toContain('TreeNodeSchema: z.ZodType<TreeNode>')
-    expect(out).not.toMatch(/: z\.ZodType =/)
+    // Uses assertion form (as z.ZodType<T>) so passthrough index-signature is not checked
+    // against the strict model type. Annotation form (: z.ZodType<T> = ...) was fragile for
+    // all-optional recursive schemas with .passthrough() under older TS/Zod combinations.
+    expect(out).toContain('as z.ZodType<TreeNode>')
+    expect(out).not.toContain('TreeNodeSchema: z.ZodType<TreeNode>')
     // The model type is imported type-only from models.ts (erased at runtime, no cycle)
     expect(out).toMatch(/import type \{ TreeNode \} from '\.\/models\.js'/)
     // No local helper interfaces are emitted into the user-owned schemas.ts
@@ -412,15 +414,16 @@ describe('circular / self-referential schemas', () => {
     expect(bDecl?.[0]).toContain('z.lazy(')
   })
 
-  it('mutually circular schemas carry z.ZodType<ModelType> annotations, not bare z.ZodType', () => {
+  it('mutually circular schemas use assertion form `as z.ZodType<ModelType>`, not annotation form', () => {
     const out = gen({
       A: { type: 'object', properties: { b: { $ref: '#/components/schemas/B' } } },
       B: { type: 'object', properties: { a: { $ref: '#/components/schemas/A' } } },
     })
-    // Both carry parameterized annotations referencing their model types (no bare z.ZodType =)
-    expect(out).not.toMatch(/: z\.ZodType =/)
-    expect(out).toContain('ASchema: z.ZodType<A>')
-    expect(out).toContain('BSchema: z.ZodType<B>')
+    // Both use assertion form (as z.ZodType<T>) so index-signature check is bypassed
+    expect(out).toContain('as z.ZodType<A>')
+    expect(out).toContain('as z.ZodType<B>')
+    expect(out).not.toContain('ASchema: z.ZodType<A>')
+    expect(out).not.toContain('BSchema: z.ZodType<B>')
     // Both model types are imported type-only from models.ts
     const importLine = out.match(/import type \{([^}]*)\} from '\.\/models\.js'/)
     expect(importLine).not.toBeNull()
@@ -430,7 +433,7 @@ describe('circular / self-referential schemas', () => {
     expect(out).not.toContain('interface _')
   })
 
-  it('cyclic schema referencing an acyclic schema annotates only the recursive one', () => {
+  it('cyclic schema uses assertion form; acyclic schema stays plain', () => {
     const out = gen({
       Meta: { type: 'object', properties: { label: { type: 'string' } } },
       Node: {
@@ -441,15 +444,53 @@ describe('circular / self-referential schemas', () => {
         },
       },
     })
-    // Only the recursive Node is annotated + imported; the acyclic Meta stays plain.
+    // Only the recursive Node gets the assertion form + type-only import.
     // The Node interface in models.ts references Meta (both in scope there); see
     // generator-schema.test.ts for the models.ts side.
-    expect(out).toContain('NodeSchema: z.ZodType<Node>')
+    expect(out).toContain('as z.ZodType<Node>')
+    expect(out).not.toContain('NodeSchema: z.ZodType<Node>')
     expect(out).toMatch(/import type \{ Node \} from '\.\/models\.js'/)
-    expect(out).not.toMatch(/MetaSchema:\s*z\.ZodType/)
+    expect(out).not.toMatch(/MetaSchema.*z\.ZodType/)
     expect(out.match(/export const MetaSchema[^=]*=.*/)?.[0]).not.toContain('z.lazy(')
     // No local helper interfaces are emitted into schemas.ts
     expect(out).not.toContain('interface _')
+  })
+
+  it('recursive-through-array schema uses assertion form (array of $ref)', () => {
+    // Regression: all-optional mutual cycle via array of $ref (Author.books: Book[])
+    // plus oneOf with null (Book.author: Author | null). This shape triggered TS2322 with
+    // the annotation form on older TS/Zod versions because .passthrough() adds an index
+    // signature ({ [x: string]: unknown }) that could not be proved assignable to the strict
+    // model interface under those toolchains. The assertion form bypasses that check.
+    const out = gen({
+      Author: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          books: { type: 'array', items: { $ref: '#/components/schemas/Book' } },
+        },
+      },
+      Book: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          author: { oneOf: [{ $ref: '#/components/schemas/Author' }, { type: 'null' }] },
+        },
+      },
+    })
+    // Both must use assertion form, not annotation form
+    expect(out).toContain('as z.ZodType<Author>')
+    expect(out).toContain('as z.ZodType<Book>')
+    expect(out).not.toContain('AuthorSchema: z.ZodType<Author>')
+    expect(out).not.toContain('BookSchema: z.ZodType<Book>')
+    // Both are wrapped in z.lazy() for deferred resolution
+    expect(out).toContain('AuthorSchema = z.lazy(')
+    expect(out).toContain('BookSchema = z.lazy(')
+    // Both model types imported type-only from models.ts
+    const importLine = out.match(/import type \{([^}]*)\} from '\.\/models\.js'/)
+    expect(importLine).not.toBeNull()
+    expect(importLine![1]).toContain('Author')
+    expect(importLine![1]).toContain('Book')
   })
 
   it('non-circular schema is NOT wrapped in z.lazy()', () => {
@@ -460,13 +501,14 @@ describe('circular / self-referential schemas', () => {
     expect(out).not.toContain('z.lazy(')
   })
 
-  it('non-circular schema does not have a z.ZodType annotation (no regression)', () => {
+  it('non-circular schema does not have a z.ZodType annotation or assertion (no regression)', () => {
     const out = gen({
       Tag: { type: 'object', properties: { id: { type: 'string' } } },
       Task: { type: 'object', properties: { tag: { $ref: '#/components/schemas/Tag' } } },
     })
-    // Acyclic schemas remain as plain assignments with no type annotation
+    // Acyclic schemas remain as plain assignments with no type annotation or assertion
     expect(out).not.toContain(': z.ZodType')
+    expect(out).not.toContain('as z.ZodType')
   })
 })
 

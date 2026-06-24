@@ -28,7 +28,7 @@ export const ErrorSchema = z.object({
   timestamp: z.iso.datetime().optional()
 }).passthrough()
 
-export const HolidaySchema: z.ZodType<Holiday> = z.lazy(() => z.object({
+export const HolidaySchema = z.lazy(() => z.object({
   date: z.iso.date(),
   federal: z.union([z.literal(1), z.literal(0)]),
   id: z.number().min(1).max(32),
@@ -37,9 +37,9 @@ export const HolidaySchema: z.ZodType<Holiday> = z.lazy(() => z.object({
   observedDate: z.iso.date(),
   optional: z.union([z.literal(1)]).optional(),
   provinces: z.array(ProvinceSchema).optional()
-}).passthrough())
+}).passthrough()) as z.ZodType<Holiday>
 
-export const ProvinceSchema: z.ZodType<Province> = z.lazy(() => z.object({
+export const ProvinceSchema = z.lazy(() => z.object({
   id: z.enum(["AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT"]),
   nameEn: z.string(),
   nameFr: z.string(),
@@ -48,7 +48,7 @@ export const ProvinceSchema: z.ZodType<Province> = z.lazy(() => z.object({
   provinces: z.array(HolidaySchema).optional(),
   sourceEn: z.string(),
   sourceLink: z.string().regex(new RegExp("https+"))
-}).passthrough())
+}).passthrough()) as z.ZodType<Province>
 
 // Synthesized schemas for inline JSON responses (operationId-based naming).
 // These are used by openapi-server to wire schema.response for Fastify routes.
