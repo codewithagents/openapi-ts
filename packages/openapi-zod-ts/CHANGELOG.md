@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.3](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.2.2...openapi-zod-ts-v2.2.3) (2026-06-24)
+
+
+### Bug Fixes
+
+* **openapi-zod-ts:** assert recursive lazy schemas as z.ZodType&lt;T&gt; ([#398](https://github.com/codewithagents/openapi-zod-ts/issues/398)) ([0ca96f7](https://github.com/codewithagents/openapi-zod-ts/commit/0ca96f7de26294036b748e3f545cca1df23a0c21)), closes [#397](https://github.com/codewithagents/openapi-zod-ts/issues/397)
+
 ## [2.2.2](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.2.1...openapi-zod-ts-v2.2.2) (2026-06-23)
 
 
