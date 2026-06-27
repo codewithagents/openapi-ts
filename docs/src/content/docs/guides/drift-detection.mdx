@@ -1,0 +1,129 @@
+---
+title: Drift detection in CI
+description: Use --check-drift to gate CI on stale, missing, or extra generated files and catch regeneration lapses before they reach production.
+---
+
+import { Steps, Code, Aside } from '@astrojs/starlight/components'
+
+## The problem
+
+Your OpenAPI spec evolves. A new endpoint is added, a response shape changes, a field is renamed. The generated output (`models.ts`, `client.ts`, and friends) must be regenerated and committed whenever the spec changes. Without a CI gate, a team member can update the spec, forget to regenerate, and push. The discrepancy is invisible until a type error or a runtime mismatch surfaces downstream.
+
+`--check-drift` solves this with a single command that fits in any CI pipeline.
+
+## One-command usage
+
+```sh
+npx openapi-zod-ts --check-drift
+```
+
+The command:
+
+1. Loads your config file (`openapi-zod-ts.config.json` by default, or the path you pass with `--config`).
+2. Runs the full generator pipeline in memory. No files are written.
+3. Applies the same Prettier formatting the write path uses, so the comparison is exact.
+4. Reads the committed files from your configured `output` directory.
+5. Exits 0 when everything matches. Exits 1 and prints per-file diagnostics when anything is stale, missing, or extra.
+
+Pass `--config` when your config file is not in the current directory:
+
+```sh
+npx openapi-zod-ts --config packages/api/openapi-zod-ts.config.json --check-drift
+```
+
+## What it checks
+
+| Status      | Meaning                                                                                                                                                                                                               |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **STALE**   | The file exists on disk but its content differs from what the generator produces today. Usually caused by a spec change that was not followed by a regeneration commit.                                               |
+| **MISSING** | The generator would produce this file but it is not on disk. Could happen after a first-time setup or after a config change that adds a new output file.                                                              |
+| **EXTRA**   | A file is in the output directory that the generator does not produce. Often a stale artifact from a removed endpoint or a file that was manually added to the generated output directory (which is not recommended). |
+
+Example output when drift is detected:
+
+```
+Drift check failed: generated output does not match committed files.
+
+  STALE   models.ts  (content differs from what the generator produces today)
+  MISSING client-config.ts  (expected by the generator but not found on disk)
+  EXTRA   old-models.ts  (on disk but not produced by the generator; delete it or regenerate)
+
+Fix: openapi-zod-ts
+```
+
+When the check passes:
+
+```
+Drift check passed: all generated files are up to date.
+```
+
+## GitHub Actions integration
+
+Add a dedicated drift check step to your workflow. When `GITHUB_ACTIONS=true`, the command also emits `::error file=...::` workflow commands so GitHub renders inline annotations on the PR, and appends a summary table to the step summary panel.
+
+```yaml
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  drift-check:
+    name: Generated output drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check generated output is up to date
+        run: npx openapi-zod-ts --check-drift
+```
+
+For a monorepo where each package has its own config:
+
+```yaml
+- name: Check generated output (packages/api)
+  run: npx openapi-zod-ts --config packages/api/openapi-zod-ts.config.json --check-drift
+```
+
+## How this differs from --check
+
+The two drift flags guard against different problems:
+
+| Flag            | What it checks                                                                                                                                                           | When it applies                         |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| `--check`       | Schema drift: your `input_schema` Zod file vs. what a fresh bootstrap from the spec would produce. Ensures your hand-written Zod schemas stay aligned with the contract. | Only when `input_schema` is configured. |
+| `--check-drift` | Output file drift: the committed generated files (`models.ts`, `client.ts`, etc.) vs. what the generator would produce today from the current spec and config.           | Always, for every generator run.        |
+
+A project can have `--check` pass (the Zod schema is aligned with the spec) and `--check-drift` fail (the TypeScript client is stale because regeneration was not committed). Both flags can be run together in the same CI step:
+
+```sh
+npx openapi-zod-ts --check --check-drift
+```
+
+## What is NOT checked
+
+The user-owned `input_schema` file (your hand-written Zod schemas, typically `zod.ts`) is intentionally excluded from `--check-drift` scope. The generator bootstraps this file once and never overwrites it: it belongs to you. Use `--check` to verify that your schema file stays aligned with the OpenAPI contract.
+
+## Fixing drift
+
+When the command reports drift, run the generator to regenerate and commit the result:
+
+```sh
+# Regenerate
+npx openapi-zod-ts
+
+# Commit the updated generated files
+git add src/api/
+git commit -m "chore: regenerate api client"
+```
+
+For more on the CLI options, see the [Types and fetch client reference](/openapi-zod-ts).

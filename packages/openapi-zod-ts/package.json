@@ -18,6 +18,10 @@
     "./cli-core": {
       "import": "./dist/cli-core.js",
       "types": "./dist/cli-core.d.ts"
+    },
+    "./drift-check": {
+      "import": "./dist/drift-check.js",
+      "types": "./dist/drift-check.d.ts"
     }
   },
   "files": [

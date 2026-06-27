@@ -27,6 +27,12 @@ export type CliAction =
        * (read-only) and --watch (one-shot).
        */
       resetSchema: boolean
+      /**
+       * When true, regenerate output in memory and compare it against committed files on
+       * disk. Exits non-zero when any file is stale, missing, or extra. Writes nothing.
+       * Incompatible with --watch.
+       */
+      checkDrift: boolean
     }
   | { action: 'error'; message: string }
 
@@ -53,6 +59,7 @@ export function parseCliArgs(argv: string[], cwd: string): CliAction {
   const watch = args.includes('--watch')
   const check = args.includes('--check')
   const resetSchema = args.includes('--reset-schema')
+  const checkDrift = args.includes('--check-drift')
 
   if (check && watch) {
     return {
@@ -60,6 +67,15 @@ export function parseCliArgs(argv: string[], cwd: string): CliAction {
       message:
         'Error: --check and --watch cannot be used together. ' +
         '--check is a read-only one-shot verification; it cannot watch for changes.',
+    }
+  }
+
+  if (checkDrift && watch) {
+    return {
+      action: 'error',
+      message:
+        'Error: --check-drift and --watch cannot be used together. ' +
+        '--check-drift is a read-only one-shot verification; it cannot watch for changes.',
     }
   }
 
@@ -122,5 +138,6 @@ export function parseCliArgs(argv: string[], cwd: string): CliAction {
     watch,
     check,
     resetSchema,
+    checkDrift,
   }
 }
