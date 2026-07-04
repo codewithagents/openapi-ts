@@ -1,68 +1,92 @@
 # Dependabot configuration for the codewithagents/openapi-zod-ts monorepo.
 # Docs: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 #
-# Strategy (mirrors how we maintain deps by hand):
-#   - One grouped PR per week for all minor + patch bumps (low-noise).
-#   - Each MAJOR bump lands as its own PR so it gets isolated review and CI.
-#   - GitHub Actions pins are kept current in a single grouped PR.
+# Grouping strategy (one PR per bucket, per week):
+#   1. PRODUCTION  - runtime `dependencies` and `peerDependencies` of the five
+#      PUBLISHED packages. These are the consumer-facing surface, so they get an
+#      isolated PR for closer review. All update types (incl. major) are grouped
+#      here on purpose: one prod PR, not one-per-major.
+#   2. DEVELOPMENT - everything else (test, build, lint, docs tooling, and the
+#      deps of the private example apps). Catch-all.
+#   3. GITHUB ACTIONS - a separate ecosystem, so Dependabot cannot fold it into
+#      the npm PRs; it gets its own single grouped PR.
 #
-# pnpm notes: Dependabot has GA support for pnpm workspaces and the pnpm
-# catalog (pnpm-workspace.yaml), so the catalog-centralized versions are
-# covered by the "npm" ecosystem below. We group by update-type rather than
-# dependency-type because Dependabot currently reports catalog dev-deps as
-# production (dependabot/dependabot-core#14824); update-type grouping is
-# unaffected by that. If a catalog update ever commits an inconsistent
-# lockfile (dependabot/dependabot-core#14339), CI's frozen install + drift
-# checks will fail the PR before merge.
+# Why PATTERN-based grouping instead of `dependency-type: production/development`:
+#   This repo centralizes versions in the pnpm catalog (pnpm-workspace.yaml), and
+#   Dependabot currently misclassifies catalog dev-deps as "production"
+#   (dependabot/dependabot-core#14824). A dependency-type split would therefore
+#   dump most dev tooling into the production group. Routing by package name
+#   avoids that. Dependabot assigns each updated dependency to the FIRST group it
+#   matches, so `production-dependencies` is declared before the catch-all.
+#
+# Maintenance note: when a published package gains a new runtime/peer dependency,
+# add its name to `production-dependencies` below, otherwise it falls through to
+# the development catch-all. `zod`/`hono`/`express` are intentionally in the
+# development bucket: they are devDependencies of the published packages (only
+# the private example apps list them under `dependencies`), so their bumps do not
+# change what consumers install. Promote any of them if you want prod-level review.
+#
+# pnpm notes: Dependabot has GA support for pnpm workspaces and the pnpm catalog.
+# CI's frozen install + drift checks fail any PR that commits an inconsistent
+# lockfile (dependabot/dependabot-core#14339) before it can merge.
 version: 2
 
 updates:
   # ---------------------------------------------------------------------------
-  # npm / pnpm: root package.json, every workspace package, and the pnpm
-  # catalog. `directory: "/"` covers the whole pnpm workspace.
+  # npm / pnpm: root package.json, every workspace package, and the pnpm catalog.
+  # `directory: "/"` covers the whole pnpm workspace.
   # ---------------------------------------------------------------------------
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "Europe/Berlin"
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'Europe/Berlin'
     open-pull-requests-limit: 10
     # Only widen a declared range when the new version falls outside it, so
     # in-range minor/patch bumps stay lockfile-only and the diffs stay small.
-    versioning-strategy: "increase-if-necessary"
+    versioning-strategy: 'increase-if-necessary'
     commit-message:
       # Produces "chore(deps): ..." / "chore(deps-dev): ...", which keeps
       # Release Please from cutting a version bump on dependency updates.
-      prefix: "chore"
-      include: "scope"
+      prefix: 'chore'
+      include: 'scope'
     groups:
-      # Everything non-major in a single weekly PR.
-      npm-minor-and-patch:
+      # 1. PRODUCTION: runtime + peer deps of the published packages. Declared
+      #    first so these names are claimed before the development catch-all.
+      production-dependencies:
         patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-    # Majors are deliberately NOT grouped: each opens its own PR for review.
+          - '@apidevtools/swagger-parser'
+          - 'openapi-types'
+          - 'prettier'
+          - 'fastify'
+          - 'fastify-type-provider-zod'
+          - '@fastify/*'
+          - '@tanstack/react-query'
+          - '@faker-js/faker'
+          - 'msw'
+      # 2. DEVELOPMENT: everything not claimed by production above.
+      development-dependencies:
+        patterns:
+          - '*'
 
   # ---------------------------------------------------------------------------
   # GitHub Actions referenced in .github/workflows/*. Actions are SHA-pinned;
   # Dependabot keeps the pin and its "# vX" comment current.
   # ---------------------------------------------------------------------------
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "Europe/Berlin"
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'Europe/Berlin'
     open-pull-requests-limit: 5
     commit-message:
-      prefix: "chore"
-      include: "scope"
+      prefix: 'chore'
+      include: 'scope'
     groups:
       github-actions:
         patterns:
-          - "*"
+          - '*'
