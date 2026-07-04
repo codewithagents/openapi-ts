@@ -21,7 +21,7 @@
     "@fastify/static": "^9.1.3",
     "@tanstack/react-query": "catalog:",
     "fastify": "^5.8.5",
-    "fastify-type-provider-zod": "^6.1.0",
+    "fastify-type-provider-zod": "^7.0.0",
     "openapi-zod-ts": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
