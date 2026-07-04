@@ -15,8 +15,7 @@ export interface ClientConfig {
   basicAuth?:
     | { username: string; password: string }
     | (() =>
-        | { username: string; password: string }
-        | Promise<{ username: string; password: string }>)
+        { username: string; password: string } | Promise<{ username: string; password: string }>)
   /**
    * API key or a function that returns one.
    * Sent as header 'X-API-Key' on every request.

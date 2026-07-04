@@ -2912,9 +2912,7 @@ export function useDownloadFile(
 
 export function useListFineTuningCheckpointPermissions(
   fineTunedModelCheckpoint:
-    | Parameters<typeof listFineTuningCheckpointPermissions>[0]
-    | undefined
-    | null,
+    Parameters<typeof listFineTuningCheckpointPermissions>[0] | undefined | null,
   params?: Parameters<typeof listFineTuningCheckpointPermissions>[1],
   options?: Omit<
     UseQueryOptions<Awaited<ReturnType<typeof listFineTuningCheckpointPermissions>>, ApiError>,

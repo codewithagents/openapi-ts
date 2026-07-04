@@ -21,7 +21,7 @@ catalog:
   fast-check: ^4.8.0
 
   # Formatter
-  prettier: ^3.8.4
+  prettier: ^3.9.4
 
   # Bundler (CLI packages)
   esbuild: ^0.28.1

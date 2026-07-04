@@ -663,11 +663,7 @@ export interface PaymentLinkResponseWritable {
   recurringProcessingModel?: 'CardOnFile' | 'Subscription' | 'UnscheduledCardOnFile'
   reference: string
   requiredShopperFields?:
-    | 'billingAddress'
-    | 'deliveryAddress'
-    | 'shopperEmail'
-    | 'shopperName'
-    | 'telephoneNumber'[]
+    'billingAddress' | 'deliveryAddress' | 'shopperEmail' | 'shopperName' | 'telephoneNumber'[]
   returnUrl?: string
   reusable?: boolean
   riskData?: RiskData

@@ -940,9 +940,7 @@ export function useGetEmailsByEmailIdAttachments(
 export function useGetEmailsByEmailIdAttachmentsByAttachmentId(
   emailId: Parameters<typeof getEmailsByEmailIdAttachmentsByAttachmentId>[0] | undefined | null,
   attachmentId:
-    | Parameters<typeof getEmailsByEmailIdAttachmentsByAttachmentId>[1]
-    | undefined
-    | null,
+    Parameters<typeof getEmailsByEmailIdAttachmentsByAttachmentId>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<
       Awaited<ReturnType<typeof getEmailsByEmailIdAttachmentsByAttachmentId>>,
@@ -1048,13 +1046,9 @@ export function useGetEmailsReceivingByEmailIdAttachments(
 
 export function useGetEmailsReceivingByEmailIdAttachmentsByAttachmentId(
   emailId:
-    | Parameters<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>[0]
-    | undefined
-    | null,
+    Parameters<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>[0] | undefined | null,
   attachmentId:
-    | Parameters<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>[1]
-    | undefined
-    | null,
+    Parameters<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>[1] | undefined | null,
   options?: Omit<
     UseQueryOptions<
       Awaited<ReturnType<typeof getEmailsReceivingByEmailIdAttachmentsByAttachmentId>>,
