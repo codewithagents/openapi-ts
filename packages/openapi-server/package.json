@@ -33,7 +33,7 @@
     "@fastify/formbody": "^8",
     "@fastify/multipart": "^10",
     "fastify": "^5",
-    "fastify-type-provider-zod": "^6"
+    "fastify-type-provider-zod": "^6 || ^7"
   },
   "peerDependenciesMeta": {
     "@fastify/formbody": {
