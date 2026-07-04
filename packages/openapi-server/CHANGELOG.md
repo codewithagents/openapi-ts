@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.1](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v2.2.0...openapi-server-v2.2.1) (2026-07-04)
+
+
+### Bug Fixes
+
+* **openapi-server:** handle explode:true array query params in hono/express routers ([#407](https://github.com/codewithagents/openapi-zod-ts/issues/407)) ([a4805b7](https://github.com/codewithagents/openapi-zod-ts/commit/a4805b70772ef3b8717ae292e177e9ed3ac68949))
+* **openapi-server:** widen fastify-type-provider-zod peer range to ^6 || ^7 ([#406](https://github.com/codewithagents/openapi-zod-ts/issues/406)) ([0476ac9](https://github.com/codewithagents/openapi-zod-ts/commit/0476ac983122bcac3177fbeac20ea2fe2eacbf7b))
+
 ## [2.2.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-server-v2.1.1...openapi-server-v2.2.0) (2026-06-23)
 
 
