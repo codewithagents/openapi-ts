@@ -2,6 +2,7 @@ import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { loadConfig, loadConfigs, type Config } from './config.js'
 import { runProjects } from './config-core.js'
+import { compareOutput, reportDrift } from './drift-check.js'
 import { parseSpec } from './parser.js'
 import { generateTypes } from './plugins/types.js'
 import { generateClientConfig } from './plugins/client-config.js'
@@ -31,6 +32,12 @@ export interface GenerateOptions {
    * is being regenerated. Destructive: customizations in the schema file are replaced.
    */
   resetSchema?: boolean
+  /**
+   * When true, regenerate all output files in memory, compare them against committed
+   * files on disk, and exit non-zero if any file is stale, missing, or extra. Nothing
+   * is written to disk. Incompatible with watch mode.
+   */
+  checkDrift?: boolean
 }
 
 async function formatTs(content: string, filePath: string): Promise<string> {
@@ -49,6 +56,103 @@ function applyOverrides(config: Config, opts: GenerateOptions): Config {
     result.output = opts.outputOverride
   }
   return result
+}
+
+/** Parameters for buildFinalOutputMap. */
+interface BuildFinalOutputMapParams {
+  generatedFiles: Array<{ filename: string; content: string }>
+  serverFile: { filename: string; content: string } | undefined
+  outputDir: string
+  config: Config
+  spec: Awaited<ReturnType<typeof parseSpec>>
+  writableVariantMap: ReturnType<typeof buildWritableVariantMap>
+  driftPlan: SchemaDriftPlan | undefined
+  resetSchema: boolean
+  cwd: string
+}
+
+/**
+ * Build a Map of filename -> formatted content representing everything that belongs in
+ * the output directory. This is the single authoritative source used by both the write
+ * path and the --check-drift path so the two can never diverge.
+ *
+ * Inclusion rules:
+ * - All base generated files (models.ts, client.ts, client-config.ts, index.ts).
+ * - The server file when config.server_client is true.
+ * - When input_schema is configured, the schema file already exists, and resetSchema is
+ *   false, models.ts and client.ts are replaced with their schema-enhanced versions.
+ *
+ * The user-owned schema file (zod.ts / input_schema) is intentionally excluded: it is
+ * bootstrapped once on first run and never overwritten by subsequent regenerations, so
+ * it must not appear in the expected output set.
+ */
+async function buildFinalOutputMap(
+  params: BuildFinalOutputMapParams
+): Promise<Map<string, string>> {
+  const {
+    generatedFiles,
+    serverFile,
+    outputDir,
+    config,
+    spec,
+    writableVariantMap,
+    driftPlan,
+    resetSchema,
+    cwd,
+  } = params
+  const map = new Map<string, string>()
+
+  for (const file of generatedFiles) {
+    const filePath = join(outputDir, file.filename)
+    map.set(file.filename, await formatTs(file.content, filePath))
+  }
+
+  if (serverFile !== undefined) {
+    const serverFilePath = join(outputDir, serverFile.filename)
+    map.set(serverFile.filename, await formatTs(serverFile.content, serverFilePath))
+  }
+
+  // When input_schema is configured, the schema file already exists, and we are not
+  // resetting: replace models.ts and client.ts with schema-enhanced versions. This is
+  // the exact condition that writeZodIntegration previously used to overwrite those
+  // files on the write path; encoding it here ensures the drift-check path uses the
+  // same enhanced content without any duplication.
+  if (
+    config.input_schema !== undefined &&
+    driftPlan !== undefined &&
+    driftPlan.schemaExists &&
+    !resetSchema
+  ) {
+    const schemaPath = resolve(cwd, config.input_schema)
+    const relPath = relative(outputDir, schemaPath)
+    const schemaImportPath = (relPath.startsWith('.') ? '' : './') + relPath.replace(/\.ts$/, '.js')
+
+    const enhancedTypes = generateTypes(
+      spec,
+      { schemaNames: driftPlan.exportedSchemas, schemaImportPath },
+      writableVariantMap
+    )
+    const enhancedClient = generateClient(
+      spec,
+      {
+        schemaNames: driftPlan.exportedSchemas,
+        schemaImportPath,
+        errorBodyType: config.error_body_type,
+        errorBodyTypeImport: config.error_body_type_import,
+      },
+      writableVariantMap
+    )
+    map.set(
+      enhancedTypes.filename,
+      await formatTs(enhancedTypes.content, join(outputDir, enhancedTypes.filename))
+    )
+    map.set(
+      enhancedClient.filename,
+      await formatTs(enhancedClient.content, join(outputDir, enhancedClient.filename))
+    )
+  }
+
+  return map
 }
 
 /**
@@ -106,6 +210,7 @@ async function generateOne(
 
   const check = opts.check === true
   const resetSchema = opts.resetSchema === true
+  const checkDrift = opts.checkDrift === true
 
   // Drift detection is a read-only pass that runs BEFORE any writes. This keeps
   // generation atomic: when a drift gate fails, the output directory is left
@@ -132,38 +237,67 @@ async function generateOne(
     return
   }
 
+  // Phase 3 (pre-write): build the optional server file so it can be included in the
+  // expected set for --check-drift. We generate it here (before any disk I/O) so that
+  // the drift check and the write path share exactly the same conditional logic.
+  const serverFile = config.server_client === true ? generateServer(spec) : undefined
+
+  // Build the canonical output map: filename -> formatted content. This is the single
+  // source of truth for what belongs in the output directory. Both the write path and
+  // the drift-check path consume this map, ensuring they can never diverge.
+  // zod.ts (the user-owned schema file) is intentionally excluded: the generator
+  // never overwrites it after the first bootstrap, so it must not be in the expected set.
+  const outputMap = await buildFinalOutputMap({
+    generatedFiles,
+    serverFile,
+    outputDir,
+    config,
+    spec,
+    writableVariantMap,
+    driftPlan,
+    resetSchema,
+    cwd,
+  })
+
+  // Output drift check: regenerate in memory, compare against committed files on disk.
+  // This runs BEFORE any mkdir/writeFile so the output directory is left untouched on
+  // failure.
+  if (checkDrift) {
+    const report = await compareOutput(outputMap, outputDir)
+    const isGithubActions = process.env['GITHUB_ACTIONS'] === 'true'
+    const configDesc = opts.configPath !== undefined ? `--config ${opts.configPath}` : ''
+    const fixCommand = ['openapi-zod-ts', configDesc].filter(Boolean).join(' ')
+    const relativeOutputDir = relative(process.cwd(), outputDir)
+    const { exitCode } = reportDrift(report, {
+      github: isGithubActions,
+      fixCommand,
+      outputDir: relativeOutputDir,
+    })
+    if (exitCode !== 0) {
+      throw new Error(
+        `${prefix}Output drift detected: generated files do not match what is committed. ` +
+          `Run '${fixCommand}' and commit the result.`
+      )
+    }
+    return
+  }
+
   console.log(`${prefix}Writing output to: ${outputDir}`)
   await mkdir(outputDir, { recursive: true })
 
-  for (const file of generatedFiles) {
-    const filePath = join(outputDir, file.filename)
-    await writeFile(filePath, await formatTs(file.content, filePath), 'utf-8')
-    console.log(`${prefix}  ✓ ${file.filename}`)
+  for (const [filename, content] of outputMap) {
+    const filePath = join(outputDir, filename)
+    await writeFile(filePath, content, 'utf-8')
+    console.log(`${prefix}  ✓ ${filename}`)
   }
 
-  // Phase 3: optional server client factory
-  if (config.server_client === true) {
-    const serverFile = generateServer(spec)
-    const serverFilePath = join(outputDir, serverFile.filename)
-    await writeFile(serverFilePath, await formatTs(serverFile.content, serverFilePath), 'utf-8')
-    console.log(`${prefix}  ✓ ${serverFile.filename}`)
-  }
-
-  // Phase 4: Zod integration (bootstrap on first run, schema-enhanced thereafter).
+  // Phase 4: Zod integration (bootstrap on first run; schema-enhanced files are
+  // already in outputMap and written above by the write loop).
   if (config.input_schema !== undefined && driftPlan !== undefined) {
-    await writeZodIntegration(
-      cwd,
-      config,
-      spec,
-      outputDir,
-      prefix,
-      writableVariantMap,
-      driftPlan,
-      resetSchema
-    )
+    await writeZodIntegration(cwd, config, spec, prefix, driftPlan, resetSchema)
   }
 
-  console.log(`${prefix}Done! Generated ${generatedFiles.length} file(s).`)
+  console.log(`${prefix}Done! Generated ${outputMap.size} file(s).`)
 }
 
 /** Result of the read-only drift detection pass. */
@@ -235,18 +369,16 @@ async function detectSchemaDrift(
 }
 
 /**
- * Write the Zod integration files. Only called in non-check mode after the drift
- * gate has passed. On first run it bootstraps the input_schema file (write once,
- * never overwritten). On subsequent runs it re-generates models.ts and client.ts
- * with Zod validation using the schema names discovered during drift detection.
+ * Write the Zod integration schema file. Only called in non-check, non-drift-check mode
+ * after the drift gate has passed. On first run it bootstraps the input_schema file
+ * (write once, never overwritten thereafter). The schema-enhanced models.ts and client.ts
+ * are handled by buildFinalOutputMap and written by the output map write loop above.
  */
 async function writeZodIntegration(
   cwd: string,
   config: Config,
   spec: Awaited<ReturnType<typeof parseSpec>>,
-  outputDir: string,
   prefix: string,
-  writableVariantMap: ReturnType<typeof buildWritableVariantMap>,
   plan: SchemaDriftPlan,
   resetSchema: boolean
 ): Promise<void> {
@@ -255,8 +387,8 @@ async function writeZodIntegration(
   if (!plan.schemaExists || resetSchema) {
     // First run bootstraps the schema file (write once). --reset-schema force-rewrites
     // an existing file from the spec, which is how a user clears reported drift. Either
-    // way the schema-enhanced regeneration of models/client/router happens on the next
-    // run, against the freshly written file.
+    // way the schema-enhanced regeneration of models/client happens on the next run,
+    // against the freshly written file.
     const zodFile = generateZodSchemas(spec)
     await writeFile(schemaPath, zodFile.content, 'utf-8')
     console.log(
@@ -267,41 +399,7 @@ async function writeZodIntegration(
     return
   }
 
-  console.log(
-    `${prefix}Skipping ${config.input_schema}: already exists (edit freely, it's yours).`
-  )
-
-  // Compute relative import path for use in generated imports.
-  // 'schemas.ts' -> './schemas.js', '../schemas.ts' -> '../schemas.js'
-  const relPath = relative(outputDir, schemaPath)
-  const schemaImportPath = (relPath.startsWith('.') ? '' : './') + relPath.replace(/\.ts$/, '.js')
-
-  // Re-generate (overwrite) models.ts and client.ts with schema-enhanced versions.
-  const enhancedTypes = generateTypes(
-    spec,
-    { schemaNames: plan.exportedSchemas, schemaImportPath },
-    writableVariantMap
-  )
-  const enhancedClient = generateClient(
-    spec,
-    {
-      schemaNames: plan.exportedSchemas,
-      schemaImportPath,
-      errorBodyType: config.error_body_type,
-      errorBodyTypeImport: config.error_body_type_import,
-    },
-    writableVariantMap
-  )
-  const enhancedTypesPath = join(outputDir, enhancedTypes.filename)
-  const enhancedClientPath = join(outputDir, enhancedClient.filename)
-  await writeFile(enhancedTypesPath, await formatTs(enhancedTypes.content, enhancedTypesPath), 'utf-8')
-  await writeFile(
-    enhancedClientPath,
-    await formatTs(enhancedClient.content, enhancedClientPath),
-    'utf-8'
-  )
-  console.log(`${prefix}  ✓ models.ts (schema-enhanced, types from z.infer)`)
-  console.log(`${prefix}  ✓ client.ts (schema-enhanced, Zod validation added)`)
+  console.log(`${prefix}Skipping ${config.input_schema}: already exists (edit freely, it's yours).`)
 }
 
 // fallow-ignore-next-line complexity
@@ -328,8 +426,7 @@ export async function generate(cwd: string, opts?: GenerateOptions | string): Pr
 
   // Overrides are incompatible with multi-spec "projects" array configs. When overrides
   // are present we fall back to single-spec loading so overrides apply to a single config.
-  const hasOverrides =
-    options.inputOverride !== undefined || options.outputOverride !== undefined
+  const hasOverrides = options.inputOverride !== undefined || options.outputOverride !== undefined
 
   if (hasOverrides) {
     const config = applyOverrides(await loadConfig(cwd, options.configPath), options)

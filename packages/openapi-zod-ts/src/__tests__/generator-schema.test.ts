@@ -275,3 +275,53 @@ describe('schema-enhanced mode — cyclic schemas resolve to concrete types (#38
     expect(schemas).not.toContain('RegionSchema as z.ZodType')
   })
 })
+
+// ── --check-drift with input_schema ───────────────────────────────────────────
+
+describe('--check-drift with input_schema configured', () => {
+  it('passes (exits cleanly) when generated output matches disk after schema-enhanced run', async () => {
+    const { configPath, tmpDir: dir } = await makeConfig(taskApiFixture)
+
+    // Run 1: bootstraps the schema file, writes PLAIN models/client (enhancement is next-run).
+    await generate(dir, configPath)
+    // Run 2: schema file exists, so writes schema-ENHANCED models.ts and client.ts.
+    await generate(dir, configPath)
+
+    // Drift check: expectedMap uses enhanced versions (schema exists), disk has enhanced versions.
+    // This must NOT throw.
+    await expect(generate(dir, { configPath, checkDrift: true })).resolves.toBeUndefined()
+  })
+
+  it('fails (throws) when schema-enhanced models.ts is stale on disk', async () => {
+    const { configPath, tmpDir: dir, outDir } = await makeConfig(taskApiFixture)
+
+    // Run 1 + 2 to get enhanced files on disk.
+    await generate(dir, configPath)
+    await generate(dir, configPath)
+
+    // Corrupt models.ts on disk so it is stale relative to the schema-enhanced expected.
+    await writeFile(join(outDir, 'models.ts'), '// stale content\n', 'utf-8')
+
+    // Drift check must detect the stale file.
+    await expect(generate(dir, { configPath, checkDrift: true })).rejects.toThrow(
+      'Output drift detected'
+    )
+  })
+
+  it('passes when checkDrift is used without input_schema (plain generation mode)', async () => {
+    // Create a config WITHOUT input_schema to confirm the base generatedFiles path works.
+    const dir = await mkdtemp(join(tmpdir(), 'openapi-zod-ts-drift-plain-'))
+    tmpDir = dir
+    const outDir = join(dir, 'generated')
+    const configPath = join(dir, 'openapi-zod-ts.config.json')
+    await writeFile(
+      configPath,
+      JSON.stringify({ input_openapi: taskApiFixture, output: outDir }),
+      'utf-8'
+    )
+
+    // Generate first, then drift-check.
+    await generate(dir, configPath)
+    await expect(generate(dir, { configPath, checkDrift: true })).resolves.toBeUndefined()
+  })
+})

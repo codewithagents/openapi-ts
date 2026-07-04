@@ -114,6 +114,7 @@ export default defineConfig({
             { label: 'React Query hooks', slug: 'openapi-react-query' },
             { label: 'MSW mock handlers', slug: 'openapi-msw' },
             { label: 'Form error mapping', slug: 'api-errors' },
+            { label: 'Drift detection in CI', slug: 'guides/drift-detection' },
           ],
         },
         {

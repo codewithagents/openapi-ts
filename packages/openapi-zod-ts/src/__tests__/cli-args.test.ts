@@ -36,6 +36,7 @@ describe('parseCliArgs', () => {
         cwd: dirname(resolve(fakeCwd, 'config.json')),
         watch: false,
         check: false,
+        checkDrift: false,
         resetSchema: false,
       })
     })
@@ -48,6 +49,7 @@ describe('parseCliArgs', () => {
         cwd: '/abs/path',
         watch: false,
         check: false,
+        checkDrift: false,
         resetSchema: false,
       })
     })
@@ -79,6 +81,7 @@ describe('parseCliArgs', () => {
         cwd: fakeCwd,
         watch: false,
         check: false,
+        checkDrift: false,
         resetSchema: false,
       })
     })
@@ -281,6 +284,59 @@ describe('parseCliArgs', () => {
         expect(result.check).toBe(true)
         expect(result.inputOverride).toBe(resolve(fakeCwd, 'spec.json'))
         expect(result.outputOverride).toBe(resolve(fakeCwd, 'out/'))
+      }
+    })
+  })
+
+  describe('--check-drift', () => {
+    it('sets checkDrift to true when --check-drift is given', () => {
+      const result = parseCliArgs([...baseArgv, '--check-drift'], fakeCwd)
+      expect(result.action).toBe('run')
+      if (result.action === 'run') {
+        expect(result.checkDrift).toBe(true)
+      }
+    })
+
+    it('sets checkDrift to false when --check-drift is not given', () => {
+      const result = parseCliArgs([...baseArgv], fakeCwd)
+      expect(result.action).toBe('run')
+      if (result.action === 'run') {
+        expect(result.checkDrift).toBe(false)
+      }
+    })
+
+    it('returns error action when --check-drift and --watch are combined', () => {
+      const result = parseCliArgs([...baseArgv, '--check-drift', '--watch'], fakeCwd)
+      expect(result.action).toBe('error')
+    })
+
+    it('error message for --check-drift --watch mentions both flags', () => {
+      const result = parseCliArgs([...baseArgv, '--check-drift', '--watch'], fakeCwd)
+      if (result.action === 'error') {
+        expect(result.message).toContain('--check-drift')
+        expect(result.message).toContain('--watch')
+      }
+    })
+
+    it('combines --check-drift with --input and --output', () => {
+      const result = parseCliArgs(
+        [...baseArgv, '--check-drift', '--input', 'spec.json', '--output', 'out/'],
+        fakeCwd
+      )
+      expect(result.action).toBe('run')
+      if (result.action === 'run') {
+        expect(result.checkDrift).toBe(true)
+        expect(result.inputOverride).toBe(resolve(fakeCwd, 'spec.json'))
+        expect(result.outputOverride).toBe(resolve(fakeCwd, 'out/'))
+      }
+    })
+
+    it('combines --check-drift with --check (both are allowed independently)', () => {
+      const result = parseCliArgs([...baseArgv, '--check-drift', '--check'], fakeCwd)
+      expect(result.action).toBe('run')
+      if (result.action === 'run') {
+        expect(result.checkDrift).toBe(true)
+        expect(result.check).toBe(true)
       }
     })
   })

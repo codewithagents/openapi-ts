@@ -29,6 +29,11 @@ if (parsed.action === 'help') {
       '                    any schema drift. Use as a CI gate alongside fallow:audit.',
       '                    Drift detection applies only when input_schema is configured.',
       '                    Cannot be combined with --watch.',
+      '  --check-drift     Regenerate all output files in memory and compare them against',
+      '                    committed files on disk. Exits non-zero when any file is stale,',
+      '                    missing, or extra. Writes nothing. Emits GitHub Actions inline',
+      '                    annotations when GITHUB_ACTIONS=true. Cannot be combined with',
+      '                    --watch. Can be combined with --check (runs both checks).',
       '  --reset-schema    Re-bootstrap the input_schema file from the spec, overwriting it.',
       '                    The remedy for drift reported by --check. Destructive: schema',
       '                    customizations are replaced. Cannot be combined with --check or',
@@ -53,10 +58,26 @@ if (parsed.action === 'error') {
   process.exit(1)
 }
 
-const { cwd, configFile, inputOverride, outputOverride, watch: watchMode, check, resetSchema } = parsed
+const {
+  cwd,
+  configFile,
+  inputOverride,
+  outputOverride,
+  watch: watchMode,
+  check,
+  resetSchema,
+  checkDrift,
+} = parsed
 
 async function runGenerate(): Promise<void> {
-  await generate(cwd, { configPath: configFile, inputOverride, outputOverride, check, resetSchema })
+  await generate(cwd, {
+    configPath: configFile,
+    inputOverride,
+    outputOverride,
+    check,
+    resetSchema,
+    checkDrift,
+  })
 }
 
 if (!watchMode) {
