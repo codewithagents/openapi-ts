@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.2.3...openapi-zod-ts-v2.3.0) (2026-07-04)
+
+
+### Features
+
+* **openapi-zod-ts:** add --check-drift CI gate for generated output ([#400](https://github.com/codewithagents/openapi-zod-ts/issues/400)) ([bb9f257](https://github.com/codewithagents/openapi-zod-ts/commit/bb9f25732c03e397cd549aed6cd33442ec7379e4))
+
 ## [2.2.3](https://github.com/codewithagents/openapi-zod-ts/compare/openapi-zod-ts-v2.2.2...openapi-zod-ts-v2.2.3) (2026-06-24)
 
 
