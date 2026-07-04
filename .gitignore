@@ -11,3 +11,4 @@ reports/
 *.tgz
 examples/generated-server/
 .astro/
+.typecheck-scratch/

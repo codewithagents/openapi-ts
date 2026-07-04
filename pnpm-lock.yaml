@@ -322,6 +322,9 @@ importers:
       '@stryker-mutator/vitest-runner':
         specifier: 'catalog:'
         version: 9.6.1(@stryker-mutator/core@9.6.1(@types/node@26.0.0))(vitest@4.1.9)
+      '@types/express':
+        specifier: ^5.0.6
+        version: 5.0.6
       '@types/node':
         specifier: 'catalog:'
         version: 26.0.0
@@ -331,15 +334,24 @@ importers:
       esbuild:
         specifier: 'catalog:'
         version: 0.28.1
+      express:
+        specifier: ^5.2.1
+        version: 5.2.1
       fast-check:
         specifier: 'catalog:'
         version: 4.8.0
+      hono:
+        specifier: ^4.12.26
+        version: 4.12.26
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
       vitest:
         specifier: 'catalog:'
         version: 4.1.9(@types/node@26.0.0)(@vitest/coverage-v8@4.1.9)(jsdom@29.1.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@26.0.0)(typescript@6.0.3))(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0))
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
 
   packages/openapi-zod-ts:
     dependencies:

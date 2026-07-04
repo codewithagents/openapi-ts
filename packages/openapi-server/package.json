@@ -52,12 +52,16 @@
   "devDependencies": {
     "@stryker-mutator/core": "catalog:",
     "@stryker-mutator/vitest-runner": "catalog:",
+    "@types/express": "^5.0.6",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "esbuild": "catalog:",
+    "express": "^5.2.1",
     "fast-check": "catalog:",
+    "hono": "^4.12.26",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   },
   "keywords": [
     "openapi",

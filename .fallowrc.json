@@ -21,7 +21,10 @@
     "fastify-type-provider-zod",
     "@fastify/formbody",
     "@fastify/multipart",
-    "@codewithagents/petstore-hono"
+    "@codewithagents/petstore-hono",
+    "hono",
+    "express",
+    "@types/express"
   ],
   "rules": {
     "unused-files": "warn",
