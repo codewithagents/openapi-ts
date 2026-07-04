@@ -22,7 +22,7 @@
     "@codewithagents/openapi-server": "workspace:*",
     "@faker-js/faker": "^10.5.0",
     "fastify": "^5.8.5",
-    "fastify-type-provider-zod": "^6.1.0",
+    "fastify-type-provider-zod": "^7.0.0",
     "zod": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@testing-library/react": "^16.3.2",
