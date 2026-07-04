@@ -292,11 +292,9 @@ function applyArrayStyle(
   const arraySchema = schema as OpenAPIV3_1.ArraySchemaObject
   const items = arraySchema.items
   param.itemsTsType = !isRef(items) ? schemaToTsType(items as OpenAPIV3_1.SchemaObject) : 'string'
-  // Align the service query type with the Fastify router's z.array(<itemExpr>) inference (#375, #378):
-  // number/integer items -> number[], boolean -> boolean[], everything else -> string[]. NOTE:
-  // the hono/express routers do not yet emit array querystring handling for explode:true params
-  // (they extract a single string), a pre-existing gap tracked in #377, so this element type
-  // only round-trips cleanly on the Fastify target.
+  // Align the service query type with the router's z.array(<itemExpr>) inference (#375, #377, #378):
+  // number/integer items -> number[], boolean -> boolean[], everything else -> string[]. This
+  // element type round-trips cleanly on all three router targets (Fastify, Hono, Express).
   param.tsType = `${queryArrayItemTsType(param.itemsTsType)}[]`
 }
 
@@ -309,7 +307,10 @@ function applyArrayStyle(
  * artefact because CI runs fallow audit without coverage data.
  */
 // fallow-ignore-next-line complexity
-function applyScalarConstraints(param: QueryParam, schema: OpenAPIV3_1.SchemaObject | undefined): void {
+function applyScalarConstraints(
+  param: QueryParam,
+  schema: OpenAPIV3_1.SchemaObject | undefined
+): void {
   if (schema === undefined || isRef(schema)) return
   const s = schema as OpenAPIV3_1.SchemaObject & {
     exclusiveMinimum?: number | boolean
@@ -442,7 +443,12 @@ export function getBodyInfo(
   const requestBody = operation.requestBody as RequestBodyObject | ReferenceObject | undefined
   if (requestBody === undefined) return undefined
   if (isRef(requestBody)) {
-    return { typeName: undefined, writableTypeName: undefined, contentType: 'application/json', isSynthesized: false }
+    return {
+      typeName: undefined,
+      writableTypeName: undefined,
+      contentType: 'application/json',
+      isSynthesized: false,
+    }
   }
 
   const rb = requestBody as RequestBodyObject
@@ -450,7 +456,12 @@ export function getBodyInfo(
     | Record<string, { schema?: OpenAPIV3_1.SchemaObject | ReferenceObject }>
     | undefined
   if (content === undefined) {
-    return { typeName: undefined, writableTypeName: undefined, contentType: 'application/json', isSynthesized: false }
+    return {
+      typeName: undefined,
+      writableTypeName: undefined,
+      contentType: 'application/json',
+      isSynthesized: false,
+    }
   }
 
   // Check application/json first.
@@ -475,9 +486,19 @@ export function getBodyInfo(
     // can wire safeParse against a user-defined schema in schemas.ts.
     const operationId = operation.operationId
     if (operationId !== undefined && operationId.length > 0) {
-      return { typeName: toTypeName(operationId), writableTypeName: undefined, contentType: 'application/json', isSynthesized: true }
+      return {
+        typeName: toTypeName(operationId),
+        writableTypeName: undefined,
+        contentType: 'application/json',
+        isSynthesized: true,
+      }
     }
-    return { typeName: undefined, writableTypeName: undefined, contentType: 'application/json', isSynthesized: false }
+    return {
+      typeName: undefined,
+      writableTypeName: undefined,
+      contentType: 'application/json',
+      isSynthesized: false,
+    }
   }
 
   // Check application/x-www-form-urlencoded.
@@ -508,7 +529,12 @@ export function getBodyInfo(
         isSynthesized: true,
       }
     }
-    return { typeName: undefined, writableTypeName: undefined, contentType: 'application/x-www-form-urlencoded', isSynthesized: false }
+    return {
+      typeName: undefined,
+      writableTypeName: undefined,
+      contentType: 'application/x-www-form-urlencoded',
+      isSynthesized: false,
+    }
   }
 
   // Check multipart/form-data.
@@ -533,14 +559,29 @@ export function getBodyInfo(
         isSynthesized: true,
       }
     }
-    return { typeName: undefined, writableTypeName: undefined, contentType: 'multipart/form-data', isSynthesized: false }
+    return {
+      typeName: undefined,
+      writableTypeName: undefined,
+      contentType: 'multipart/form-data',
+      isSynthesized: false,
+    }
   }
 
   // Check application/octet-stream request body.
   const octetContent = content['application/octet-stream']
   if (octetContent !== undefined) {
-    return { typeName: undefined, writableTypeName: undefined, contentType: 'application/octet-stream', isSynthesized: false }
+    return {
+      typeName: undefined,
+      writableTypeName: undefined,
+      contentType: 'application/octet-stream',
+      isSynthesized: false,
+    }
   }
 
-  return { typeName: undefined, writableTypeName: undefined, contentType: 'application/json', isSynthesized: false }
+  return {
+    typeName: undefined,
+    writableTypeName: undefined,
+    contentType: 'application/json',
+    isSynthesized: false,
+  }
 }

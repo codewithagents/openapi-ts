@@ -133,6 +133,21 @@ function queryParamDeepObjectZodBase(param: QueryParam): string {
   return `z.object({ ${propFields.join(', ')} })`
 }
 
+/** Coerce a single array item's Zod expression based on its item type. Mirrors the
+ * Fastify emitter's queryParamItemExpr so hono/express validate the same shape. */
+function queryParamItemZodExpr(itemsTsType: string | undefined): string {
+  if (itemsTsType === 'number') return 'z.coerce.number()'
+  if (itemsTsType === 'boolean') return 'z.boolean()'
+  return 'z.string()'
+}
+
+/** Plain repeated-key array param (type:array, explode:true): value has been collected
+ * into an array by the extraction layer; emits z.array(<itemExpr>) so the querystring
+ * schema matches the service T[] signature instead of falling through to z.string(). */
+function queryParamArrayZodBase(param: QueryParam): string {
+  return `z.array(${queryParamItemZodExpr(param.itemsTsType)})`
+}
+
 /** Number/integer param: z.coerce.number() with optional range modifiers.
  * Uses coerce so that Fastify's raw string values (fast-querystring never converts types)
  * are accepted alongside the already-coerced numbers from Express/Hono extraction. */
@@ -166,6 +181,7 @@ function queryParamStringZodBase(param: QueryParam): string {
  * String types use z.string() with optional format/enum/pattern/length modifiers.
  * Delimited array params use z.array(z.string()).
  * DeepObject params use z.object({...}) with per-property coercion.
+ * Plain repeated-key array params (explode:true) use z.array(<itemExpr>).
  * Appends .optional() for non-required params.
  */
 function queryParamZodExpr(param: QueryParam): string {
@@ -174,6 +190,8 @@ function queryParamZodExpr(param: QueryParam): string {
     base = queryParamDelimitedZodBase(param)
   } else if (param.isDeepObject === true && param.deepObjectProperties !== undefined) {
     base = queryParamDeepObjectZodBase(param)
+  } else if (param.isArray === true) {
+    base = queryParamArrayZodBase(param)
   } else if (param.tsType === 'number') {
     base = queryParamNumberZodBase(param)
   } else if (param.tsType === 'boolean') {
@@ -287,6 +305,33 @@ function delimiterChar(style: 'csv' | 'ssv' | 'psv'): string {
   if (style === 'ssv') return ' '
   if (style === 'psv') return '|'
   return ','
+}
+
+/**
+ * Build the Hono extraction expression for a plain repeated-key array query param
+ * (explode:true). c.req.queries(name) collects every occurrence of the key into
+ * string[] | undefined; items are coerced to match queryParamArrayZodBase's item
+ * expression so the extracted value and the Zod validation agree on the runtime type.
+ */
+function honoArrayQueryExpr(q: QueryParam): string {
+  const base = `c.req.queries('${q.rawName}')`
+  if (q.itemsTsType === 'number') return `${base}?.map(Number)`
+  if (q.itemsTsType === 'boolean') return `${base}?.map((v) => v === 'true')`
+  return base
+}
+
+/**
+ * Build the Express extraction expression for a plain repeated-key array query param
+ * (explode:true). Express (via qs) gives a REPEATED key (?ids=1&ids=2) as string[], but a
+ * SINGLE occurrence (?ids=1) as a bare string and an absent key as undefined; _toQueryArray
+ * (emitted once per file, see generateExpressRouter) normalizes all three cases to
+ * string[] | undefined before item coercion, mirroring queryParamArrayZodBase's item expression.
+ */
+function expressArrayQueryExpr(q: QueryParam): string {
+  const base = `_toQueryArray(req.query['${q.rawName}'] as string | string[] | undefined)`
+  if (q.itemsTsType === 'number') return `${base}?.map(Number)`
+  if (q.itemsTsType === 'boolean') return `${base}?.map((v) => v === 'true')`
+  return base
 }
 
 /**
@@ -715,6 +760,9 @@ function buildRouteHandler(
           const delim = JSON.stringify(delimiterChar(q.delimiterStyle))
           return `    ${q.name}: c.req.query('${q.rawName}') !== undefined ? c.req.query('${q.rawName}')!.split(${delim}) : undefined`
         }
+        if (q.isArray === true) {
+          return `    ${q.name}: ${honoArrayQueryExpr(q)}`
+        }
         if (q.tsType === 'number') {
           return `    ${q.name}: c.req.query('${q.name}') !== undefined ? Number(c.req.query('${q.name}')) : undefined`
         }
@@ -938,6 +986,9 @@ function buildExpressRouteHandler(
           const delim = JSON.stringify(delimiterChar(q.delimiterStyle))
           return `    ${q.name}: typeof req.query['${q.rawName}'] === 'string' ? (req.query['${q.rawName}'] as string).split(${delim}) : undefined`
         }
+        if (q.isArray === true) {
+          return `    ${q.name}: ${expressArrayQueryExpr(q)}`
+        }
         if (q.tsType === 'number') {
           return `    ${q.name}: Number(req.query['${q.name}'] as string)`
         }
@@ -1154,6 +1205,20 @@ export function generateExpressRouter(
   lines.push(`import { HttpError } from '${expressErrorsPath}'`)
   lines.push(`export { HttpError } from '${expressErrorsPath}'`)
   lines.push('')
+
+  // Plain repeated-key array query params (explode:true) need this normalizer: qs gives a
+  // repeated key (?ids=1&ids=2) as string[], but a single occurrence (?ids=1) as a bare
+  // string and an absent key as undefined. Emitted once per file, only when needed.
+  const needsArrayQueryHelper = operations.some((op) =>
+    op.queryParams.some((q) => q.isArray === true)
+  )
+  if (needsArrayQueryHelper) {
+    lines.push('function _toQueryArray(v: string | string[] | undefined): string[] | undefined {')
+    lines.push('  return v === undefined ? undefined : Array.isArray(v) ? v : [v]')
+    lines.push('}')
+    lines.push('')
+  }
+
   lines.push(`export function createRouter(service: ${serviceRef}): Router {`)
   lines.push('  const router = Router()')
   lines.push('')
