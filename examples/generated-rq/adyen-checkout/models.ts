@@ -2,44 +2,26 @@
 
 export interface AccountInfo {
   accountAgeIndicator?:
-    | 'notApplicable'
-    | 'thisTransaction'
-    | 'lessThan30Days'
-    | 'from30To60Days'
-    | 'moreThan60Days'
+    'notApplicable' | 'thisTransaction' | 'lessThan30Days' | 'from30To60Days' | 'moreThan60Days'
   accountChangeDate?: string /* date-time */
   accountChangeIndicator?:
-    | 'thisTransaction'
-    | 'lessThan30Days'
-    | 'from30To60Days'
-    | 'moreThan60Days'
+    'thisTransaction' | 'lessThan30Days' | 'from30To60Days' | 'moreThan60Days'
   accountCreationDate?: string /* date-time */
   accountType?: 'notApplicable' | 'credit' | 'debit'
   addCardAttemptsDay?: number
   deliveryAddressUsageDate?: string /* date-time */
   deliveryAddressUsageIndicator?:
-    | 'thisTransaction'
-    | 'lessThan30Days'
-    | 'from30To60Days'
-    | 'moreThan60Days'
+    'thisTransaction' | 'lessThan30Days' | 'from30To60Days' | 'moreThan60Days'
   homePhone?: string
   mobilePhone?: string
   passwordChangeDate?: string /* date-time */
   passwordChangeIndicator?:
-    | 'notApplicable'
-    | 'thisTransaction'
-    | 'lessThan30Days'
-    | 'from30To60Days'
-    | 'moreThan60Days'
+    'notApplicable' | 'thisTransaction' | 'lessThan30Days' | 'from30To60Days' | 'moreThan60Days'
   pastTransactionsDay?: number
   pastTransactionsYear?: number
   paymentAccountAge?: string /* date-time */
   paymentAccountIndicator?:
-    | 'notApplicable'
-    | 'thisTransaction'
-    | 'lessThan30Days'
-    | 'from30To60Days'
-    | 'moreThan60Days'
+    'notApplicable' | 'thisTransaction' | 'lessThan30Days' | 'from30To60Days' | 'moreThan60Days'
   purchasesLast6Months?: number
   suspiciousActivity?: boolean
   workPhone?: string
@@ -1256,11 +1238,7 @@ export interface DonationPaymentRequest {
   mpiData?: ThreeDSecureData
   origin?: string
   paymentMethod?:
-    | ApplePayDonations
-    | CardDonations
-    | GooglePayDonations
-    | IdealDonations
-    | PayWithGoogleDonations
+    ApplePayDonations | CardDonations | GooglePayDonations | IdealDonations | PayWithGoogleDonations
   recurringProcessingModel?: 'CardOnFile' | 'Subscription' | 'UnscheduledCardOnFile'
   redirectFromIssuerMethod?: string
   redirectToIssuerMethod?: string
@@ -1317,11 +1295,7 @@ export interface EcontextVoucherDetails {
   shopperEmail: string
   telephoneNumber: string
   type:
-    | 'econtext_seven_eleven'
-    | 'econtext_online'
-    | 'econtext'
-    | 'econtext_stores'
-    | 'econtext_atm'
+    'econtext_seven_eleven' | 'econtext_online' | 'econtext' | 'econtext_stores' | 'econtext_atm'
 }
 
 export interface EftDetails {
@@ -1625,14 +1599,7 @@ export interface Mandate {
   count?: string
   endsAt: string
   frequency:
-    | 'adhoc'
-    | 'daily'
-    | 'weekly'
-    | 'biWeekly'
-    | 'monthly'
-    | 'quarterly'
-    | 'halfYearly'
-    | 'yearly'
+    'adhoc' | 'daily' | 'weekly' | 'biWeekly' | 'monthly' | 'quarterly' | 'halfYearly' | 'yearly'
   remarks?: string
   startsAt?: string
 }
@@ -1672,10 +1639,7 @@ export interface MerchantRiskIndicator {
   deliveryEmail?: string
   deliveryEmailAddress?: string
   deliveryTimeframe?:
-    | 'electronicDelivery'
-    | 'sameDayShipping'
-    | 'overnightShipping'
-    | 'twoOrMoreDaysShipping'
+    'electronicDelivery' | 'sameDayShipping' | 'overnightShipping' | 'twoOrMoreDaysShipping'
   giftCardAmount?: Amount
   giftCardCount?: number
   giftCardCurr?: string
@@ -2054,11 +2018,7 @@ export interface PaymentLinkRequest {
   recurringProcessingModel?: 'CardOnFile' | 'Subscription' | 'UnscheduledCardOnFile'
   reference: string
   requiredShopperFields?:
-    | 'billingAddress'
-    | 'deliveryAddress'
-    | 'shopperEmail'
-    | 'shopperName'
-    | 'telephoneNumber'[]
+    'billingAddress' | 'deliveryAddress' | 'shopperEmail' | 'shopperName' | 'telephoneNumber'[]
   returnUrl?: string
   reusable?: boolean
   riskData?: RiskData
@@ -2105,11 +2065,7 @@ export interface PaymentLinkResponse {
   recurringProcessingModel?: 'CardOnFile' | 'Subscription' | 'UnscheduledCardOnFile'
   reference: string
   requiredShopperFields?:
-    | 'billingAddress'
-    | 'deliveryAddress'
-    | 'shopperEmail'
-    | 'shopperName'
-    | 'telephoneNumber'[]
+    'billingAddress' | 'deliveryAddress' | 'shopperEmail' | 'shopperName' | 'telephoneNumber'[]
   returnUrl?: string
   reusable?: boolean
   riskData?: RiskData
@@ -2158,11 +2114,7 @@ export interface PaymentLinkResponseWritable {
   recurringProcessingModel?: 'CardOnFile' | 'Subscription' | 'UnscheduledCardOnFile'
   reference: string
   requiredShopperFields?:
-    | 'billingAddress'
-    | 'deliveryAddress'
-    | 'shopperEmail'
-    | 'shopperName'
-    | 'telephoneNumber'[]
+    'billingAddress' | 'deliveryAddress' | 'shopperEmail' | 'shopperName' | 'telephoneNumber'[]
   returnUrl?: string
   reusable?: boolean
   riskData?: RiskData
@@ -2574,9 +2526,7 @@ export interface PixRecurring {
 
 export interface PlatformChargebackLogic {
   behavior?:
-    | 'deductFromOneBalanceAccount'
-    | 'deductAccordingToSplitRatio'
-    | 'deductFromLiableAccount'
+    'deductFromOneBalanceAccount' | 'deductAccordingToSplitRatio' | 'deductFromLiableAccount'
   costAllocationAccount?: string
   targetAccount?: string
 }
@@ -3033,10 +2983,7 @@ export interface ThreeDS2RequestData {
   addrMatch?: 'Y' | 'N'
   authenticationOnly?: boolean
   challengeIndicator?:
-    | 'noPreference'
-    | 'requestNoChallenge'
-    | 'requestChallenge'
-    | 'requestChallengeAsMandate'
+    'noPreference' | 'requestNoChallenge' | 'requestChallenge' | 'requestChallengeAsMandate'
   deviceChannel: string
   deviceRenderOptions?: DeviceRenderOptions
   homePhone?: Phone
@@ -3084,10 +3031,7 @@ export interface ThreeDS2RequestFields {
   addrMatch?: 'Y' | 'N'
   authenticationOnly?: boolean
   challengeIndicator?:
-    | 'noPreference'
-    | 'requestNoChallenge'
-    | 'requestChallenge'
-    | 'requestChallengeAsMandate'
+    'noPreference' | 'requestNoChallenge' | 'requestChallenge' | 'requestChallengeAsMandate'
   deviceRenderOptions?: DeviceRenderOptions
   homePhone?: Phone
   mcc?: string
@@ -3153,10 +3097,7 @@ export interface ThreeDS2Result {
   dsTransID?: string
   eci?: string
   exemptionIndicator?:
-    | 'lowValue'
-    | 'secureCorporate'
-    | 'trustedBeneficiary'
-    | 'transactionRiskAnalysis'
+    'lowValue' | 'secureCorporate' | 'trustedBeneficiary' | 'transactionRiskAnalysis'
   messageVersion?: string
   riskScore?: string
   threeDSRequestorChallengeInd?: '01' | '02' | '03' | '04' | '05' | '06'
@@ -3218,14 +3159,7 @@ export interface TokenMandate {
   currency: string
   endsAt: string
   frequency:
-    | 'adhoc'
-    | 'daily'
-    | 'weekly'
-    | 'biWeekly'
-    | 'monthly'
-    | 'quarterly'
-    | 'halfYearly'
-    | 'yearly'
+    'adhoc' | 'daily' | 'weekly' | 'biWeekly' | 'monthly' | 'quarterly' | 'halfYearly' | 'yearly'
   mandateId: string
   maskedAccountId?: string
   minAmount?: string

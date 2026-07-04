@@ -1142,9 +1142,7 @@ export function useGetBatchComplianceJob(
 
 export function useGetDmConversationsWithParticipantIdDmEvents(
   participantId:
-    | Parameters<typeof getDmConversationsWithParticipantIdDmEvents>[0]
-    | undefined
-    | null,
+    Parameters<typeof getDmConversationsWithParticipantIdDmEvents>[0] | undefined | null,
   params?: Parameters<typeof getDmConversationsWithParticipantIdDmEvents>[1],
   options?: Omit<
     UseQueryOptions<

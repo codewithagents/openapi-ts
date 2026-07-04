@@ -188,10 +188,7 @@ export interface AssistantToolsFunction {
 }
 
 export type AssistantsApiResponseFormatOption =
-  | 'auto'
-  | ResponseFormatText
-  | ResponseFormatJsonObject
-  | ResponseFormatJsonSchema
+  'auto' | ResponseFormatText | ResponseFormatJsonObject | ResponseFormatJsonSchema
 
 export type AssistantsApiToolChoiceOption = 'none' | 'auto' | 'required' | AssistantsNamedToolChoice
 
@@ -776,8 +773,7 @@ export interface ChatCompletionMessageToolCallChunk {
 }
 
 export type ChatCompletionMessageToolCalls =
-  | ChatCompletionMessageToolCall
-  | ChatCompletionMessageCustomToolCall[]
+  ChatCompletionMessageToolCall | ChatCompletionMessageCustomToolCall[]
 
 export type ChatCompletionModalities = 'text' | 'audio'[] | null
 
@@ -1541,13 +1537,7 @@ export interface CreateImageEditRequest {
 export interface CreateImageRequest {
   prompt: string
   model?:
-    | string
-    | 'gpt-image-1.5'
-    | 'dall-e-2'
-    | 'dall-e-3'
-    | 'gpt-image-1'
-    | 'gpt-image-1-mini'
-    | null
+    string | 'gpt-image-1.5' | 'dall-e-2' | 'dall-e-3' | 'gpt-image-1' | 'gpt-image-1-mini' | null
   n?: number | null
   quality?: 'standard' | 'hd' | 'low' | 'medium' | 'high' | 'auto' | null
   response_format?: 'url' | 'b64_json' | null
@@ -2031,12 +2021,7 @@ export interface EasyInputMessage {
 
 export interface EditImageBodyJsonParam {
   model?:
-    | string
-    | 'gpt-image-1.5'
-    | 'gpt-image-1'
-    | 'gpt-image-1-mini'
-    | 'chatgpt-image-latest'
-    | null
+    string | 'gpt-image-1.5' | 'gpt-image-1' | 'gpt-image-1-mini' | 'chatgpt-image-latest' | null
   images: ImageRefParam[]
   mask?: ImageRefParam
   prompt: string
@@ -2080,9 +2065,7 @@ export interface Eval {
   id: string
   name: string
   data_source_config:
-    | EvalCustomDataSourceConfig
-    | EvalLogsDataSourceConfig
-    | EvalStoredCompletionsDataSourceConfig
+    EvalCustomDataSourceConfig | EvalLogsDataSourceConfig | EvalStoredCompletionsDataSourceConfig
   testing_criteria:
     | EvalGraderLabelModel
     | EvalGraderStringCheck
@@ -2514,11 +2497,7 @@ export interface GraderMulti {
   type: 'multi'
   name: string
   graders:
-    | GraderStringCheck
-    | GraderTextSimilarity
-    | GraderPython
-    | GraderScoreModel
-    | GraderLabelModel
+    GraderStringCheck | GraderTextSimilarity | GraderPython | GraderScoreModel | GraderLabelModel
   calculate_output: string
 }
 
@@ -6421,8 +6400,7 @@ export interface RunStepDeltaObject {
   object: 'thread.run.step.delta'
   delta: {
     step_details?:
-      | RunStepDeltaStepDetailsMessageCreationObject
-      | RunStepDeltaStepDetailsToolCallsObject
+      RunStepDeltaStepDetailsMessageCreationObject | RunStepDeltaStepDetailsToolCallsObject
   }
 }
 
@@ -6498,8 +6476,7 @@ export interface RunStepDetailsToolCallsCodeObject {
   code_interpreter: {
     input: string
     outputs:
-      | RunStepDetailsToolCallsCodeOutputLogsObject
-      | RunStepDetailsToolCallsCodeOutputImageObject[]
+      RunStepDetailsToolCallsCodeOutputLogsObject | RunStepDetailsToolCallsCodeOutputImageObject[]
   }
 }
 
@@ -6702,9 +6679,7 @@ export interface SubmitToolOutputsRunRequest {
 }
 
 export type TextResponseFormatConfiguration =
-  | ResponseFormatText
-  | TextResponseFormatJsonSchema
-  | ResponseFormatJsonObject
+  ResponseFormatText | TextResponseFormatJsonSchema | ResponseFormatJsonObject
 
 export interface TextResponseFormatJsonSchema {
   type: 'json_schema'
@@ -7536,14 +7511,7 @@ export type MessageStatus = 'in_progress' | 'completed' | 'incomplete'
 export const MessageStatusValues = ['in_progress', 'completed', 'incomplete'] as const
 
 export type MessageRole =
-  | 'unknown'
-  | 'user'
-  | 'assistant'
-  | 'system'
-  | 'critic'
-  | 'discriminator'
-  | 'developer'
-  | 'tool'
+  'unknown' | 'user' | 'assistant' | 'system' | 'critic' | 'discriminator' | 'developer' | 'tool'
 export const MessageRoleValues = [
   'unknown',
   'user',
@@ -8065,9 +8033,7 @@ export interface ApplyPatchToolCall {
   call_id: string
   status: ApplyPatchCallStatus
   operation:
-    | ApplyPatchCreateFileOperation
-    | ApplyPatchDeleteFileOperation
-    | ApplyPatchUpdateFileOperation
+    ApplyPatchCreateFileOperation | ApplyPatchDeleteFileOperation | ApplyPatchUpdateFileOperation
   created_by?: string
 }
 

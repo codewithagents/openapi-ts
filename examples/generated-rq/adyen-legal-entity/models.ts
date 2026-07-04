@@ -485,11 +485,7 @@ export interface LegalEntity {
   transferInstruments?: TransferInstrumentReference[]
   trust?: Trust
   type?:
-    | 'individual'
-    | 'organization'
-    | 'soleProprietorship'
-    | 'trust'
-    | 'unincorporatedPartnership'
+    'individual' | 'organization' | 'soleProprietorship' | 'trust' | 'unincorporatedPartnership'
   unincorporatedPartnership?: UnincorporatedPartnership
   verificationDeadlines?: VerificationDeadline[]
   verificationPlan?: string
@@ -507,11 +503,7 @@ export interface LegalEntityWritable {
   soleProprietorship?: SoleProprietorship
   trust?: TrustWritable
   type?:
-    | 'individual'
-    | 'organization'
-    | 'soleProprietorship'
-    | 'trust'
-    | 'unincorporatedPartnership'
+    'individual' | 'organization' | 'soleProprietorship' | 'trust' | 'unincorporatedPartnership'
   unincorporatedPartnership?: UnincorporatedPartnershipWritable
   verificationPlan?: string
 }
@@ -598,11 +590,7 @@ export interface LegalEntityInfo {
   soleProprietorship?: SoleProprietorship
   trust?: Trust
   type?:
-    | 'individual'
-    | 'organization'
-    | 'soleProprietorship'
-    | 'trust'
-    | 'unincorporatedPartnership'
+    'individual' | 'organization' | 'soleProprietorship' | 'trust' | 'unincorporatedPartnership'
   unincorporatedPartnership?: UnincorporatedPartnership
   verificationPlan?: string
 }
@@ -616,11 +604,7 @@ export interface LegalEntityInfoWritable {
   soleProprietorship?: SoleProprietorship
   trust?: TrustWritable
   type?:
-    | 'individual'
-    | 'organization'
-    | 'soleProprietorship'
-    | 'trust'
-    | 'unincorporatedPartnership'
+    'individual' | 'organization' | 'soleProprietorship' | 'trust' | 'unincorporatedPartnership'
   unincorporatedPartnership?: UnincorporatedPartnershipWritable
   verificationPlan?: string
 }

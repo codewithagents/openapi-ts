@@ -15,8 +15,7 @@ export interface ClientConfig {
   basicAuth?:
     | { username: string; password: string }
     | (() =>
-        | { username: string; password: string }
-        | Promise<{ username: string; password: string }>)
+        { username: string; password: string } | Promise<{ username: string; password: string }>)
   /**
    * Fetch credentials mode. Use 'include' for cookie-based auth.
    * Defaults to 'same-origin'.

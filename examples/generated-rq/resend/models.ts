@@ -103,12 +103,7 @@ export interface CreateDomainResponse {
   name?: string
   created_at?: string /* date-time */
   status?:
-    | 'pending'
-    | 'verified'
-    | 'failed'
-    | 'not_started'
-    | 'partially_verified'
-    | 'partially_failed'
+    'pending' | 'verified' | 'failed' | 'not_started' | 'partially_verified' | 'partially_failed'
   capabilities?: DomainCapabilities
   records?: DomainRecord[]
   region?: string
@@ -140,12 +135,7 @@ export interface Domain {
   id?: string
   name?: string
   status?:
-    | 'pending'
-    | 'verified'
-    | 'failed'
-    | 'not_started'
-    | 'partially_verified'
-    | 'partially_failed'
+    'pending' | 'verified' | 'failed' | 'not_started' | 'partially_verified' | 'partially_failed'
   created_at?: string /* date-time */
   region?: string
   open_tracking?: boolean
@@ -170,12 +160,7 @@ export interface ListDomainsItem {
   id?: string
   name?: string
   status?:
-    | 'pending'
-    | 'verified'
-    | 'failed'
-    | 'not_started'
-    | 'partially_verified'
-    | 'partially_failed'
+    'pending' | 'verified' | 'failed' | 'not_started' | 'partially_verified' | 'partially_failed'
   created_at?: string /* date-time */
   region?: string
   capabilities?: DomainCapabilities
