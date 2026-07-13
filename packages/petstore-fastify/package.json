@@ -18,7 +18,7 @@
     "@codewithagents/openapi-server": "workspace:*",
     "@fastify/formbody": "^8.0.2",
     "@fastify/multipart": "^10.0.0",
-    "@fastify/static": "^9.1.3",
+    "@fastify/static": "^10.1.0",
     "@tanstack/react-query": "catalog:",
     "fastify": "^5.8.5",
     "fastify-type-provider-zod": "^7.0.0",
